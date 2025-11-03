@@ -43,18 +43,20 @@ const PostCard = ({ post, userRole = 'student' }) => {
           {/* Header Row - Username, role, time, kebab */}
           <View style={styles.headerRow}>
             <View style={styles.headerLeft}>
-              <Text style={styles.username}>{post.anonymous_username || 'Anonymous'}</Text>
-              
-              <View style={styles.roleTimeContainer}>
-                <Image 
-                  source={require('../../assets/post_card_icons/student_icon.png')} 
-                  style={styles.roleIcon}
-                  resizeMode="contain"
-                />
-                <Text style={styles.roleText}>Student</Text>
+              <View style={styles.usernameRow}>
+                <Text style={styles.username}>{post.anonymous_username || 'Anonymous'}</Text>
                 
-                <View style={styles.dot} />
-                <Text style={styles.timeText}>{formatTime(post.created_at)}</Text>
+                <View style={styles.roleTimeContainer}>
+                  <Image 
+                    source={require('../../assets/post_card_icons/student_icon.png')} 
+                    style={styles.roleIcon}
+                    resizeMode="contain"
+                  />
+                  <Text style={styles.roleText}>Student</Text>
+                  
+                  <View style={styles.dot} />
+                  <Text style={styles.timeText}>{formatTime(post.created_at)}</Text>
+                </View>
               </View>
             </View>
             
@@ -158,11 +160,16 @@ const styles = StyleSheet.create({
   headerLeft: {
     flex: 1,
   },
+  usernameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+  },
   username: {
-    fontSize: 16, // Increased from 14
+    fontSize: 16, // Kept the same increased size
     fontFamily: fonts.semiBold,
     color: colors.white,
-    marginBottom: 4, // Added margin to separate from role/time row
+    marginRight: 12, // Added margin to separate from role/time
   },
   roleTimeContainer: {
     flexDirection: 'row',
@@ -197,17 +204,17 @@ const styles = StyleSheet.create({
   },
   kebabIcon: {
     fontSize: 18,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: 'rgba(255, 255, 255, 1)',
     fontWeight: 'bold',
   },
   categorySection: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   categoryIcon: {
-    width: 20,
-    height: 20,
+    width: 15,
+    height: 15,
     marginRight: 8,
   },
   categoryText: {

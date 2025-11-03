@@ -23,6 +23,10 @@ import FacultySupportScreen from '../screens/faculty/SupportScreen';
 import StudentCreatePostScreen from '../screens/student/CreatePostScreen';
 import FacultyCreatePostScreen from '../screens/faculty/CreatePostScreen';
 
+// ADD PROFILE SCREEN IMPORTS
+import StudentProfileScreen from '../screens/student/ProfileScreen';
+import FacultyProfileScreen from '../screens/faculty/ProfileScreen';
+
 import BottomNavigation from '../components/BottomNavigation';
 
 const Stack = createNativeStackNavigator();
@@ -82,9 +86,25 @@ export default function AppNavigator() {
       <Stack.Screen name="StudentMain" component={StudentTabNavigator} />
       <Stack.Screen name="FacultyMain" component={FacultyTabNavigator} />
       
-      {/* ADD THESE NEW SCREENS FOR CREATE POST */}
+      {/* CREATE POST SCREENS */}
       <Stack.Screen name="StudentCreatePost" component={StudentCreatePostScreen} />
       <Stack.Screen name="FacultyCreatePost" component={FacultyCreatePostScreen} />
+      
+      {/* PROFILE SCREENS WITH LEFT-TO-RIGHT ANIMATION */}
+      <Stack.Screen 
+        name="StudentProfile" 
+        component={StudentProfileScreen}
+        options={{
+          animation: 'slide_from_left',
+        }}
+      />
+      <Stack.Screen 
+        name="FacultyProfile" 
+        component={FacultyProfileScreen}
+        options={{
+          animation: 'slide_from_left',
+        }}
+      />
     </Stack.Navigator>
   );
 }

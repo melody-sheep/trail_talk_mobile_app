@@ -1,4 +1,3 @@
-// src/components/HeaderWithTabs.js
 import React, { useState, useRef } from 'react';
 import { View, Text, TouchableOpacity, Image, Animated, StyleSheet, Dimensions } from 'react-native';
 import { colors } from '../styles/colors';
@@ -6,9 +5,8 @@ import { fonts } from '../styles/fonts';
 
 const { width: screenWidth } = Dimensions.get('window');
 
-export default function HeaderWithTabs({ userRole = 'student', onFilterPress }) {
-  const [activeTab, setActiveTab] = useState('forYou');
-  const animation = useRef(new Animated.Value(0)).current;
+export default function HeaderWithTabs({ userRole = 'student', onFilterPress, navigation, activeTab, onTabChange }) {
+  const animation = useRef(new Animated.Value(activeTab === 'forYou' ? 0 : 1)).current;
 
   const profileIcon = userRole === 'student' 
     ? require('../../assets/std_fcty_homescreen_icons/student_profile.png')
@@ -17,8 +15,18 @@ export default function HeaderWithTabs({ userRole = 'student', onFilterPress }) 
   const tabWidth = screenWidth / 2;
   const vectorWidth = 80; // Match your vector image width
 
+  // PROFILE PRESS HANDLER - NAVIGATES TO PROFILE SCREEN
+  const handleProfilePress = () => {
+    console.log('Profile pressed - navigating to profile screen');
+    if (userRole === 'student') {
+      navigation.navigate('StudentProfile');
+    } else {
+      navigation.navigate('FacultyProfile');
+    }
+  };
+
   const handleTabPress = (tab) => {
-    setActiveTab(tab);
+    onTabChange(tab);
     
     const position = tab === 'forYou' ? 0 : 1;
     Animated.timing(animation, {
@@ -41,7 +49,8 @@ export default function HeaderWithTabs({ userRole = 'student', onFilterPress }) 
     <View style={styles.headerContainer}>
       {/* Top Row: Profile Icon - Logo - Filter Icon */}
       <View style={styles.topRow}>
-        <TouchableOpacity style={styles.iconButton}>
+        {/* PROFILE ICON WITH NAVIGATION */}
+        <TouchableOpacity style={styles.iconButton} onPress={handleProfilePress}>
           <Image source={profileIcon} style={styles.profileIcon} />
         </TouchableOpacity>
         

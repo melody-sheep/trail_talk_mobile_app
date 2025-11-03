@@ -8,7 +8,7 @@ import HeaderWithTabs from '../../components/HeaderWithTabs';
 import PostCard from '../../components/PostCard';
 import { supabase } from '../../lib/supabase';
 
-export default function StudentHomeScreen() {
+export default function StudentHomeScreen({ navigation }) { // ADDED navigation prop here
   const [posts, setPosts] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState('forYou');
@@ -89,6 +89,7 @@ export default function StudentHomeScreen() {
         onFilterPress={handleFilterPress}
         activeTab={activeTab}
         onTabChange={setActiveTab}
+        navigation={navigation} // ADDED navigation prop here
       />
       
       <ScrollView 
