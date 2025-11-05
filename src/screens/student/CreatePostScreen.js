@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'; 
+import React, { useState, useRef, useContext, useEffect } from 'react'; 
 import { 
   View, 
   Text, 
@@ -16,7 +16,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../../styles/colors';
 import { fonts } from '../../styles/fonts';
-import { supabase } from '../../lib/supabase'; // ← ADD THIS IMPORT
+import { supabase } from '../../lib/supabase';
+import { UserContext } from '../../contexts/UserContext';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -25,11 +26,143 @@ const CreatePostScreen = ({ navigation }) => {
   const [message, setMessage] = useState('');
   const [inputHeight, setInputHeight] = useState(140);
   const [isFocused, setIsFocused] = useState(false);
+  const [userDisplayName, setUserDisplayName] = useState('Blazer01'); // Default fallback
+  const [userInitials, setUserInitials] = useState('USR'); // Default fallback
+  const { user, loading } = useContext(UserContext);
 
   const textInputRef = useRef(null);
   const scrollViewRef = useRef(null);
 
-  // ← ADD THIS: categories array definition
+  // Fetch user profile data when component mounts
+  useEffect(() => {
+    if (user && !loading) {
+      fetchUserProfile();
+    }
+  }, [user, loading]);
+
+  // Function to fetch user profile and set display name
+  const fetchUserProfile = async () => {
+    if (!user) return;
+
+    try {
+      // Get profile data from profiles table
+      const { data: profileData, error } = await supabase
+        .from('profiles')
+        .select('username, student_id, school_email, user_type')
+        .eq('id', user.id)
+        .single();
+
+      if (error) {
+        console.log('Error fetching profile:', error);
+        // Fallback to auth user email
+        handleFallbackDisplayName();
+        return;
+      }
+
+      // Determine what to display as the username
+      let displayName = 'Blazer01'; // Default
+      let initials = 'USR'; // Default
+
+      // Priority 1: Use username from profiles table
+      if (profileData?.username) {
+        displayName = profileData.username;
+        initials = profileData.username.substring(0, 3).toUpperCase();
+      }
+      // Priority 2: Use student_id if available
+      else if (profileData?.student_id) {
+        displayName = profileData.student_id;
+        initials = profileData.student_id.substring(0, 3).toUpperCase();
+      }
+      // Priority 3: Use school_email if available
+      else if (profileData?.school_email) {
+        const emailPart = profileData.school_email.split('@')[0];
+        displayName = emailPart;
+        initials = emailPart.substring(0, 3).toUpperCase();
+      }
+      // Priority 4: Fallback to auth user email
+      else {
+        handleFallbackDisplayName();
+        return;
+      }
+
+      setUserDisplayName(displayName);
+      setUserInitials(initials);
+      
+    } catch (error) {
+      console.log('Error in fetchUserProfile:', error);
+      handleFallbackDisplayName();
+    }
+  };
+
+  // Fallback function using auth user data
+  const handleFallbackDisplayName = () => {
+    if (user?.email) {
+      const emailPart = user.email.split('@')[0];
+      setUserDisplayName(emailPart);
+      setUserInitials(emailPart.substring(0, 3).toUpperCase());
+    } else {
+      setUserDisplayName('Blazer01');
+      setUserInitials('USR');
+    }
+  };
+
+  // Function to get user initials for post submission
+  const getUserInitialsForPost = async () => {
+    if (!user) return 'USR';
+    
+    try {
+      // Get fresh profile data to ensure we have the latest
+      const { data: profileData, error } = await supabase
+        .from('profiles')
+        .select('username, student_id, school_email')
+        .eq('id', user.id)
+        .single();
+
+      if (!error && profileData) {
+        // Priority 1: Use username
+        if (profileData.username) {
+          return profileData.username.substring(0, 3).toUpperCase();
+        }
+        // Priority 2: Use student_id
+        if (profileData.student_id) {
+          return profileData.student_id.substring(0, 3).toUpperCase();
+        }
+        // Priority 3: Use school_email
+        if (profileData.school_email) {
+          const emailPart = profileData.school_email.split('@')[0];
+          return emailPart.substring(0, 3).toUpperCase();
+        }
+      }
+
+      // Fallback to auth user email
+      if (user.email) {
+        const emailPart = user.email.split('@')[0];
+        return emailPart.substring(0, 3).toUpperCase();
+      }
+
+      return 'USR'; // Final fallback
+    } catch (error) {
+      console.log('Error getting user initials for post:', error);
+      // Fallback to current state or auth email
+      if (user?.email) {
+        const emailPart = user.email.split('@')[0];
+        return emailPart.substring(0, 3).toUpperCase();
+      }
+      return userInitials || 'USR';
+    }
+  };
+
+  // ADDED: Loading state check
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   const categories = [
     'Academics',
     'Rant',
@@ -38,7 +171,6 @@ const CreatePostScreen = ({ navigation }) => {
     'General'
   ];
 
-  // ← ADD THIS: getCategoryIcon function
   const getCategoryIcon = (category) => {
     switch(category) {
       case 'Academics': return '📚';
@@ -66,9 +198,8 @@ const CreatePostScreen = ({ navigation }) => {
         return;
       }
 
-      // Extract initials from user email (you can modify this logic)
-      const userEmail = userData.user.email;
-      const initials = userEmail ? userEmail.substring(0, 3).toUpperCase() : 'USER';
+      // Get fresh initials for the post
+      const authorInitials = await getUserInitialsForPost();
 
       const { data, error } = await supabase
         .from('posts')
@@ -77,7 +208,7 @@ const CreatePostScreen = ({ navigation }) => {
             content: message.trim(),
             category: selectedCategory,
             author_id: userData.user.id,
-            author_initials: initials,
+            author_initials: authorInitials,
             is_anonymous: true
           }
         ])
@@ -165,7 +296,7 @@ const CreatePostScreen = ({ navigation }) => {
             </View>
           </ImageBackground>
 
-          {/* User Identity Card */}
+          {/* User Identity Card - NOW WITH DYNAMIC DATA */}
           <View style={styles.userCard}>
             <View style={styles.userInfo}>
               <Image 
@@ -174,8 +305,8 @@ const CreatePostScreen = ({ navigation }) => {
                 resizeMode="contain"
               />
               <View style={styles.userText}>
-                <Text style={styles.userName}>Blazer01</Text>
-                <Text style={styles.userStatus}>Anonymous User</Text>
+                <Text style={styles.userName}>{userDisplayName}</Text>
+                <Text style={styles.userStatus}>Anonymous User • {userInitials}</Text>
               </View>
             </View>
             <View style={styles.verifiedBadge}>
@@ -322,7 +453,7 @@ const CreatePostScreen = ({ navigation }) => {
             </TouchableOpacity>
             
             <Text style={styles.postDisclaimer}>
-              Your post will be published anonymously
+              Your post will be published anonymously as {userDisplayName}
             </Text>
           </View>
 
@@ -360,7 +491,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-  
   },
   backButton: {
     justifyContent: 'center',
@@ -451,8 +581,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sectionIcon: {
-    width: 20, // Reduced from 24
-    height: 20, // Reduced from 24
+    width: 20,
+    height: 20,
     marginRight: 12,
   },
   sectionTitle: {
@@ -557,8 +687,8 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   mediaIcon: {
-    width: 20, // Reduced from 22
-    height: 20, // Reduced from 22
+    width: 20,
+    height: 20,
     tintColor: colors.white,
   },
   mediaButtonText: {
@@ -600,6 +730,18 @@ const styles = StyleSheet.create({
   },
   bottomSpacer: {
     height: 10,
+  },
+  // ADDED: Loading styles
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.homeBackground,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: colors.white,
+    fontFamily: fonts.normal,
   },
 });
 

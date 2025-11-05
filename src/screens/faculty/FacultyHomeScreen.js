@@ -30,7 +30,7 @@ export default function FacultyHomeScreen() {
         return;
       }
 
-      console.log('Fetched posts:', data?.length || 0);
+      console.log('Fetched posts with counts:', data?.length || 0);
       setPosts(data || []);
     } catch (error) {
       console.log('Error:', error);
@@ -55,9 +55,12 @@ export default function FacultyHomeScreen() {
     }, [])
   );
 
-  // REAL-TIME SUBSCRIPTION (BACKUP)
+  // ENHANCED REAL-TIME SUBSCRIPTIONS FOR ALL INTERACTIONS
   useEffect(() => {
-    const channel = supabase
+    console.log('Setting up real-time subscriptions for interactions...');
+
+    // Channel for new posts
+    const postsChannel = supabase
       .channel('posts_channel')
       .on(
         'postgres_changes',
@@ -72,12 +75,135 @@ export default function FacultyHomeScreen() {
         }
       )
       .subscribe((status) => {
-        console.log('Real-time subscription status:', status);
+        console.log('Posts real-time subscription status:', status);
+      });
+
+    // Channel for post updates (count changes)
+    const postsUpdateChannel = supabase
+      .channel('posts_update_channel')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'posts',
+        },
+        (payload) => {
+          console.log('Post updated in real-time:', payload);
+          setPosts(currentPosts => 
+            currentPosts.map(post => 
+              post.id === payload.new.id ? { ...post, ...payload.new } : post
+            )
+          );
+        }
+      )
+      .subscribe((status) => {
+        console.log('Posts update subscription status:', status);
+      });
+
+    // Channel for likes
+    const likesChannel = supabase
+      .channel('likes_channel')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to INSERT and DELETE
+          schema: 'public',
+          table: 'post_likes',
+        },
+        async (payload) => {
+          console.log('Like interaction detected:', payload);
+          // Refresh the specific post to get updated counts
+          const { data: updatedPost } = await supabase
+            .from('posts')
+            .select('*')
+            .eq('id', payload.new?.post_id || payload.old?.post_id)
+            .single();
+          
+          if (updatedPost) {
+            setPosts(currentPosts => 
+              currentPosts.map(post => 
+                post.id === updatedPost.id ? updatedPost : post
+              )
+            );
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('Likes subscription status:', status);
+      });
+
+    // Channel for reposts
+    const repostsChannel = supabase
+      .channel('reposts_channel')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to INSERT and DELETE
+          schema: 'public',
+          table: 'reposts',
+        },
+        async (payload) => {
+          console.log('Repost interaction detected:', payload);
+          // Refresh the specific post to get updated counts
+          const { data: updatedPost } = await supabase
+            .from('posts')
+            .select('*')
+            .eq('id', payload.new?.post_id || payload.old?.post_id)
+            .single();
+          
+          if (updatedPost) {
+            setPosts(currentPosts => 
+              currentPosts.map(post => 
+                post.id === updatedPost.id ? updatedPost : post
+              )
+            );
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('Reposts subscription status:', status);
+      });
+
+    // Channel for bookmarks
+    const bookmarksChannel = supabase
+      .channel('bookmarks_channel')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to INSERT and DELETE
+          schema: 'public',
+          table: 'bookmarks',
+        },
+        async (payload) => {
+          console.log('Bookmark interaction detected:', payload);
+          // Refresh the specific post to get updated counts
+          const { data: updatedPost } = await supabase
+            .from('posts')
+            .select('*')
+            .eq('id', payload.new?.post_id || payload.old?.post_id)
+            .single();
+          
+          if (updatedPost) {
+            setPosts(currentPosts => 
+              currentPosts.map(post => 
+                post.id === updatedPost.id ? updatedPost : post
+              )
+            );
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('Bookmarks subscription status:', status);
       });
 
     return () => {
-      console.log('Unsubscribing from real-time channel');
-      supabase.removeChannel(channel);
+      console.log('Unsubscribing from all real-time channels');
+      supabase.removeChannel(postsChannel);
+      supabase.removeChannel(postsUpdateChannel);
+      supabase.removeChannel(likesChannel);
+      supabase.removeChannel(repostsChannel);
+      supabase.removeChannel(bookmarksChannel);
     };
   }, []);
 

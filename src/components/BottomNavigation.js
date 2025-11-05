@@ -1,3 +1,4 @@
+// src/components/BottomNavigation.js
 import React from 'react';
 import { View, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -7,7 +8,6 @@ export default function BottomNavigation({ userRole, state }) {
   const navigation = useNavigation();
   const route = useRoute();
 
-  // Get the current active tab based on the tab navigator's state
   const getActiveTab = () => {
     if (!state) return 'Home';
     
@@ -69,19 +69,12 @@ export default function BottomNavigation({ userRole, state }) {
 
   const handleFABPress = () => {
     console.log('FAB button pressed - Navigating to Create Post');
-    console.log('User role:', userRole);
     
     try {
-      // Use the main navigator (Stack navigator) not the Tab navigator
       if (userRole === 'student') {
-        console.log('Navigating to StudentCreatePost');
         navigation.navigate('StudentCreatePost');
       } else if (userRole === 'faculty') {
-        console.log('Navigating to FacultyCreatePost');
         navigation.navigate('FacultyCreatePost');
-      } else {
-        console.log('Unknown user role, defaulting to StudentCreatePost');
-        navigation.navigate('StudentCreatePost');
       }
     } catch (error) {
       console.log('Navigation error:', error);
@@ -90,8 +83,6 @@ export default function BottomNavigation({ userRole, state }) {
 
   const renderTabIcon = (tab) => {
     const isActive = activeTab === tab.id;
-    
-    // Use activeIcon for filled when active, icon for no_fill when inactive
     const iconSource = isActive ? tab.activeIcon : tab.icon;
 
     return (
@@ -111,7 +102,7 @@ export default function BottomNavigation({ userRole, state }) {
 
   return (
     <View style={styles.mainContainer}>
-      {/* FAB Button - Positioned above the bottom nav with margin */}
+      {/* FAB Button */}
       <View style={styles.fabContainer}>
         <TouchableOpacity
           style={styles.fabButton}
@@ -167,27 +158,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     flex: 1,
   },
-  iconWrapper: {
-    // Clean wrapper - no background, no padding, no border radius
-  },
+  iconWrapper: {},
   icon: {
     width: 25,
     height: 25,
   },
   activeIcon: {
-    transform: [{ scale: 1.2 }], // Slight scale up for active icon
+    transform: [{ scale: 1.2 }],
   },
   glowEffect: {
     shadowColor: '#FFFFFF',
-    shadowOffset: {
-      width: 0,
-      height: 0,
-    },
+    shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.8,
     shadowRadius: 15,
     elevation: 15,
   },
-  // FAB Styles
   fabContainer: {
     position: 'absolute',
     right: 10,
@@ -205,10 +190,7 @@ const styles = StyleSheet.create({
   },
   fabGlowEffect: {
     shadowColor: '#FFD700',
-    shadowOffset: {
-      width: 0,
-      height: 0,
-    },
+    shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.8,
     shadowRadius: 20,
     elevation: 20,

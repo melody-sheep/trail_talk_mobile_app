@@ -44,6 +44,13 @@ export default function SignUpScreen({ route, navigation }) {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // Function to extract first 3 characters from email
+  const extractUsernameFromEmail = (email) => {
+    if (!email) return '';
+    const usernamePart = email.split('@')[0];
+    return usernamePart.substring(0, 3).toUpperCase();
+  };
+
   const validateField = (field, value) => {
     let error = '';
     
@@ -138,7 +145,10 @@ export default function SignUpScreen({ route, navigation }) {
     setLoading(true);
     
     try {
-      const { data, error } = await supabase.auth.signUp({
+      console.log('Starting signup process...');
+      
+      // Step 1: Create auth user
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.schoolEmail,
         password: formData.password,
         options: {
@@ -150,29 +160,101 @@ export default function SignUpScreen({ route, navigation }) {
         }
       });
 
-      if (error) {
-        Alert.alert('Sign Up Failed', error.message);
+      if (authError) {
+        console.log('Auth error:', authError);
+        Alert.alert('Sign Up Failed', authError.message);
         return;
       }
 
-      if (data.user) {
-        // Create profile in profiles table
+      if (!authData.user) {
+        Alert.alert('Error', 'User creation failed');
+        return;
+      }
+
+      console.log('Auth user created:', authData.user.id);
+      
+      // Step 2: Extract username from email
+      const username = extractUsernameFromEmail(formData.schoolEmail);
+      
+      // Step 3: Check if profile already exists
+      const { data: existingProfile, error: checkError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', authData.user.id)
+        .maybeSingle();
+
+      if (checkError) {
+        console.log('Error checking existing profile:', checkError);
+      }
+
+      if (existingProfile) {
+        console.log('Profile already exists, updating instead...');
+        // Update existing profile
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({
+            role: formData.role,
+            student_id: formData.studentId,
+            age: parseInt(formData.age),
+            school_email: formData.schoolEmail,
+            username: username,
+            user_type: formData.role
+          })
+          .eq('id', authData.user.id);
+
+        if (updateError) {
+          console.error('Error updating profile:', updateError);
+          Alert.alert('Error', 'Account created but profile update failed');
+          return;
+        }
+        console.log('Profile updated successfully');
+      } else {
+        console.log('Creating new profile...');
+        // Create new profile
         const { error: profileError } = await supabase
           .from('profiles')
           .insert([
             {
-              id: data.user.id,
+              id: authData.user.id,
               role: formData.role,
               student_id: formData.studentId,
               age: parseInt(formData.age),
-              email: formData.schoolEmail
+              school_email: formData.schoolEmail,
+              username: username,
+              user_type: formData.role
             }
           ]);
 
         if (profileError) {
           console.error('Error creating profile:', profileError);
-          Alert.alert('Error', 'Account created but profile setup failed');
-          return;
+          
+          // If it's a duplicate key error, try updating instead
+          if (profileError.code === '23505') {
+            console.log('Duplicate key detected, updating profile instead...');
+            const { error: updateError } = await supabase
+              .from('profiles')
+              .update({
+                role: formData.role,
+                student_id: formData.studentId,
+                age: parseInt(formData.age),
+                school_email: formData.schoolEmail,
+                username: username,
+                user_type: formData.role
+              })
+              .eq('id', authData.user.id);
+
+            if (updateError) {
+              console.error('Error updating profile after duplicate:', updateError);
+              Alert.alert('Error', 'Account created but profile setup failed');
+              return;
+            }
+            console.log('Profile updated successfully after duplicate detection');
+          } else {
+            Alert.alert('Error', 'Account created but profile setup failed');
+            return;
+          }
+        } else {
+          console.log('Profile created successfully');
         }
       }
 
@@ -188,6 +270,7 @@ export default function SignUpScreen({ route, navigation }) {
       );
 
     } catch (err) {
+      console.error('Unexpected error:', err);
       Alert.alert('Error', 'An unexpected error occurred');
     } finally {
       setLoading(false);
@@ -402,12 +485,12 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: 30, // Added top padding
+    paddingTop: 30,
     paddingBottom: 30,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 40, // Increased spacing
+    marginBottom: 40,
   },
   logo: {
     width: 80,
@@ -450,7 +533,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.normal,
     borderWidth: 1,
     borderColor: colors.border,
-    width: '100%', // Fixed width
+    width: '100%',
   },
   inputError: {
     borderColor: '#FF3B30',
@@ -458,19 +541,19 @@ const styles = StyleSheet.create({
   },
   passwordContainer: {
     position: 'relative',
-    width: '100%', // Fixed width container
+    width: '100%',
   },
   passwordInput: {
     backgroundColor: colors.white,
     borderRadius: 12,
     padding: 16,
-    paddingRight: 50, // Space for eye icon
+    paddingRight: 50,
     fontSize: 16,
     color: colors.black,
     fontFamily: fonts.normal,
     borderWidth: 1,
     borderColor: colors.border,
-    width: '100%', // Fixed width
+    width: '100%',
   },
   eyeIcon: {
     position: 'absolute',

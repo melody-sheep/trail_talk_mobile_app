@@ -1,12 +1,10 @@
-import React, { useState, useRef, useContext, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, StatusBar, TouchableOpacity, Image, ScrollView, Animated, Dimensions, FlatList } from 'react-native';
+import React, { useState, useRef, useContext, useEffect } from 'react';
+import { View, Text, StyleSheet, StatusBar, TouchableOpacity, Image, ScrollView, Animated, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
 import { colors } from '../../styles/colors';
 import { fonts } from '../../styles/fonts';
 import { UserContext } from '../../contexts/UserContext';
 import { supabase } from '../../lib/supabase';
-import PostCard from '../../components/PostCard';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -18,9 +16,7 @@ export default function ProfileScreen({ navigation }) {
   const [followingCount, setFollowingCount] = useState(0);
   const [followersCount, setFollowersCount] = useState(0);
   const [postCount, setPostCount] = useState(0);
-  const [userPosts, setUserPosts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [postsLoading, setPostsLoading] = useState(false);
   const { user } = useContext(UserContext);
   const animation = useRef(new Animated.Value(0)).current;
 
@@ -28,11 +24,10 @@ export default function ProfileScreen({ navigation }) {
   const tabWidth = screenWidth / tabs.length;
   const vectorWidth = 80;
 
-  // Fetch all user profile data and posts
+  // Fetch all user profile data
   useEffect(() => {
     if (user) {
       fetchUserProfileData();
-      fetchUserPosts();
     }
   }, [user]);
 
@@ -102,11 +97,11 @@ export default function ProfileScreen({ navigation }) {
         setFollowingCount(followingCount || 0);
       }
 
-      // Fetch post count - FIXED: using author_id instead of user_id
+      // Fetch post count
       const { count: postCount, error: postError } = await supabase
         .from('posts')
         .select('*', { count: 'exact', head: true })
-        .eq('author_id', user.id);
+        .eq('user_id', user.id);
 
       if (!postError) {
         setPostCount(postCount || 0);
@@ -129,179 +124,6 @@ export default function ProfileScreen({ navigation }) {
     }
   };
 
-  const fetchUserPosts = async () => {
-    if (!user) {
-      console.log('No user found');
-      return;
-    }
-    
-    try {
-      setPostsLoading(true);
-      console.log('Fetching posts for user:', user.id);
-      
-      const { data: posts, error } = await supabase
-        .from('posts')
-        .select('*')
-        .eq('author_id', user.id)
-        .order('created_at', { ascending: false });
-
-      console.log('Posts fetch result:', { posts, error });
-      
-      if (!error && posts) {
-        console.log(`Found ${posts.length} posts`);
-        setUserPosts(posts);
-      } else {
-        console.log('Error fetching posts:', error);
-        setUserPosts([]);
-      }
-    } catch (error) {
-      console.log('Exception fetching user posts:', error);
-      setUserPosts([]);
-    } finally {
-      setPostsLoading(false);
-    }
-  };
-
-  // AUTO-REFRESH WHEN FOCUSED
-  useFocusEffect(
-    useCallback(() => {
-      console.log('Profile screen focused - refreshing posts');
-      fetchUserPosts();
-    }, [user])
-  );
-
-  // REAL-TIME SUBSCRIPTIONS FOR INTERACTION UPDATES (SAME AS HOMESCREEN)
-  useEffect(() => {
-    console.log('Setting up real-time subscriptions for ProfileScreen interactions...');
-
-    // Channel for post updates (count changes)
-    const postsUpdateChannel = supabase
-      .channel('profile_posts_update_channel')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'posts',
-        },
-        (payload) => {
-          console.log('Post updated in ProfileScreen real-time:', payload);
-          setUserPosts(currentPosts => 
-            currentPosts.map(post => 
-              post.id === payload.new.id ? { ...post, ...payload.new } : post
-            )
-          );
-        }
-      )
-      .subscribe((status) => {
-        console.log('Profile posts update subscription status:', status);
-      });
-
-    // Channel for likes
-    const likesChannel = supabase
-      .channel('profile_likes_channel')
-      .on(
-        'postgres_changes',
-        {
-          event: '*', // Listen to INSERT and DELETE
-          schema: 'public',
-          table: 'post_likes',
-        },
-        async (payload) => {
-          console.log('Like interaction detected in ProfileScreen:', payload);
-          // Refresh the specific post to get updated counts
-          const { data: updatedPost } = await supabase
-            .from('posts')
-            .select('*')
-            .eq('id', payload.new?.post_id || payload.old?.post_id)
-            .single();
-          
-          if (updatedPost) {
-            setUserPosts(currentPosts => 
-              currentPosts.map(post => 
-                post.id === updatedPost.id ? updatedPost : post
-              )
-            );
-          }
-        }
-      )
-      .subscribe((status) => {
-        console.log('Profile likes subscription status:', status);
-      });
-
-    // Channel for reposts
-    const repostsChannel = supabase
-      .channel('profile_reposts_channel')
-      .on(
-        'postgres_changes',
-        {
-          event: '*', // Listen to INSERT and DELETE
-          schema: 'public',
-          table: 'reposts',
-        },
-        async (payload) => {
-          console.log('Repost interaction detected in ProfileScreen:', payload);
-          // Refresh the specific post to get updated counts
-          const { data: updatedPost } = await supabase
-            .from('posts')
-            .select('*')
-            .eq('id', payload.new?.post_id || payload.old?.post_id)
-            .single();
-          
-          if (updatedPost) {
-            setUserPosts(currentPosts => 
-              currentPosts.map(post => 
-                post.id === updatedPost.id ? updatedPost : post
-              )
-            );
-          }
-        }
-      )
-      .subscribe((status) => {
-        console.log('Profile reposts subscription status:', status);
-      });
-
-    // Channel for bookmarks
-    const bookmarksChannel = supabase
-      .channel('profile_bookmarks_channel')
-      .on(
-        'postgres_changes',
-        {
-          event: '*', // Listen to INSERT and DELETE
-          schema: 'public',
-          table: 'bookmarks',
-        },
-        async (payload) => {
-          console.log('Bookmark interaction detected in ProfileScreen:', payload);
-          // Refresh the specific post to get updated counts
-          const { data: updatedPost } = await supabase
-            .from('posts')
-            .select('*')
-            .eq('id', payload.new?.post_id || payload.old?.post_id)
-            .single();
-          
-          if (updatedPost) {
-            setUserPosts(currentPosts => 
-              currentPosts.map(post => 
-                post.id === updatedPost.id ? updatedPost : post
-              )
-            );
-          }
-        }
-      )
-      .subscribe((status) => {
-        console.log('Profile bookmarks subscription status:', status);
-      });
-
-    return () => {
-      console.log('Unsubscribing from ProfileScreen real-time channels');
-      supabase.removeChannel(postsUpdateChannel);
-      supabase.removeChannel(likesChannel);
-      supabase.removeChannel(repostsChannel);
-      supabase.removeChannel(bookmarksChannel);
-    };
-  }, []);
-
   const handleTabPress = (tab, index) => {
     setActiveTab(tab);
     
@@ -319,15 +141,6 @@ export default function ProfileScreen({ navigation }) {
     ),
   });
 
-  const renderPostItem = ({ item }) => (
-    <PostCard post={item} userRole="student" 
-    onInteraction={() => {
-      // Force refresh user posts after interaction
-      setTimeout(() => fetchUserPosts(), 500);
-    }}    
-    />
-  );
-
   // Loading state
   if (loading) {
     return (
@@ -343,7 +156,6 @@ export default function ProfileScreen({ navigation }) {
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <StatusBar barStyle="light-content" backgroundColor={colors.homeBackground} />
       
-      {/* Fixed Header */}
       <View style={styles.header}>
         <TouchableOpacity 
           style={styles.backButton}
@@ -366,8 +178,7 @@ export default function ProfileScreen({ navigation }) {
       </View>
 
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        {/* Profile Details Section */}
-        <View style={styles.profileDetails}>
+        <View style={styles.coverSection}>
           <Image 
             source={require('../../../assets/profile_page_icons/profile_default_bg.png')}
             style={styles.coverImage}
@@ -381,10 +192,7 @@ export default function ProfileScreen({ navigation }) {
           </View>
           
           <View style={styles.editButtonRow}>
-            <TouchableOpacity 
-              style={styles.editProfileButton}
-              onPress={() => navigation.navigate('EditProfile')}
-            >
+            <TouchableOpacity style={styles.editProfileButton}>
               <Text style={styles.editProfileText}>Edit Profile</Text>
             </TouchableOpacity>
           </View>
@@ -431,84 +239,39 @@ export default function ProfileScreen({ navigation }) {
               <Text style={styles.statLabel}>Followers</Text>
             </View>
           </View>
-        </View>
 
-        {/* Sticky Tabs - AT THE BOTTOM OF PROFILE DETAILS */}
-        <View style={styles.stickyTabsWrapper}>
-          <View style={styles.tabsContainer}>
-            {tabs.map((tab, index) => (
-              <TouchableOpacity 
-                key={tab}
-                style={styles.tab}
-                onPress={() => handleTabPress(tab, index)}
+          <View style={styles.tabsWrapper}>
+            <View style={styles.tabsContainer}>
+              {tabs.map((tab, index) => (
+                <TouchableOpacity 
+                  key={tab}
+                  style={styles.tab}
+                  onPress={() => handleTabPress(tab, index)}
+                >
+                  <Text style={[
+                    styles.tabText,
+                    activeTab === tab ? styles.tabTextActive : styles.tabTextInactive
+                  ]}>
+                    {tab}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+
+              <Animated.View 
+                style={[
+                  styles.horizontalVector,
+                  { transform: [{ translateX }] }
+                ]}
               >
-                <Text style={[
-                  styles.tabText,
-                  activeTab === tab ? styles.tabTextActive : styles.tabTextInactive
-                ]}>
-                  {tab}
-                </Text>
-              </TouchableOpacity>
-            ))}
-
-            <Animated.View 
-              style={[
-                styles.horizontalVector,
-                { transform: [{ translateX }] }
-              ]}
-            >
-              <Image 
-                source={require('../../../assets/profile_page_icons/horizontal_scroll_vector.png')} 
-                style={styles.vectorImage}
-              />
-            </Animated.View>
-          </View>
-          
-          <View style={styles.tabsBottomBorder} />
-        </View>
-
-        {/* Posts Content Area */}
-        <View style={styles.postsContent}>
-          {activeTab === 'Post' && (
-            <>
-              {postsLoading ? (
-                <View style={styles.loadingPostsContainer}>
-                  <Text style={styles.loadingText}>Loading posts...</Text>
-                </View>
-              ) : userPosts.length > 0 ? (
-                <FlatList
-                  data={userPosts}
-                  renderItem={renderPostItem}
-                  keyExtractor={(item) => item.id}
-                  scrollEnabled={false}
-                  showsVerticalScrollIndicator={false}
+                <Image 
+                  source={require('../../../assets/profile_page_icons/horizontal_scroll_vector.png')} 
+                  style={styles.vectorImage}
                 />
-              ) : (
-                <View style={styles.noPostsContainer}>
-                  <Text style={styles.noPostsText}>No posts yet</Text>
-                  <Text style={styles.noPostsSubtext}>Start sharing your thoughts!</Text>
-                </View>
-              )}
-            </>
-          )}
-
-          {activeTab === 'Replies' && (
-            <View style={styles.comingSoonContainer}>
-              <Text style={styles.comingSoonText}>Replies tab coming soon!</Text>
+              </Animated.View>
             </View>
-          )}
-
-          {activeTab === 'BookMarks' && (
-            <View style={styles.comingSoonContainer}>
-              <Text style={styles.comingSoonText}>Bookmarks tab coming soon!</Text>
-            </View>
-          )}
-
-          {activeTab === 'Like' && (
-            <View style={styles.comingSoonContainer}>
-              <Text style={styles.comingSoonText}>Likes tab coming soon!</Text>
-            </View>
-          )}
+            
+            <View style={styles.tabsBottomBorder} />
+          </View>
         </View>
 
         <View style={styles.bottomSpacer} />
@@ -557,9 +320,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.homeBackground,
   },
-  // Profile Details Section
-  profileDetails: {
-    marginBottom: 0, // Remove margin since tabs are now part of the flow
+  coverSection: {
+    marginBottom: 20,
   },
   coverImage: {
     width: '100%',
@@ -664,7 +426,7 @@ const styles = StyleSheet.create({
   statsRow: {
     flexDirection: 'row',
     paddingHorizontal: 22,
-    marginBottom: 20, // Space before tabs
+    marginBottom: 20,
   },
   statItem: {
     flexDirection: 'row',
@@ -689,9 +451,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.normal,
     color: 'rgba(255, 255, 255, 0.7)',
   },
-  // Sticky Tabs - AT BOTTOM OF PROFILE DETAILS
-  stickyTabsWrapper: {
-    backgroundColor: colors.homeBackground,
+  tabsWrapper: {
     marginBottom: 1,
   },
   tabsContainer: {
@@ -729,39 +489,6 @@ const styles = StyleSheet.create({
     height: 0.5,
     backgroundColor: '#434343',
     width: '100%',
-  },
-  // Posts Content Styles
-  postsContent: {
-    backgroundColor: colors.homeBackground,
-    minHeight: 200,
-  },
-  loadingPostsContainer: {
-    padding: 40,
-    alignItems: 'center',
-  },
-  noPostsContainer: {
-    padding: 40,
-    alignItems: 'center',
-  },
-  noPostsText: {
-    fontSize: 16,
-    fontFamily: fonts.medium,
-    color: colors.white,
-    marginBottom: 8,
-  },
-  noPostsSubtext: {
-    fontSize: 14,
-    fontFamily: fonts.normal,
-    color: 'rgba(255, 255, 255, 0.6)',
-  },
-  comingSoonContainer: {
-    padding: 40,
-    alignItems: 'center',
-  },
-  comingSoonText: {
-    fontSize: 16,
-    fontFamily: fonts.medium,
-    color: 'rgba(255, 255, 255, 0.6)',
   },
   bottomSpacer: {
     height: 30,

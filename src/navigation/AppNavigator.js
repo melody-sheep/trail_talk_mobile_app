@@ -1,3 +1,4 @@
+// src/navigation/AppNavigator.js
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -7,31 +8,28 @@ import SignUpScreen from '../screens/SignUpScreen';
 import SignInScreen from '../screens/SignInScreen';
 import StudentHomeScreen from '../screens/student/StudentHomeScreen';
 import FacultyHomeScreen from '../screens/faculty/FacultyHomeScreen';
-import StudentSearchScreen from '../screens/student/SearchScreen';
-import FacultySearchScreen from '../screens/faculty/SearchScreen';
-// Import other screens as you create them
-import StudentMessagesScreen from '../screens/student/MessagesScreen';
-import FacultyMessagesScreen from '../screens/faculty/MessagesScreen';
-import StudentCommunityScreen from '../screens/student/CommunityScreen';
-import FacultyCommunityScreen from '../screens/faculty/CommunityScreen';
-import StudentNotificationsScreen from '../screens/student/NotificationsScreen';
-import FacultyNotificationsScreen from '../screens/faculty/NotificationsScreen';
-import StudentSupportScreen from '../screens/student/SupportScreen';
-import FacultySupportScreen from '../screens/faculty/SupportScreen';
 
-// ADD THESE IMPORTS
+// Import CreatePostScreen and ProfileScreen
 import StudentCreatePostScreen from '../screens/student/CreatePostScreen';
 import FacultyCreatePostScreen from '../screens/faculty/CreatePostScreen';
-
-// ADD PROFILE SCREEN IMPORTS
 import StudentProfileScreen from '../screens/student/ProfileScreen';
 import FacultyProfileScreen from '../screens/faculty/ProfileScreen';
+
+// Import the new EditProfileScreen
+import EditProfileScreen from '../screens/student/EditProfileScreen';
 
 import BottomNavigation from '../components/BottomNavigation';
 
 const Stack = createNativeStackNavigator();
 const StudentTab = createBottomTabNavigator();
 const FacultyTab = createBottomTabNavigator();
+
+// Create placeholder screens for unimplemented features
+const PlaceholderScreen = () => (
+  <div style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0A0A0A' }}>
+    <text style={{ color: 'white', fontSize: 18 }}>Coming Soon</text>
+  </div>
+);
 
 function StudentTabNavigator() {
   return (
@@ -42,12 +40,12 @@ function StudentTabNavigator() {
         unmountOnBlur: false,
       }}
     >
-      <StudentTab.Screen name="StudentHome" component={StudentHomeScreen} options={{ tabBarButton: () => null }} />
-      <StudentTab.Screen name="StudentSearch" component={StudentSearchScreen} options={{ tabBarButton: () => null }} />
-      <StudentTab.Screen name="StudentSupport" component={StudentSupportScreen} options={{ tabBarButton: () => null }} />
-      <StudentTab.Screen name="StudentCommunity" component={StudentCommunityScreen} options={{ tabBarButton: () => null }} />
-      <StudentTab.Screen name="StudentNotifications" component={StudentNotificationsScreen} options={{ tabBarButton: () => null }} />
-      <StudentTab.Screen name="StudentMessages" component={StudentMessagesScreen} options={{ tabBarButton: () => null }} />
+      <StudentTab.Screen name="StudentHome" component={StudentHomeScreen} />
+      <StudentTab.Screen name="StudentSearch" component={PlaceholderScreen} />
+      <StudentTab.Screen name="StudentSupport" component={PlaceholderScreen} />
+      <StudentTab.Screen name="StudentCommunity" component={PlaceholderScreen} />
+      <StudentTab.Screen name="StudentNotifications" component={PlaceholderScreen} />
+      <StudentTab.Screen name="StudentMessages" component={PlaceholderScreen} />
     </StudentTab.Navigator>
   );
 }
@@ -61,12 +59,12 @@ function FacultyTabNavigator() {
         unmountOnBlur: false,
       }}
     >
-      <FacultyTab.Screen name="FacultyHome" component={FacultyHomeScreen} options={{ tabBarButton: () => null }} />
-      <FacultyTab.Screen name="FacultySearch" component={FacultySearchScreen} options={{ tabBarButton: () => null }} />
-      <FacultyTab.Screen name="FacultySupport" component={FacultySupportScreen} options={{ tabBarButton: () => null }} />
-      <FacultyTab.Screen name="FacultyCommunity" component={FacultyCommunityScreen} options={{ tabBarButton: () => null }} />
-      <FacultyTab.Screen name="FacultyNotifications" component={FacultyNotificationsScreen} options={{ tabBarButton: () => null }} />
-      <FacultyTab.Screen name="FacultyMessages" component={FacultyMessagesScreen} options={{ tabBarButton: () => null }} />
+      <FacultyTab.Screen name="FacultyHome" component={FacultyHomeScreen} />
+      <FacultyTab.Screen name="FacultySearch" component={PlaceholderScreen} />
+      <FacultyTab.Screen name="FacultySupport" component={PlaceholderScreen} />
+      <FacultyTab.Screen name="FacultyCommunity" component={PlaceholderScreen} />
+      <FacultyTab.Screen name="FacultyNotifications" component={PlaceholderScreen} />
+      <FacultyTab.Screen name="FacultyMessages" component={PlaceholderScreen} />
     </FacultyTab.Navigator>
   );
 }
@@ -79,30 +77,56 @@ export default function AppNavigator() {
       }}
       initialRouteName="Welcome"
     >
+      {/* AUTHENTICATION FLOW */}
       <Stack.Screen name="Welcome" component={WelcomeScreen} />
       <Stack.Screen name="SignIn" component={SignInScreen} />
       <Stack.Screen name="RoleSelection" component={RoleSelectionScreen} />
       <Stack.Screen name="SignUp" component={SignUpScreen} />
+      
+      {/* MAIN APP - STUDENT */}
       <Stack.Screen name="StudentMain" component={StudentTabNavigator} />
+      
+      {/* MAIN APP - FACULTY */}
       <Stack.Screen name="FacultyMain" component={FacultyTabNavigator} />
       
-      {/* CREATE POST SCREENS */}
-      <Stack.Screen name="StudentCreatePost" component={StudentCreatePostScreen} />
-      <Stack.Screen name="FacultyCreatePost" component={FacultyCreatePostScreen} />
+      {/* CREATE POST SCREENS - These are outside the tab navigator */}
+      <Stack.Screen 
+        name="StudentCreatePost" 
+        component={StudentCreatePostScreen}
+        options={{
+          animation: 'slide_from_bottom',
+        }}
+      />
+      <Stack.Screen 
+        name="FacultyCreatePost" 
+        component={FacultyCreatePostScreen}
+        options={{
+          animation: 'slide_from_bottom',
+        }}
+      />
       
-      {/* PROFILE SCREENS WITH LEFT-TO-RIGHT ANIMATION */}
+      {/* PROFILE SCREENS */}
       <Stack.Screen 
         name="StudentProfile" 
         component={StudentProfileScreen}
         options={{
-          animation: 'slide_from_left',
+          animation: 'slide_from_right',
         }}
       />
       <Stack.Screen 
         name="FacultyProfile" 
         component={FacultyProfileScreen}
         options={{
-          animation: 'slide_from_left',
+          animation: 'slide_from_right',
+        }}
+      />
+      
+      {/* EDIT PROFILE SCREEN - STUDENT ONLY (for now) */}
+      <Stack.Screen 
+        name="EditProfile" 
+        component={EditProfileScreen}
+        options={{
+          animation: 'slide_from_right',
         }}
       />
     </Stack.Navigator>
