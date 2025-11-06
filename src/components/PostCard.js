@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Alert } from 'react-native';
 import { colors } from '../styles/colors';
-import { fonts } from '../styles/fonts';
+import { fonts } from '../styles/fonts';  
 import { supabase } from '../lib/supabase';
 import { UserContext } from '../contexts/UserContext';
 
@@ -22,39 +22,41 @@ const PostCard = ({ post, userRole = 'student', onInteraction }) => {
     }
   }, [user, post.id]);
 
+  // In your checkUserInteractions function, add error handling:
   const checkUserInteractions = async () => {
     if (!user) return;
     
     try {
       // Check if user liked this post
-      const { data: likeData } = await supabase
+      const { data: likeData, error: likeError } = await supabase
         .from('post_likes')
         .select('id')
         .eq('post_id', post.id)
         .eq('user_id', user.id)
         .single();
 
-      setIsLiked(!!likeData);
+      if (!likeError) setIsLiked(!!likeData);
 
       // Check if user reposted this post
-      const { data: repostData } = await supabase
+      const { data: repostData, error: repostError } = await supabase
         .from('reposts')
         .select('id')
         .eq('post_id', post.id)
         .eq('user_id', user.id)
         .single();
 
-      setIsReposted(!!repostData);
+      if (!repostError) setIsReposted(!!repostData);
 
       // Check if user bookmarked this post
-      const { data: bookmarkData } = await supabase
+      const { data: bookmarkData, error: bookmarkError } = await supabase
         .from('bookmarks')
         .select('id')
         .eq('post_id', post.id)
         .eq('user_id', user.id)
         .single();
 
-      setIsBookmarked(!!bookmarkData);
+      if (!bookmarkError) setIsBookmarked(!!bookmarkData);
+
     } catch (error) {
       console.log('Error checking interactions:', error);
     }

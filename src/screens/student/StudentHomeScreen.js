@@ -1,211 +1,48 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import { View, Text, StyleSheet, StatusBar, ScrollView, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
+import { useIsFocused } from '@react-navigation/native';
 import { colors } from '../../styles/colors';
 import { fonts } from '../../styles/fonts';
 import HeaderWithTabs from '../../components/HeaderWithTabs';
 import PostCard from '../../components/PostCard';
-import { supabase } from '../../lib/supabase';
+import { usePosts } from '../../hooks/usePost';
+import { UserContext } from '../../contexts/UserContext';
 
 export default function StudentHomeScreen({ navigation }) {
-  const [posts, setPosts] = useState([]);
-  const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState('forYou');
+  const { user } = useContext(UserContext);
+  const isFocused = useIsFocused();
+  const lastRefreshTime = useRef(0);
+  const refreshCooldown = 5000; // 5 seconds cooldown between refreshes
+  
+  const { posts, refreshing, onRefresh, refetchPosts } = usePosts(activeTab, user?.id);
 
   const handleFilterPress = () => {
     console.log('Filter pressed');
   };
 
-  const fetchPosts = async () => {
-    try {
-      console.log('Fetching posts...');
-      const { data, error } = await supabase
-        .from('posts')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.log('Error fetching posts:', error);
-        return;
+  // MANUAL FOCUS MANAGEMENT - No more useFocusEffect
+  useEffect(() => {
+    if (isFocused) {
+      const now = Date.now();
+      // Only refresh if it's been more than 5 seconds since last refresh
+      if (now - lastRefreshTime.current > refreshCooldown) {
+        console.log('Screen focused - refreshing posts after cooldown');
+        lastRefreshTime.current = now;
+        refetchPosts();
+      } else {
+        console.log('Screen focused - skipping refresh (in cooldown)');
       }
-
-      console.log('Fetched posts with counts:', data?.length || 0);
-      setPosts(data || []);
-    } catch (error) {
-      console.log('Error:', error);
     }
-  };
+  }, [isFocused, refetchPosts]);
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await fetchPosts();
-    setRefreshing(false);
-  };
-
+  // Log mount once
   useEffect(() => {
-    fetchPosts();
-  }, []);
-
-  // AUTO-REFRESH WHEN RETURNING FROM CREATEPOST SCREEN
-  useFocusEffect(
-    useCallback(() => {
-      console.log('Home screen focused - refreshing posts');
-      fetchPosts();
-    }, [])
-  );
-
-  // ENHANCED REAL-TIME SUBSCRIPTIONS FOR ALL INTERACTIONS
-  useEffect(() => {
-    console.log('Setting up real-time subscriptions for interactions...');
-
-    // Channel for new posts
-    const postsChannel = supabase
-      .channel('posts_channel')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'posts',
-        },
-        (payload) => {
-          console.log('New post received in real-time:', payload);
-          setPosts(currentPosts => [payload.new, ...currentPosts]);
-        }
-      )
-      .subscribe((status) => {
-        console.log('Posts real-time subscription status:', status);
-      });
-
-    // Channel for post updates (count changes)
-    const postsUpdateChannel = supabase
-      .channel('posts_update_channel')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'posts',
-        },
-        (payload) => {
-          console.log('Post updated in real-time:', payload);
-          setPosts(currentPosts => 
-            currentPosts.map(post => 
-              post.id === payload.new.id ? { ...post, ...payload.new } : post
-            )
-          );
-        }
-      )
-      .subscribe((status) => {
-        console.log('Posts update subscription status:', status);
-      });
-
-    // Channel for likes
-    const likesChannel = supabase
-      .channel('likes_channel')
-      .on(
-        'postgres_changes',
-        {
-          event: '*', // Listen to INSERT and DELETE
-          schema: 'public',
-          table: 'post_likes',
-        },
-        async (payload) => {
-          console.log('Like interaction detected:', payload);
-          // Refresh the specific post to get updated counts
-          const { data: updatedPost } = await supabase
-            .from('posts')
-            .select('*')
-            .eq('id', payload.new?.post_id || payload.old?.post_id)
-            .single();
-          
-          if (updatedPost) {
-            setPosts(currentPosts => 
-              currentPosts.map(post => 
-                post.id === updatedPost.id ? updatedPost : post
-              )
-            );
-          }
-        }
-      )
-      .subscribe((status) => {
-        console.log('Likes subscription status:', status);
-      });
-
-    // Channel for reposts
-    const repostsChannel = supabase
-      .channel('reposts_channel')
-      .on(
-        'postgres_changes',
-        {
-          event: '*', // Listen to INSERT and DELETE
-          schema: 'public',
-          table: 'reposts',
-        },
-        async (payload) => {
-          console.log('Repost interaction detected:', payload);
-          // Refresh the specific post to get updated counts
-          const { data: updatedPost } = await supabase
-            .from('posts')
-            .select('*')
-            .eq('id', payload.new?.post_id || payload.old?.post_id)
-            .single();
-          
-          if (updatedPost) {
-            setPosts(currentPosts => 
-              currentPosts.map(post => 
-                post.id === updatedPost.id ? updatedPost : post
-              )
-            );
-          }
-        }
-      )
-      .subscribe((status) => {
-        console.log('Reposts subscription status:', status);
-      });
-
-    // Channel for bookmarks
-    const bookmarksChannel = supabase
-      .channel('bookmarks_channel')
-      .on(
-        'postgres_changes',
-        {
-          event: '*', // Listen to INSERT and DELETE
-          schema: 'public',
-          table: 'bookmarks',
-        },
-        async (payload) => {
-          console.log('Bookmark interaction detected:', payload);
-          // Refresh the specific post to get updated counts
-          const { data: updatedPost } = await supabase
-            .from('posts')
-            .select('*')
-            .eq('id', payload.new?.post_id || payload.old?.post_id)
-            .single();
-          
-          if (updatedPost) {
-            setPosts(currentPosts => 
-              currentPosts.map(post => 
-                post.id === updatedPost.id ? updatedPost : post
-              )
-            );
-          }
-        }
-      )
-      .subscribe((status) => {
-        console.log('Bookmarks subscription status:', status);
-      });
-
-    return () => {
-      console.log('Unsubscribing from all real-time channels');
-      supabase.removeChannel(postsChannel);
-      supabase.removeChannel(postsUpdateChannel);
-      supabase.removeChannel(likesChannel);
-      supabase.removeChannel(repostsChannel);
-      supabase.removeChannel(bookmarksChannel);
-    };
-  }, []);
+    console.log('StudentHomeScreen mounted with user:', user?.id);
+    // Initial load
+    refetchPosts();
+  }, [user?.id]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -225,14 +62,21 @@ export default function StudentHomeScreen({ navigation }) {
             refreshing={refreshing}
             onRefresh={onRefresh}
             tintColor={colors.white}
+            colors={[colors.white]}
           />
         }
+        showsVerticalScrollIndicator={false}
       >
         {posts.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyTitle}>No posts yet</Text>
+            <Text style={styles.emptyTitle}>
+              {activeTab === 'forYou' ? 'No posts yet' : 'No posts from followed users'}
+            </Text>
             <Text style={styles.emptySubtitle}>
-              Be the first to share something with the community!
+              {activeTab === 'forYou' 
+                ? 'Be the first to share something with the community!'
+                : 'Follow some users to see their posts here!'
+              }
             </Text>
           </View>
         ) : (
@@ -241,13 +85,17 @@ export default function StudentHomeScreen({ navigation }) {
               key={post.id} 
               post={post} 
               userRole="student"
-                onInteraction={() => {
-                // Force refresh posts after interaction
-                setTimeout(() => fetchPosts(), 500);
+              currentUserId={user?.id}
+              onInteraction={() => {
+                // Don't refresh immediately on interaction
+                console.log('Post interaction - not refreshing');
               }}
             />
           ))
         )}
+        
+        {/* Add some bottom padding */}
+        <View style={styles.bottomPadding} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -267,17 +115,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 60,
+    paddingHorizontal: 40,
   },
   emptyTitle: {
     fontSize: 20,
     fontFamily: fonts.medium,
     color: colors.white,
     marginBottom: 8,
+    textAlign: 'center',
   },
   emptySubtitle: {
     fontSize: 14,
     fontFamily: fonts.normal,
     color: 'rgba(255, 255, 255, 0.6)',
     textAlign: 'center',
+    lineHeight: 20,
+  },
+  bottomPadding: {
+    height: 20,
   },
 });
