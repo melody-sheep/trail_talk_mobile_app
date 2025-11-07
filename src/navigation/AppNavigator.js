@@ -18,6 +18,14 @@ import FacultyProfileScreen from '../screens/faculty/ProfileScreen';
 // Import the new EditProfileScreen
 import EditProfileScreen from '../screens/student/EditProfileScreen';
 
+// Import SearchScreen
+import StudentSearchScreen from '../screens/student/SearchScreen';
+import FacultySearchScreen from '../screens/student/SearchScreen'; // Using same for now
+
+// Import SupportScreen
+import StudentSupportScreen from '../screens/student/SupportScreen';
+import FacultySupportScreen from '../screens/faculty/SupportScreen';
+
 import BottomNavigation from '../components/BottomNavigation';
 
 const Stack = createNativeStackNavigator();
@@ -41,8 +49,8 @@ function StudentTabNavigator() {
       }}
     >
       <StudentTab.Screen name="StudentHome" component={StudentHomeScreen} />
-      <StudentTab.Screen name="StudentSearch" component={PlaceholderScreen} />
-      <StudentTab.Screen name="StudentSupport" component={PlaceholderScreen} />
+      <StudentTab.Screen name="StudentSearch" component={StudentSearchScreen} />
+      <StudentTab.Screen name="StudentSupport" component={StudentSupportScreen} />
       <StudentTab.Screen name="StudentCommunity" component={PlaceholderScreen} />
       <StudentTab.Screen name="StudentNotifications" component={PlaceholderScreen} />
       <StudentTab.Screen name="StudentMessages" component={PlaceholderScreen} />
@@ -60,8 +68,8 @@ function FacultyTabNavigator() {
       }}
     >
       <FacultyTab.Screen name="FacultyHome" component={FacultyHomeScreen} />
-      <FacultyTab.Screen name="FacultySearch" component={PlaceholderScreen} />
-      <FacultyTab.Screen name="FacultySupport" component={PlaceholderScreen} />
+      <FacultyTab.Screen name="FacultySearch" component={FacultySearchScreen} />
+      <FacultyTab.Screen name="FacultySupport" component={FacultySupportScreen} />
       <FacultyTab.Screen name="FacultyCommunity" component={PlaceholderScreen} />
       <FacultyTab.Screen name="FacultyNotifications" component={PlaceholderScreen} />
       <FacultyTab.Screen name="FacultyMessages" component={PlaceholderScreen} />
