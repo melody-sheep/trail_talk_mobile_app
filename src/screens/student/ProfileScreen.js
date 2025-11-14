@@ -693,13 +693,13 @@ const styles = StyleSheet.create({
   },
   followersItem: {
     marginLeft: 'auto',
-    marginRight: 125,
+    marginRight: 128,
   },
   statNumber: {
     fontSize: 16,
     fontFamily: fonts.bold,
     color: colors.white,
-    marginRight: 0,
+    marginRight: 4,
   },
   statLabel: {
     fontSize: 14,
