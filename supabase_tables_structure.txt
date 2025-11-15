@@ -1,0 +1,812 @@
+[
+  {
+    "table_name": "bookmarks",
+    "column_name": "id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "column_default": "gen_random_uuid()",
+    "is_primary_key": "YES",
+    "foreign_key": null
+  },
+  {
+    "table_name": "bookmarks",
+    "column_name": "post_id",
+    "data_type": "uuid",
+    "is_nullable": "YES",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": "posts.id"
+  },
+  {
+    "table_name": "bookmarks",
+    "column_name": "user_id",
+    "data_type": "uuid",
+    "is_nullable": "YES",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "bookmarks",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "YES",
+    "column_default": "timezone('utc'::text, now())",
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "communities",
+    "column_name": "id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "column_default": "gen_random_uuid()",
+    "is_primary_key": "YES",
+    "foreign_key": null
+  },
+  {
+    "table_name": "communities",
+    "column_name": "name",
+    "data_type": "text",
+    "is_nullable": "NO",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "communities",
+    "column_name": "description",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "communities",
+    "column_name": "category",
+    "data_type": "text",
+    "is_nullable": "NO",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "communities",
+    "column_name": "privacy",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "column_default": "'public'::text",
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "communities",
+    "column_name": "icon",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "column_default": "'people-outline'::text",
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "communities",
+    "column_name": "member_count",
+    "data_type": "integer",
+    "is_nullable": "YES",
+    "column_default": "1",
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "communities",
+    "column_name": "created_by",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": "profiles.id"
+  },
+  {
+    "table_name": "communities",
+    "column_name": "is_featured",
+    "data_type": "boolean",
+    "is_nullable": "YES",
+    "column_default": "false",
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "communities",
+    "column_name": "is_official",
+    "data_type": "boolean",
+    "is_nullable": "YES",
+    "column_default": "false",
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "communities",
+    "column_name": "rules",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "communities",
+    "column_name": "max_members",
+    "data_type": "integer",
+    "is_nullable": "YES",
+    "column_default": "50",
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "communities",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "YES",
+    "column_default": "now()",
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "communities",
+    "column_name": "updated_at",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "YES",
+    "column_default": "now()",
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "community_members",
+    "column_name": "id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "column_default": "gen_random_uuid()",
+    "is_primary_key": "YES",
+    "foreign_key": null
+  },
+  {
+    "table_name": "community_members",
+    "column_name": "community_id",
+    "data_type": "uuid",
+    "is_nullable": "YES",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": "communities.id"
+  },
+  {
+    "table_name": "community_members",
+    "column_name": "user_id",
+    "data_type": "uuid",
+    "is_nullable": "YES",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": "profiles.id"
+  },
+  {
+    "table_name": "community_members",
+    "column_name": "role",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "column_default": "'member'::text",
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "community_members",
+    "column_name": "joined_at",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "YES",
+    "column_default": "now()",
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "community_post_likes",
+    "column_name": "id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "column_default": "gen_random_uuid()",
+    "is_primary_key": "YES",
+    "foreign_key": null
+  },
+  {
+    "table_name": "community_post_likes",
+    "column_name": "post_id",
+    "data_type": "uuid",
+    "is_nullable": "YES",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": "community_posts.id"
+  },
+  {
+    "table_name": "community_post_likes",
+    "column_name": "user_id",
+    "data_type": "uuid",
+    "is_nullable": "YES",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": "profiles.id"
+  },
+  {
+    "table_name": "community_post_likes",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "YES",
+    "column_default": "now()",
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "community_posts",
+    "column_name": "id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "column_default": "gen_random_uuid()",
+    "is_primary_key": "YES",
+    "foreign_key": null
+  },
+  {
+    "table_name": "community_posts",
+    "column_name": "community_id",
+    "data_type": "uuid",
+    "is_nullable": "YES",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": "communities.id"
+  },
+  {
+    "table_name": "community_posts",
+    "column_name": "author_id",
+    "data_type": "uuid",
+    "is_nullable": "YES",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": "profiles.id"
+  },
+  {
+    "table_name": "community_posts",
+    "column_name": "anonymous_name",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "column_default": "'Anonymous User'::text",
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "community_posts",
+    "column_name": "content",
+    "data_type": "text",
+    "is_nullable": "NO",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "community_posts",
+    "column_name": "like_count",
+    "data_type": "integer",
+    "is_nullable": "YES",
+    "column_default": "0",
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "community_posts",
+    "column_name": "comment_count",
+    "data_type": "integer",
+    "is_nullable": "YES",
+    "column_default": "0",
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "community_posts",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "YES",
+    "column_default": "now()",
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "community_posts",
+    "column_name": "updated_at",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "YES",
+    "column_default": "now()",
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "faculty",
+    "column_name": "id",
+    "data_type": "uuid",
+    "is_nullable": "YES",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "faculty",
+    "column_name": "role",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "faculty",
+    "column_name": "student_id",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "faculty",
+    "column_name": "school_email",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "faculty",
+    "column_name": "age",
+    "data_type": "integer",
+    "is_nullable": "YES",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "faculty",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "YES",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "faculty",
+    "column_name": "updated_at",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "YES",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "faculty",
+    "column_name": "user_type",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "follows",
+    "column_name": "id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "column_default": "gen_random_uuid()",
+    "is_primary_key": "YES",
+    "foreign_key": null
+  },
+  {
+    "table_name": "follows",
+    "column_name": "follower_user_id",
+    "data_type": "uuid",
+    "is_nullable": "YES",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": "profiles.id"
+  },
+  {
+    "table_name": "follows",
+    "column_name": "following_user_id",
+    "data_type": "uuid",
+    "is_nullable": "YES",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": "profiles.id"
+  },
+  {
+    "table_name": "follows",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "NO",
+    "column_default": "timezone('utc'::text, now())",
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "post_likes",
+    "column_name": "id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "column_default": "gen_random_uuid()",
+    "is_primary_key": "YES",
+    "foreign_key": null
+  },
+  {
+    "table_name": "post_likes",
+    "column_name": "post_id",
+    "data_type": "uuid",
+    "is_nullable": "YES",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": "posts.id"
+  },
+  {
+    "table_name": "post_likes",
+    "column_name": "user_id",
+    "data_type": "uuid",
+    "is_nullable": "YES",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "post_likes",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "YES",
+    "column_default": "timezone('utc'::text, now())",
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "posts",
+    "column_name": "id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "column_default": "gen_random_uuid()",
+    "is_primary_key": "YES",
+    "foreign_key": null
+  },
+  {
+    "table_name": "posts",
+    "column_name": "content",
+    "data_type": "text",
+    "is_nullable": "NO",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "posts",
+    "column_name": "category",
+    "data_type": "text",
+    "is_nullable": "NO",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "posts",
+    "column_name": "author_id",
+    "data_type": "uuid",
+    "is_nullable": "YES",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "posts",
+    "column_name": "author_initials",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "posts",
+    "column_name": "is_anonymous",
+    "data_type": "boolean",
+    "is_nullable": "YES",
+    "column_default": "true",
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "posts",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "YES",
+    "column_default": "now()",
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "posts",
+    "column_name": "likes_count",
+    "data_type": "integer",
+    "is_nullable": "YES",
+    "column_default": "0",
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "posts",
+    "column_name": "comments_count",
+    "data_type": "integer",
+    "is_nullable": "YES",
+    "column_default": "0",
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "posts",
+    "column_name": "reposts_count",
+    "data_type": "integer",
+    "is_nullable": "YES",
+    "column_default": "0",
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "posts",
+    "column_name": "bookmarks_count",
+    "data_type": "integer",
+    "is_nullable": "YES",
+    "column_default": "0",
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "profiles",
+    "column_name": "id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "column_default": null,
+    "is_primary_key": "YES",
+    "foreign_key": null
+  },
+  {
+    "table_name": "profiles",
+    "column_name": "role",
+    "data_type": "text",
+    "is_nullable": "NO",
+    "column_default": "'student'::text",
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "profiles",
+    "column_name": "student_id",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "profiles",
+    "column_name": "school_email",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "profiles",
+    "column_name": "age",
+    "data_type": "integer",
+    "is_nullable": "YES",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "profiles",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "YES",
+    "column_default": "now()",
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "profiles",
+    "column_name": "updated_at",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "YES",
+    "column_default": "now()",
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "profiles",
+    "column_name": "user_type",
+    "data_type": "text",
+    "is_nullable": "NO",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "profiles",
+    "column_name": "username",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "profiles",
+    "column_name": "avatar_url",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "profiles",
+    "column_name": "department",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "profiles",
+    "column_name": "display_name",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "profiles",
+    "column_name": "cover_url",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "profiles",
+    "column_name": "post_anonymously",
+    "data_type": "boolean",
+    "is_nullable": "YES",
+    "column_default": "true",
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "profiles",
+    "column_name": "birthday",
+    "data_type": "date",
+    "is_nullable": "YES",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "reposts",
+    "column_name": "id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "column_default": "gen_random_uuid()",
+    "is_primary_key": "YES",
+    "foreign_key": null
+  },
+  {
+    "table_name": "reposts",
+    "column_name": "post_id",
+    "data_type": "uuid",
+    "is_nullable": "YES",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": "posts.id"
+  },
+  {
+    "table_name": "reposts",
+    "column_name": "user_id",
+    "data_type": "uuid",
+    "is_nullable": "YES",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "reposts",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "YES",
+    "column_default": "timezone('utc'::text, now())",
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "students",
+    "column_name": "id",
+    "data_type": "uuid",
+    "is_nullable": "YES",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "students",
+    "column_name": "role",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "students",
+    "column_name": "student_id",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "students",
+    "column_name": "school_email",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "students",
+    "column_name": "age",
+    "data_type": "integer",
+    "is_nullable": "YES",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "students",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "YES",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "students",
+    "column_name": "updated_at",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "YES",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": null
+  },
+  {
+    "table_name": "students",
+    "column_name": "user_type",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "column_default": null,
+    "is_primary_key": "NO",
+    "foreign_key": null
+  }
+]

@@ -8,10 +8,10 @@ import {
   ImageBackground,
   TextInput,
   TouchableOpacity,
-  Image,
   ScrollView,
   FlatList,
-  Animated
+  Animated,
+  Linking
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,6 +23,7 @@ export default function SupportScreen({ navigation }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
   const [expandedItems, setExpandedItems] = useState({});
+  const [showFeatured, setShowFeatured] = useState(true); // Dropdown state
   const { user } = useContext(UserContext);
   
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -30,26 +31,26 @@ export default function SupportScreen({ navigation }) {
 
   // Calculate header animation values
   const headerHeight = scrollY.interpolate({
-    inputRange: [0, 100],
-    outputRange: [100, 60],
+    inputRange: [0, 120],
+    outputRange: [160, 80],
     extrapolate: 'clamp',
   });
 
   const headerTitleOpacity = scrollY.interpolate({
-    inputRange: [0, 60],
+    inputRange: [0, 80],
     outputRange: [1, 0],
     extrapolate: 'clamp',
   });
 
   const collapsedTitleOpacity = scrollY.interpolate({
-    inputRange: [0, 60, 100],
+    inputRange: [0, 80, 120],
     outputRange: [0, 0, 1],
     extrapolate: 'clamp',
   });
 
   const searchSectionTranslateY = scrollY.interpolate({
-    inputRange: [0, 120],
-    outputRange: [0, -40],
+    inputRange: [0, 140],
+    outputRange: [0, -60],
     extrapolate: 'clamp',
   });
 
@@ -57,99 +58,71 @@ export default function SupportScreen({ navigation }) {
     { id: 'all', label: 'All', icon: 'grid-outline' },
     { id: 'faq', label: 'FAQ', icon: 'help-circle-outline' },
     { id: 'reporting', label: 'Reporting', icon: 'flag-outline' },
-    { id: 'communities', label: 'Communities', icon: 'people-outline' },
     { id: 'resources', label: 'Resources', icon: 'business-outline' },
     { id: 'volunteers', label: 'Volunteers', icon: 'heart-outline' }
   ];
 
-  // Mock data for support content
-  const supportContent = [
-    // FAQ Items
+  // Mock data for support content - USTP Specific
+  const [supportContent, setSupportContent] = useState([
+    // FAQ Items - READ ONLY
     {
       id: 'faq1',
       category: 'faq',
       title: 'How to Report Inappropriate Content',
       description: 'Learn how to flag posts or comments that violate community guidelines',
-      content: 'To report a post:\n1. Tap the three dots on the post\n2. Select "Report Post"\n3. Choose the reason for reporting\n4. Submit your report\n\nOur moderation team will review within 24 hours.',
+      content: 'To report a post:\n1. Tap the three dots on the post\n2. Select "Report Post"\n3. Choose the reason for reporting\n4. Submit your report\n\nOur USTP moderation team will review within 24 hours.',
       icon: 'flag',
       iconColor: '#FF6B6B',
-      emergency: false
+      emergency: false,
+      lastUpdated: '2024-01-15',
+      updatedBy: 'USTP Admin',
+      editable: false,
+      isOfficial: true // Mark as official content
     },
     {
       id: 'faq2',
       category: 'faq', 
-      title: 'How to Join Support Groups',
-      description: 'Find and join campus support communities',
-      content: 'Available Support Groups:\n• Mental Health Support\n• Academic Success\n• International Students\n• LGBTQ+ Community\n• First-Generation Students\n\nTap "Join Community" below to explore.',
-      icon: 'people',
+      title: 'How to Find Support Groups',
+      description: 'Discover and explore campus support communities',
+      content: 'Support Groups Available:\n• Mental Health Support\n• Academic Success\n• International Students\n• LGBTQ+ Community\n• First-Generation Students\n\nTap "Find Support" below to explore.',
+      icon: 'search',
       iconColor: '#4ECDC4',
-      emergency: false
-    },
-    {
-      id: 'faq3',
-      category: 'faq',
-      title: 'Privacy and Anonymity',
-      description: 'Understanding how your data is protected',
-      content: 'Your privacy matters:\n• Posts are anonymous by default\n• Personal information is encrypted\n• You control what you share\n• Data is never sold to third parties',
-      icon: 'lock-closed',
-      iconColor: '#45B7D1',
-      emergency: false
+      emergency: false,
+      lastUpdated: '2024-01-10',
+      updatedBy: 'Counseling Center',
+      editable: false,
+      isOfficial: true
     },
 
-    // Reporting Items
+    // Reporting Items - READ ONLY
     {
       id: 'report1',
       category: 'reporting',
       title: 'Emergency Reporting',
       description: 'Immediate assistance for urgent situations',
-      content: 'For immediate danger:\n• Campus Security: (555) 123-4567\n• Emergency Services: 911\n• Crisis Hotline: 988\n\nAvailable 24/7 for urgent matters.',
+      content: 'For immediate danger:\n• USTP Campus Security: (088) 123-4567\n• Emergency Services: 911\n• Crisis Hotline: 988\n\nAvailable 24/7 for urgent matters.',
       icon: 'warning',
       iconColor: '#FF6B6B',
-      emergency: true
-    },
-    {
-      id: 'report2',
-      category: 'reporting',
-      title: 'Post Reporting Steps',
-      description: 'Step-by-step guide to reporting content',
-      content: 'Reporting Process:\n1. Identify the concerning content\n2. Use the report feature\n3. Provide specific details\n4. Our team investigates\n5. You receive updates on the outcome',
-      icon: 'document-text',
-      iconColor: '#96CEB4',
-      emergency: false
+      emergency: true,
+      lastUpdated: '2024-01-12',
+      updatedBy: 'Campus Security',
+      editable: false,
+      isOfficial: true
     },
 
-    // Community Items
-    {
-      id: 'community1',
-      category: 'communities',
-      title: 'Mental Health Support Group',
-      description: 'Safe space for mental health discussions',
-      content: 'This group provides:\n• Peer support sessions\n• Professional guidance\n• Resource sharing\n• Weekly meetings\n\nMembers: 150+ students',
-      icon: 'heart',
-      iconColor: '#FF6B6B',
-      emergency: false
-    },
-    {
-      id: 'community2',
-      category: 'communities',
-      title: 'Academic Success Community',
-      description: 'Study groups and academic resources',
-      content: 'Features include:\n• Study buddy matching\n• Tutoring resources\n• Time management tips\n• Exam preparation help',
-      icon: 'school',
-      iconColor: '#4CAF50',
-      emergency: false
-    },
-
-    // Resource Items
+    // Resource Items - EDITABLE by verified users
     {
       id: 'resource1',
       category: 'resources',
-      title: 'Campus Counseling Services',
+      title: 'USTP Counseling Services',
       description: 'Professional mental health support',
-      content: 'Services Offered:\n• Individual therapy\n• Group sessions\n• Crisis intervention\n• Referrals to specialists\n\nLocation: Student Wellness Center, Room 201',
+      content: 'Services Offered:\n• Individual therapy\n• Group sessions\n• Crisis intervention\n• Referrals to specialists\n\nLocation: USTP Student Wellness Center',
       icon: 'medical',
       iconColor: '#45B7D1',
-      emergency: false
+      emergency: false,
+      lastUpdated: '2024-01-14',
+      updatedBy: 'Counseling Center',
+      editable: true
     },
     {
       id: 'resource2',
@@ -159,66 +132,69 @@ export default function SupportScreen({ navigation }) {
       content: 'Available Resources:\n• Meditation guides\n• Stress management\n• Sleep improvement\n• Mindfulness exercises\n• Digital wellness tools',
       icon: 'build',
       iconColor: '#FFA726',
-      emergency: false
+      emergency: false,
+      lastUpdated: '2024-01-07',
+      updatedBy: 'Wellness Committee',
+      editable: true
     },
 
-    // Volunteer Items
+    // Volunteer Items - EDITABLE by verified users
     {
       id: 'volunteer1',
       category: 'volunteers',
       title: 'Peer Support Volunteers',
-      description: 'Trained student volunteers ready to help',
+      description: 'Trained USTP student volunteers ready to help',
       content: 'Our volunteers:\n• Complete 20-hour training\n• Maintain confidentiality\n• Provide empathetic listening\n• Connect you to resources\n\nAvailable: Mon-Fri, 9AM-5PM',
       icon: 'hand-left',
       iconColor: '#4ECDC4',
-      emergency: false
-    },
-    {
-      id: 'volunteer2',
-      category: 'volunteers',
-      title: 'Schedule a Chat',
-      description: 'Book time with a support volunteer',
-      content: 'How to connect:\n1. Browse available volunteers\n2. Select a time slot\n3. Choose video or text chat\n4. Receive confirmation\n\nAll chats are confidential.',
-      icon: 'chatbubble-ellipses',
-      iconColor: '#45B7D1',
-      emergency: false
+      emergency: false,
+      lastUpdated: '2024-01-11',
+      updatedBy: 'Student Affairs',
+      editable: true
     }
-  ];
+  ]);
 
   // Quick action buttons
   const quickActions = [
     { 
       id: 'report', 
-      label: 'Report Post', 
+      label: 'Report Content', 
       icon: 'flag-outline', 
-      color: '#FF6B6B' 
+      color: '#FF6B6B',
+      action: () => navigation.navigate('ReportFlow')
     },
     { 
-      id: 'community', 
-      label: 'Join Community', 
-      icon: 'people-outline', 
-      color: '#4ECDC4' 
+      id: 'find-support', 
+      label: 'Find Support', 
+      icon: 'search-outline', 
+      color: '#4ECDC4',
+      action: () => navigation.navigate('Communities', { 
+        filter: 'support',
+        source: 'support-page'
+      })
     },
     { 
-      id: 'talk', 
-      label: 'Talk Now', 
-      icon: 'chatbubble-ellipses-outline', 
-      color: '#45B7D1' 
+      id: 'create-community', 
+      label: 'Create Group', 
+      icon: 'add-circle-outline', 
+      color: '#FFA726',
+      action: () => navigation.navigate('CreateCommunity')
     },
     { 
-      id: 'resources', 
-      label: 'Resources', 
-      icon: 'book-outline', 
-      color: '#96CEB4' 
+      id: 'emergency', 
+      label: 'Emergency', 
+      icon: 'warning-outline', 
+      color: '#FF6B6B',
+      action: () => scrollToEmergency()
     }
   ];
 
-  // Emergency contacts
+  // USTP Specific Emergency contacts
   const emergencyContacts = [
     { 
       id: 'security', 
-      name: 'Campus Security', 
-      number: '(555) 123-4567', 
+      name: 'USTP Campus Security', 
+      number: '(088) 123-4567', 
       available: '24/7',
       icon: 'shield-checkmark' 
     },
@@ -231,12 +207,27 @@ export default function SupportScreen({ navigation }) {
     },
     { 
       id: 'counseling', 
-      name: 'Counseling Services', 
-      number: '(555) 123-4568', 
-      available: 'Mon-Fri 9AM-5PM',
+      name: 'USTP Counseling', 
+      number: '(088) 123-4568', 
+      available: 'Mon-Fri 8AM-5PM',
       icon: 'medical' 
     }
   ];
+
+  // Community Creation Data
+  const userCommunityStats = {
+    createdCommunities: user?.createdCommunities || 0,
+    maxFreeCommunities: 3,
+    subscription: user?.subscription || 'free',
+    isVerifiedCreator: user?.isVerifiedCreator || false
+  };
+
+  // Enhanced permission checking
+  const canEditSupport = user?.role === 'faculty' || user?.organization_role === 'president' || user?.organization_role === 'officer';
+  
+  const canEditItem = (item) => {
+    return canEditSupport && item.editable;
+  };
 
   const filteredContent = supportContent.filter(item => {
     if (activeCategory === 'all') return true;
@@ -255,9 +246,210 @@ export default function SupportScreen({ navigation }) {
   };
 
   const handleQuickAction = (actionId) => {
-    console.log('Quick action:', actionId);
-    // Navigate to appropriate screen based on action
+    const action = quickActions.find(a => a.id === actionId);
+    if (action && action.action) {
+      action.action();
+    }
   };
+
+  const handleCall = (phoneNumber) => {
+    Linking.openURL(`tel:${phoneNumber}`);
+  };
+
+  const scrollToEmergency = () => {
+    scrollViewRef.current?.scrollToEnd({ animated: true });
+  };
+
+  const handleEditSupport = () => {
+    navigation.navigate('EditSupportContent', { 
+      supportContent, 
+      onSave: (updatedContent) => setSupportContent(updatedContent) 
+    });
+  };
+
+  const handleEditItem = (itemId) => {
+    const item = supportContent.find(item => item.id === itemId);
+    if (item && canEditItem(item)) {
+      navigation.navigate('EditSupportContent', {
+        mode: 'edit',
+        item: item,
+        onSave: (updatedItem) => {
+          setSupportContent(prev => 
+            prev.map(item => item.id === itemId ? updatedItem : item)
+          );
+        }
+      });
+    }
+  };
+
+  // ENHANCED Professional Badge Component with Shield Badge
+  const ProfessionalBadge = ({ type, size = 'medium' }) => {
+    const badgeConfig = {
+      verified: {
+        icon: 'shield-checkmark',
+        color: '#1877F2',
+        label: 'Verified',
+        bgColor: 'rgba(24, 119, 242, 0.1)',
+        borderColor: '#1877F2'
+      },
+      official: {
+        icon: 'shield-checkmark',
+        color: '#4CAF50',
+        label: 'Official',
+        bgColor: 'rgba(76, 175, 80, 0.1)',
+        borderColor: '#4CAF50'
+      },
+      featured: {
+        icon: 'star',
+        color: '#FFD700',
+        label: 'Featured',
+        bgColor: 'rgba(255, 215, 0, 0.1)',
+        borderColor: '#FFD700'
+      },
+      emergency: {
+        icon: 'warning',
+        color: '#FF6B6B',
+        label: 'Emergency',
+        bgColor: 'rgba(255, 107, 107, 0.1)',
+        borderColor: '#FF6B6B'
+      }
+    };
+
+    const config = badgeConfig[type];
+    const isSmall = size === 'small';
+    const iconSize = isSmall ? 14 : 16;
+    const fontSize = isSmall ? 10 : 12;
+    const padding = isSmall ? 6 : 8;
+
+    return (
+      <View style={[
+        styles.badgeContainer,
+        { 
+          backgroundColor: config.bgColor,
+          borderColor: config.borderColor,
+          paddingHorizontal: padding,
+          paddingVertical: padding - 2,
+          borderRadius: 8
+        }
+      ]}>
+        <Ionicons name={config.icon} size={iconSize} color={config.color} />
+        <Text style={[
+          styles.badgeText, 
+          { 
+            color: config.color, 
+            fontSize: fontSize,
+            marginLeft: 4
+          }
+        ]}>
+          {config.label}
+        </Text>
+      </View>
+    );
+  };
+
+  // ENHANCED CommunityCreationSection with bigger icons and better badges
+  const CommunityCreationSection = () => (
+    <View style={styles.creationSection}>
+      {/* Header with Dropdown Button */}
+      <TouchableOpacity 
+        style={styles.creationHeader}
+        onPress={() => setShowFeatured(!showFeatured)}
+        activeOpacity={0.7}
+      >
+        <View style={styles.creationHeaderLeft}>
+          <Ionicons name="rocket-outline" size={28} color="#4ECDC4" />
+          <View style={styles.creationTitleContainer}>
+            <Text style={styles.creationTitle}>Start Your Community</Text>
+            <Text style={styles.creationSubtitle}>
+              {userCommunityStats.createdCommunities}/{userCommunityStats.maxFreeCommunities} free communities used
+            </Text>
+          </View>
+        </View>
+        <View style={styles.creationHeaderRight}>
+          <ProfessionalBadge type="featured" size="medium" />
+          <Ionicons 
+            name={showFeatured ? 'chevron-up' : 'chevron-down'} 
+            size={20} 
+            color="rgba(255, 255, 255, 0.6)" 
+            style={styles.dropdownIcon}
+          />
+        </View>
+      </TouchableOpacity>
+
+      {/* Content that shows/hides with dropdown */}
+      {showFeatured && (
+        <View style={styles.creationContent}>
+          {/* Free Tier Card */}
+          <View style={styles.tierCard}>
+            <View style={styles.tierHeader}>
+              <View style={styles.tierTitleContainer}>
+                <Text style={styles.tierName}>Free Plan</Text>
+                <Text style={styles.tierDescription}>
+                  Perfect for student clubs and study groups
+                </Text>
+              </View>
+              <View style={[
+                styles.communityCount,
+                userCommunityStats.createdCommunities >= userCommunityStats.maxFreeCommunities && styles.communityCountFull
+              ]}>
+                <Text style={styles.countText}>
+                  {userCommunityStats.createdCommunities}/{userCommunityStats.maxFreeCommunities}
+                </Text>
+              </View>
+            </View>
+            
+            <View style={styles.featuresList}>
+              <Text style={styles.featureItem}>• Create up to 3 communities</Text>
+              <Text style={styles.featureItem}>• Basic community features</Text>
+              <Text style={styles.featureItem}>• Up to 50 members each</Text>
+            </View>
+            
+            <TouchableOpacity 
+              style={[
+                styles.createButton,
+                userCommunityStats.createdCommunities >= userCommunityStats.maxFreeCommunities && styles.disabledButton
+              ]}
+              onPress={() => navigation.navigate('CreateCommunity', { tier: 'free' })}
+              disabled={userCommunityStats.createdCommunities >= userCommunityStats.maxFreeCommunities}
+            >
+              <Text style={styles.createButtonText}>
+                {userCommunityStats.createdCommunities >= userCommunityStats.maxFreeCommunities ? 'Free Limit Reached' : 'Create Free Community'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Premium Tier Card with Shield Badge */}
+          <View style={[styles.tierCard, styles.premiumCard]}>
+            <View style={styles.tierHeader}>
+              <View style={styles.tierTitleContainer}>
+                <Text style={styles.premiumTierName}>Premium Plan</Text>
+                <Text style={styles.tierDescription}>
+                  Advanced tools for serious community builders
+                </Text>
+              </View>
+              <ProfessionalBadge type="verified" size="medium" />
+            </View>
+            
+            <View style={styles.featuresList}>
+              <Text style={styles.premiumFeatureItem}>• Unlimited communities</Text>
+              <Text style={styles.premiumFeatureItem}>• Verified creator badge</Text>
+              <Text style={styles.premiumFeatureItem}>• Advanced analytics</Text>
+              <Text style={styles.premiumFeatureItem}>• Priority support</Text>
+              <Text style={styles.premiumFeatureItem}>• Custom branding</Text>
+            </View>
+            
+            <TouchableOpacity 
+              style={styles.premiumButton}
+              onPress={() => navigation.navigate('PremiumSubscription')}
+            >
+              <Text style={styles.premiumButtonText}>Upgrade to Premium</Text>
+              <Text style={styles.premiumButtonSubtext}>₱99/month or ₱999/year</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+    </View>
+  );
 
   const renderCategoryChip = ({ item }) => (
     <TouchableOpacity
@@ -299,65 +491,91 @@ export default function SupportScreen({ navigation }) {
     </TouchableOpacity>
   );
 
-  const renderSupportCard = ({ item }) => (
-    <TouchableOpacity 
-      style={[
-        styles.supportCard,
-        item.emergency && styles.emergencyCard
-      ]}
-      onPress={() => toggleExpand(item.id)}
-      activeOpacity={0.7}
-    >
-      <View style={styles.cardHeader}>
-        <View style={[styles.cardIconContainer, { backgroundColor: `${item.iconColor}20` }]}>
-          <Ionicons 
-            name={item.icon} 
-            size={20} 
-            color={item.iconColor} 
-          />
-        </View>
-        <View style={styles.cardContent}>
-          <Text style={styles.cardTitle}>{item.title}</Text>
-          <Text style={styles.cardDescription}>{item.description}</Text>
-        </View>
-        <Ionicons 
-          name={expandedItems[item.id] ? 'chevron-up' : 'chevron-down'} 
-          size={20} 
-          color="rgba(255, 255, 255, 0.6)" 
-        />
-      </View>
-      
-      {expandedItems[item.id] && (
-        <View style={styles.expandedContent}>
-          <Text style={styles.expandedText}>{item.content}</Text>
-          {item.emergency && (
-            <View style={styles.emergencyBadge}>
-              <Ionicons name="warning" size={12} color={colors.white} />
-              <Text style={styles.emergencyText}>EMERGENCY</Text>
+  // FIXED Support Card with proper badge hierarchy
+  const renderSupportCard = ({ item }) => {
+    const userCanEdit = canEditItem(item);
+    
+    return (
+      <TouchableOpacity 
+        style={[
+          styles.supportCard,
+          item.emergency && styles.emergencyCard
+        ]}
+        onPress={() => toggleExpand(item.id)}
+        activeOpacity={0.7}
+      >
+        <View style={styles.cardHeader}>
+          <View style={[styles.cardIconContainer, { backgroundColor: `${item.iconColor}20` }]}>
+            <Ionicons name={item.icon} size={20} color={item.iconColor} />
+          </View>
+          <View style={styles.cardContent}>
+            <View style={styles.cardTitleRow}>
+              <Text style={styles.cardTitle}>{item.title}</Text>
+              {/* SINGLE BADGE PER CARD - Better hierarchy */}
+              {item.emergency && <ProfessionalBadge type="emergency" size="small" />}
+              {!item.emergency && item.isOfficial && <ProfessionalBadge type="official" size="small" />}
             </View>
-          )}
+            <Text style={styles.cardDescription}>{item.description}</Text>
+            {userCanEdit && (
+              <Text style={styles.lastUpdated}>
+                Updated: {item.lastUpdated} by {item.updatedBy}
+              </Text>
+            )}
+          </View>
+          <View style={styles.cardActions}>
+            <Ionicons 
+              name={expandedItems[item.id] ? 'chevron-up' : 'chevron-down'} 
+              size={20} 
+              color="rgba(255, 255, 255, 0.6)" 
+            />
+            {userCanEdit && (
+              <TouchableOpacity 
+                style={styles.editIconButton}
+                onPress={() => handleEditItem(item.id)}
+              >
+                <Ionicons name="create-outline" size={16} color="#4ECDC4" />
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
-      )}
-    </TouchableOpacity>
-  );
+        
+        {expandedItems[item.id] && (
+          <View style={styles.expandedContent}>
+            <Text style={styles.expandedText}>{item.content}</Text>
+            {userCanEdit && (
+              <TouchableOpacity 
+                style={styles.editContentButton}
+                onPress={() => handleEditItem(item.id)}
+              >
+                <Ionicons name="create-outline" size={14} color="#4ECDC4" />
+                <Text style={styles.editContentText}>Edit this content</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  };
 
   const renderEmergencyContact = ({ item }) => (
     <View style={styles.emergencyContact}>
       <View style={styles.contactLeft}>
         <View style={styles.contactIconContainer}>
-          <Ionicons 
-            name={item.icon} 
-            size={20} 
-            color="#FF6B6B" 
-          />
+          <Ionicons name={item.icon} size={20} color="#FF6B6B" />
         </View>
         <View style={styles.contactInfo}>
           <Text style={styles.contactName}>{item.name}</Text>
           <Text style={styles.contactNumber}>{item.number}</Text>
-          <Text style={styles.contactAvailability}>{item.available}</Text>
+          <View style={styles.contactMeta}>
+            <Ionicons name="time-outline" size={12} color="rgba(255, 255, 255, 0.5)" />
+            <Text style={styles.contactAvailability}>{item.available}</Text>
+          </View>
         </View>
       </View>
-      <TouchableOpacity style={styles.callButton}>
+      <TouchableOpacity 
+        style={styles.callButton}
+        onPress={() => handleCall(item.number)}
+      >
         <Ionicons name="call" size={16} color={colors.white} />
         <Text style={styles.callButtonText}>Call</Text>
       </TouchableOpacity>
@@ -380,40 +598,27 @@ export default function SupportScreen({ navigation }) {
           style={styles.headerBackground}
           resizeMode="cover"
         >
-          {/* Original Header Content - Fades out when scrolling */}
           <Animated.View style={[styles.headerContent, { opacity: headerTitleOpacity }]}>
             <Text style={styles.headerTitle}>Support & Resources</Text>
             <Text style={styles.headerSubtitle}>Get help when you need it</Text>
           </Animated.View>
 
-          {/* Collapsed Header Title - Appears when scrolling */}
-          <Animated.View 
-            style={[
-              styles.collapsedHeaderContent,
-              { opacity: collapsedTitleOpacity }
-            ]}
-          >
+          <Animated.View style={[styles.collapsedHeaderContent, { opacity: collapsedTitleOpacity }]}>
             <Text style={styles.collapsedHeaderTitle}>Support</Text>
+            {canEditSupport && (
+              <TouchableOpacity style={styles.editHeaderButton} onPress={handleEditSupport}>
+                <Ionicons name="create-outline" size={16} color={colors.white} />
+              </TouchableOpacity>
+            )}
           </Animated.View>
         </ImageBackground>
       </Animated.View>
 
       {/* Sticky Search & Categories Section */}
-      <Animated.View 
-        style={[
-          styles.stickySection,
-          { transform: [{ translateY: searchSectionTranslateY }] }
-        ]}
-      >
-        {/* Search Field */}
+      <Animated.View style={[styles.stickySection, { transform: [{ translateY: searchSectionTranslateY }] }]}>
         <View style={styles.searchContainer}>
           <View style={styles.searchInputWrapper}>
-            <Ionicons 
-              name="search" 
-              size={20} 
-              color="rgba(255, 255, 255, 0.6)" 
-              style={styles.searchIcon}
-            />
+            <Ionicons name="search" size={20} color="rgba(255, 255, 255, 0.6)" style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
               placeholder="Search for help topics, resources..."
@@ -423,10 +628,14 @@ export default function SupportScreen({ navigation }) {
               onSubmitEditing={handleSearch}
               returnKeyType="search"
             />
+            {canEditSupport && (
+              <TouchableOpacity style={styles.quickEditButton} onPress={handleEditSupport}>
+                <Ionicons name="add-circle-outline" size={22} color="#4ECDC4" />
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
-        {/* Category Chips - Always Visible */}
         <View style={styles.categoriesSection}>
           <FlatList
             data={categories}
@@ -447,11 +656,20 @@ export default function SupportScreen({ navigation }) {
         contentContainerStyle={styles.scrollContent}
         onScroll={handleScroll}
         scrollEventThrottle={16}
-        stickyHeaderIndices={[]}
       >
-        {/* Quick Action Buttons */}
+        {/* Community Creation Section with Dropdown */}
+        <CommunityCreationSection />
+
+        {/* Quick Action Buttons - FIXED MARGIN */}
         <View style={styles.quickActionsSection}>
-          <Text style={styles.sectionTitle}>Quick Help</Text>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>Quick Help</Text>
+            {canEditSupport && (
+              <TouchableOpacity style={styles.manageButton} onPress={handleEditSupport}>
+                <Text style={styles.manageButtonText}>Manage Content</Text>
+              </TouchableOpacity>
+            )}
+          </View>
           <FlatList
             data={quickActions}
             renderItem={renderQuickAction}
@@ -466,16 +684,19 @@ export default function SupportScreen({ navigation }) {
         <View style={styles.contentSection}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionHeaderContent}>
-              <Text style={styles.sectionTitle}>
-                {activeCategory === 'all' && 'All Support Resources'}
-                {activeCategory === 'faq' && 'Frequently Asked Questions'}
-                {activeCategory === 'reporting' && 'Reporting & Safety'}
-                {activeCategory === 'communities' && 'Support Communities'} 
-                {activeCategory === 'resources' && 'Campus Resources'}
-                {activeCategory === 'volunteers' && 'Volunteer Support'}
-              </Text>
+              <View style={styles.sectionHeaderRow}>
+                <Text style={styles.sectionTitle}>
+                  {activeCategory === 'all' && 'All Support Resources'}
+                  {activeCategory === 'faq' && 'Frequently Asked Questions'}
+                  {activeCategory === 'reporting' && 'Reporting & Safety'}
+                  {activeCategory === 'resources' && 'USTP Resources'}
+                  {activeCategory === 'volunteers' && 'Volunteer Support'}
+                </Text>
+                {canEditSupport && <ProfessionalBadge type="verified" size="small" />}
+              </View>
               <Text style={styles.sectionSubtitle}>
                 {filteredContent.length} resources available
+                {canEditSupport && ' • You can edit Resources & Volunteers'}
               </Text>
             </View>
           </View>
@@ -495,6 +716,7 @@ export default function SupportScreen({ navigation }) {
             <View style={styles.emergencyHeader}>
               <Ionicons name="warning" size={20} color="#FF6B6B" />
               <Text style={styles.sectionTitle}>Emergency Contacts</Text>
+              <ProfessionalBadge type="emergency" size="small" />
             </View>
             <Text style={styles.emergencySubtitle}>Available 24/7 for urgent situations</Text>
           </View>
@@ -507,7 +729,6 @@ export default function SupportScreen({ navigation }) {
           />
         </View>
 
-        {/* Bottom Spacer */}
         <View style={styles.bottomSpacer} />
       </ScrollView>
     </SafeAreaView>
@@ -543,18 +764,18 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 28,
     fontFamily: fonts.bold,
     color: colors.white,
     textAlign: 'center',
     letterSpacing: 0.5,
   },
   headerSubtitle: {
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: fonts.normal,
     color: 'rgba(255, 255, 255, 0.8)',
     textAlign: 'center',
-    marginTop: 4,
+    marginTop: 8,
   },
   collapsedHeaderContent: {
     position: 'absolute',
@@ -564,37 +785,204 @@ const styles = StyleSheet.create({
     bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 12,
   },
   collapsedHeaderTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontFamily: fonts.bold,
     color: colors.white,
-    textAlign: 'center',
+  },
+  editHeaderButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
   stickySection: {
     position: 'absolute',
-    top: 100, // Matches reduced header height
+    top: 160,
     left: 0,
     right: 0,
     zIndex: 20,
     backgroundColor: colors.homeBackground,
-    paddingTop: 10,
+    paddingTop: 16,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
   container: {
     flex: 1,
     backgroundColor: colors.homeBackground,
-    marginTop: 100, // Space for header + sticky section
+    marginTop: 160,
   },
   scrollContent: {
     flexGrow: 1,
-    paddingTop: 120, // Space for sticky section
-    paddingBottom: 20,
+    paddingTop: 140,
+    paddingBottom: 30,
   },
+  // ENHANCED Badge Styles with Shield
+  badgeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderRadius: 8,
+  },
+  badgeText: {
+    fontFamily: fonts.semiBold,
+    letterSpacing: 0.3,
+  },
+  // ENHANCED Community Creation Styles with Dropdown
+  creationSection: {
+    marginHorizontal: 20,
+    marginTop: 10,
+    marginBottom: 30,
+  },
+  creationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+    padding: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  creationHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 12,
+  },
+  creationHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  creationTitleContainer: {
+    flex: 1,
+  },
+  creationTitle: {
+    fontSize: 20,
+    fontFamily: fonts.bold,
+    color: colors.white,
+    marginBottom: 4,
+  },
+  creationSubtitle: {
+    fontSize: 14,
+    fontFamily: fonts.normal,
+    color: 'rgba(255, 255, 255, 0.7)',
+  },
+  dropdownIcon: {
+    marginLeft: 8,
+  },
+  creationContent: {
+    marginTop: 8,
+  },
+  tierCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    marginBottom: 16,
+  },
+  premiumCard: {
+    backgroundColor: 'rgba(255, 215, 0, 0.08)',
+    borderColor: 'rgba(255, 215, 0, 0.3)',
+  },
+  tierHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  tierTitleContainer: {
+    flex: 1,
+  },
+  tierName: {
+    fontSize: 18,
+    fontFamily: fonts.bold,
+    color: colors.white,
+    marginBottom: 6,
+  },
+  premiumTierName: {
+    fontSize: 18,
+    fontFamily: fonts.bold,
+    color: '#FFD700',
+    marginBottom: 6,
+  },
+  tierDescription: {
+    fontSize: 14,
+    fontFamily: fonts.normal,
+    color: 'rgba(255, 255, 255, 0.7)',
+    lineHeight: 18,
+  },
+  communityCount: {
+    backgroundColor: 'rgba(76, 175, 80, 0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  communityCountFull: {
+    backgroundColor: 'rgba(255, 107, 107, 0.2)',
+  },
+  countText: {
+    fontSize: 14,
+    fontFamily: fonts.bold,
+    color: '#4CAF50',
+  },
+  featuresList: {
+    marginBottom: 20,
+  },
+  featureItem: {
+    fontSize: 14,
+    fontFamily: fonts.normal,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginBottom: 6,
+    lineHeight: 18,
+  },
+  premiumFeatureItem: {
+    fontSize: 14,
+    fontFamily: fonts.normal,
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginBottom: 6,
+    lineHeight: 18,
+  },
+  createButton: {
+    backgroundColor: '#4ECDC4',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  disabledButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  createButtonText: {
+    fontSize: 16,
+    fontFamily: fonts.bold,
+    color: colors.white,
+  },
+  premiumButton: {
+    backgroundColor: '#FFD700',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  premiumButtonText: {
+    fontSize: 16,
+    fontFamily: fonts.bold,
+    color: '#000',
+  },
+  premiumButtonSubtext: {
+    fontSize: 12,
+    fontFamily: fonts.normal,
+    color: 'rgba(0, 0, 0, 0.7)',
+    marginTop: 4,
+  },
+  // Search and Edit Styles
   searchContainer: {
     paddingHorizontal: 20,
-    marginBottom: 15,
+    marginBottom: 16,
   },
   searchInputWrapper: {
     flexDirection: 'row',
@@ -602,7 +990,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
     borderRadius: 16,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderWidth: 1.5,
     borderColor: 'rgba(255, 255, 255, 0.2)',
   },
@@ -616,49 +1004,63 @@ const styles = StyleSheet.create({
     color: colors.white,
     padding: 0,
   },
+  quickEditButton: {
+    padding: 4,
+    marginLeft: 8,
+  },
+  // FIXED Section Header Styles with proper margins
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+    paddingHorizontal: 20, // ADDED: Proper margin alignment
+  },
+  manageButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
+  },
+  manageButtonText: {
+    fontSize: 14,
+    fontFamily: fonts.medium,
+    color: '#4ECDC4',
+  },
   quickActionsSection: {
-    marginTop: 10,
-    marginBottom: 25,
+    marginBottom: 30,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontFamily: fonts.semiBold,
+    fontSize: 20,
+    fontFamily: fonts.bold,
     color: colors.white,
-    marginBottom: 8,
-    paddingHorizontal: 20,
-    marginTop: 20,
   },
   quickActionsList: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 20, // FIXED: Now aligned with other content
     gap: 12,
   },
   quickActionButton: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
+    paddingVertical: 18,
     paddingHorizontal: 20,
     borderRadius: 16,
-    minWidth: 110,
+    minWidth: 120,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
   actionIcon: {
-    marginBottom: 10,
+    marginBottom: 8,
   },
   actionLabel: {
-    fontSize: 13,
+    fontSize: 14,
     fontFamily: fonts.medium,
     color: colors.white,
     textAlign: 'center',
   },
   categoriesSection: {
     paddingHorizontal: 20,
-    paddingBottom: 15,
+    paddingBottom: 16,
   },
   categoriesList: {
     gap: 8,
@@ -691,25 +1093,26 @@ const styles = StyleSheet.create({
     fontFamily: fonts.semiBold,
   },
   contentSection: {
-    marginTop: 0,
+    marginBottom: 30,
   },
   sectionHeader: {
-    marginBottom: 15,
+    marginBottom: 20,
   },
   sectionHeaderContent: {
-    paddingHorizontal: 0,
+    paddingHorizontal: 20,
   },
   sectionSubtitle: {
     fontSize: 14,
     fontFamily: fonts.normal,
     color: 'rgba(255, 255, 255, 0.6)',
-    marginLeft: 20,
+    marginTop: 4,
   },
+  // Support Card Enhanced Styles
   supportCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     marginHorizontal: 20,
     marginBottom: 12,
-    padding: 16,
+    padding: 20,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
@@ -720,7 +1123,7 @@ const styles = StyleSheet.create({
   },
   cardHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
   cardIconContainer: {
     width: 44,
@@ -728,26 +1131,49 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: 16,
   },
   cardContent: {
     flex: 1,
+    marginRight: 12,
+  },
+  cardTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 6,
+    flexWrap: 'wrap',
   },
   cardTitle: {
     fontSize: 16,
-    fontFamily: fonts.semiBold,
+    fontFamily: fonts.bold,
     color: colors.white,
-    marginBottom: 4,
   },
   cardDescription: {
     fontSize: 14,
     fontFamily: fonts.normal,
     color: 'rgba(255, 255, 255, 0.6)',
-    lineHeight: 18,
+    lineHeight: 20,
+    marginBottom: 6,
+  },
+  lastUpdated: {
+    fontSize: 12,
+    fontFamily: fonts.normal,
+    color: 'rgba(255, 255, 255, 0.4)',
+    fontStyle: 'italic',
+  },
+  cardActions: {
+    alignItems: 'flex-end',
+    gap: 8,
+  },
+  editIconButton: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: 'rgba(78, 205, 196, 0.1)',
   },
   expandedContent: {
-    marginTop: 12,
-    paddingTop: 12,
+    marginTop: 16,
+    paddingTop: 16,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255, 255, 255, 0.1)',
   },
@@ -755,50 +1181,49 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: fonts.normal,
     color: 'rgba(255, 255, 255, 0.8)',
-    lineHeight: 20,
+    lineHeight: 22,
   },
-  emergencyBadge: {
+  editContentButton: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    backgroundColor: '#FF6B6B',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    marginTop: 12,
+    padding: 8,
     borderRadius: 8,
-    marginTop: 8,
-    gap: 4,
+    backgroundColor: 'rgba(78, 205, 196, 0.1)',
+    gap: 6,
   },
-  emergencyText: {
-    fontSize: 10,
-    fontFamily: fonts.bold,
-    color: colors.white,
-    letterSpacing: 0.5,
+  editContentText: {
+    fontSize: 13,
+    fontFamily: fonts.medium,
+    color: '#4ECDC4',
   },
   emergencySection: {
-    marginTop: 10,
+    marginBottom: 20,
   },
   emergencyHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 4,
+    gap: 10,
+    marginBottom: 8,
   },
   emergencySubtitle: {
     fontSize: 14,
     fontFamily: fonts.normal,
     color: 'rgba(255, 255, 255, 0.6)',
-    marginBottom: 15,
+    marginBottom: 20,
   },
+  // Emergency Contact Styles
   emergencyContact: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    padding: 16,
+    padding: 20,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
-    marginBottom: 10,
+    marginBottom: 12,
     marginHorizontal: 20,
   },
   contactLeft: {
@@ -807,31 +1232,36 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contactIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: 'rgba(255, 107, 107, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: 16,
   },
   contactInfo: {
     flex: 1,
   },
   contactName: {
     fontSize: 16,
-    fontFamily: fonts.medium,
+    fontFamily: fonts.bold,
     color: colors.white,
-    marginBottom: 2,
+    marginBottom: 4,
   },
   contactNumber: {
-    fontSize: 14,
-    fontFamily: fonts.normal,
-    color: 'rgba(255, 255, 255, 0.8)',
-    marginBottom: 2,
+    fontSize: 15,
+    fontFamily: fonts.medium,
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginBottom: 6,
+  },
+  contactMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   contactAvailability: {
-    fontSize: 12,
+    fontSize: 13,
     fontFamily: fonts.normal,
     color: 'rgba(255, 255, 255, 0.5)',
   },
@@ -839,10 +1269,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#4CAF50',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
     borderRadius: 12,
-    gap: 6,
+    gap: 8,
+    minWidth: 80,
+    justifyContent: 'center',
   },
   callButtonText: {
     fontSize: 14,
@@ -850,6 +1282,6 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   bottomSpacer: {
-    height: 20,
+    height: 30,
   },
 });

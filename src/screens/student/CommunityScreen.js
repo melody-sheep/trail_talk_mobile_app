@@ -1,5 +1,5 @@
 // src/screens/student/CommunityScreen.js
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,155 +8,371 @@ import {
   ImageBackground,
   TextInput,
   TouchableOpacity,
-  Image,
   ScrollView,
-  FlatList
+  FlatList,
+  Animated,
+  RefreshControl
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../styles/colors';
 import { fonts } from '../../styles/fonts';
 import { UserContext } from '../../contexts/UserContext';
+import { 
+  getCommunitiesWithUserStatus, 
+  joinCommunity, 
+  leaveCommunity, 
+  canUserCreateCommunity 
+} from '../../lib/supabase';
 
 export default function CommunityScreen({ navigation }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
-  const [joinedCommunities, setJoinedCommunities] = useState(['2', '4']); // Mock joined communities
+  const [expandedItems, setExpandedItems] = useState({});
+  const [showFeatured, setShowFeatured] = useState(true);
+  const [communities, setCommunities] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const [userCommunityStats, setUserCommunityStats] = useState({
+    createdCommunities: 0,
+    maxFreeCommunities: 3,
+    subscription: 'free',
+    isVerifiedCreator: false
+  });
+  
   const { user } = useContext(UserContext);
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const scrollViewRef = useRef(null);
+
+  // Animation values
+  const headerHeight = scrollY.interpolate({
+    inputRange: [0, 120],
+    outputRange: [160, 80],
+    extrapolate: 'clamp',
+  });
+
+  const headerTitleOpacity = scrollY.interpolate({
+    inputRange: [0, 80],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
+
+  const collapsedTitleOpacity = scrollY.interpolate({
+    inputRange: [0, 80, 120],
+    outputRange: [0, 0, 1],
+    extrapolate: 'clamp',
+  });
+
+  const searchSectionTranslateY = scrollY.interpolate({
+    inputRange: [0, 140],
+    outputRange: [0, -60],
+    extrapolate: 'clamp',
+  });
 
   const categories = [
-    { id: 'all', label: 'All' },
-    { id: 'academic', label: 'Academic' },
-    { id: 'social', label: 'Social' },
-    { id: 'support', label: 'Support' },
-    { id: 'hobbies', label: 'Hobbies' },
-    { id: 'sports', label: 'Sports' }
+    { id: 'all', label: 'All', icon: 'grid-outline' },
+    { id: 'academic', label: 'Academic', icon: 'school-outline' },
+    { id: 'social', label: 'Social', icon: 'people-outline' },
+    { id: 'support', label: 'Support', icon: 'heart-outline' },
+    { id: 'hobbies', label: 'Hobbies', icon: 'game-controller-outline' },
+    { id: 'sports', label: 'Sports', icon: 'basketball-outline' }
   ];
 
-  // Mock data for communities
-  const communitiesData = [
-    {
-      id: '1',
-      name: 'Computer Science Club',
-      description: 'For CS students to collaborate and learn programming',
-      memberCount: 245,
-      category: 'academic',
-      isFeatured: true,
-      recentActivity: '2 hours ago',
-      icon: '💻',
-      privacy: 'public',
-      rules: 'Be respectful, share knowledge, help each other grow'
+  // Quick action buttons
+  const quickActions = [
+    { 
+      id: 'explore', 
+      label: 'Explore', 
+      icon: 'compass-outline', 
+      color: '#4ECDC4',
+      action: () => navigation.navigate('CommunityExplore')
     },
-    {
-      id: '2',
-      name: 'Mental Health Support',
-      description: 'Safe space for mental health discussions and support',
-      memberCount: 150,
-      category: 'support',
-      isFeatured: true,
-      recentActivity: '5 new posts today',
-      icon: '💚',
-      privacy: 'public',
-      rules: 'Confidentiality, respect, no judgment zone'
+    { 
+      id: 'create', 
+      label: 'Create', 
+      icon: 'add-circle-outline', 
+      color: '#FFA726',
+      action: () => handleCreateCommunity()
     },
-    {
-      id: '3',
-      name: 'Campus Sports Club',
-      description: 'Join various sports activities and tournaments',
-      memberCount: 89,
-      category: 'sports',
-      isFeatured: false,
-      recentActivity: 'Basketball tournament next week',
-      icon: '🏀',
-      privacy: 'public',
-      rules: 'Sportsmanship, teamwork, regular participation'
+    { 
+      id: 'my-communities', 
+      label: 'My Groups', 
+      icon: 'people-circle-outline', 
+      color: '#45B7D1',
+      action: () => setActiveCategory('my')
     },
-    {
-      id: '4',
-      name: 'Art & Creativity Hub',
-      description: 'For artists, writers, and creative minds',
-      memberCount: 120,
-      category: 'hobbies',
-      isFeatured: true,
-      recentActivity: 'Art exhibition this Friday',
-      icon: '🎨',
-      privacy: 'public',
-      rules: 'Share your work, constructive feedback only'
-    },
-    {
-      id: '5',
-      name: 'International Students',
-      description: 'Connect with students from around the world',
-      memberCount: 300,
-      category: 'social',
-      isFeatured: false,
-      recentActivity: 'Cultural night planning',
-      icon: '🌍',
-      privacy: 'public',
-      rules: 'Cultural respect, language exchange welcome'
-    },
-    {
-      id: '6',
-      name: 'Study Buddies Network',
-      description: 'Find study partners for different subjects',
-      memberCount: 180,
-      category: 'academic',
-      isFeatured: false,
-      recentActivity: 'New study groups forming',
-      icon: '📚',
-      privacy: 'public',
-      rules: 'Academic integrity, regular attendance'
-    },
-    {
-      id: '7',
-      name: 'Music Lovers Society',
-      description: 'For musicians and music enthusiasts',
-      memberCount: 95,
-      category: 'hobbies',
-      isFeatured: false,
-      recentActivity: 'Jam session tomorrow',
-      icon: '🎵',
-      privacy: 'public',
-      rules: 'All skill levels welcome, share your passion'
-    },
-    {
-      id: '8',
-      name: 'Entrepreneurship Club',
-      description: 'For future entrepreneurs and innovators',
-      memberCount: 75,
-      category: 'academic',
-      isFeatured: false,
-      recentActivity: 'Startup pitch competition',
-      icon: '💡',
-      privacy: 'public',
-      rules: 'Innovation focused, collaborative mindset'
+    { 
+      id: 'featured', 
+      label: 'Featured', 
+      icon: 'star-outline', 
+      color: '#FFD700',
+      action: () => scrollToFeatured()
     }
   ];
 
-  const filteredCommunities = communitiesData.filter(community => {
-    if (activeCategory === 'all') return true;
-    return community.category === activeCategory;
-  });
+  // Load communities from database
+  useEffect(() => {
+    if (user?.id) {
+      loadCommunities();
+      loadUserCommunityStats();
+    }
+  }, [activeCategory, user?.id]);
 
-  const featuredCommunities = communitiesData.filter(community => community.isFeatured);
-  const myCommunities = communitiesData.filter(community => joinedCommunities.includes(community.id));
+  const loadCommunities = async () => {
+    if (!user?.id) return;
+    
+    try {
+      const { data, error } = await getCommunitiesWithUserStatus(user.id, activeCategory === 'my' ? 'all' : activeCategory);
+      if (!error && data) {
+        setCommunities(data);
+      } else {
+        console.error('Error loading communities:', error);
+      }
+    } catch (error) {
+      console.error('Error in loadCommunities:', error);
+    }
+  };
+
+  const loadUserCommunityStats = async () => {
+    if (!user?.id) return;
+    
+    try {
+      const { canCreate, createdCount } = await canUserCreateCommunity(user.id);
+      setUserCommunityStats(prev => ({
+        ...prev,
+        createdCommunities: createdCount,
+        canCreate
+      }));
+    } catch (error) {
+      console.error('Error loading user stats:', error);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadCommunities();
+    await loadUserCommunityStats();
+    setRefreshing(false);
+  };
 
   const handleSearch = () => {
     console.log('Searching communities for:', searchQuery);
   };
 
-  const handleJoinCommunity = (communityId) => {
-    setJoinedCommunities(prev => 
-      prev.includes(communityId) 
-        ? prev.filter(id => id !== communityId)
-        : [...prev, communityId]
-    );
-    console.log('Toggled join for community:', communityId);
+  const scrollToFeatured = () => {
+    scrollViewRef.current?.scrollTo({ y: 300, animated: true });
   };
 
-  const handleCreateCommunity = () => {
-    console.log('Navigate to create community');
-    // navigation.navigate('CreateCommunity');
+  const handleCreateCommunity = async () => {
+    const { canCreate } = await canUserCreateCommunity(user.id);
+    if (!canCreate) {
+      alert('You have reached the free community limit (3 communities). Upgrade to premium for unlimited communities.');
+      return;
+    }
+    navigation.navigate('CreateCommunity');
   };
+
+  const handleEditCommunities = () => {
+    navigation.navigate('ManageCommunities');
+  };
+
+  // REAL JOIN/LEAVE FUNCTIONALITY
+  const handleJoinCommunity = async (communityId) => {
+    try {
+      const { error } = await joinCommunity(communityId, user.id);
+      if (!error) {
+        loadCommunities();
+      } else {
+        console.error('Error joining community:', error);
+        alert('Failed to join community. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error in handleJoinCommunity:', error);
+    }
+  };
+
+  const handleLeaveCommunity = async (communityId) => {
+    try {
+      const { error } = await leaveCommunity(communityId, user.id);
+      if (!error) {
+        loadCommunities();
+      } else {
+        console.error('Error leaving community:', error);
+        alert('Failed to leave community. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error in handleLeaveCommunity:', error);
+    }
+  };
+
+  // Enhanced permission checking
+  const canEditCommunities = user?.role === 'faculty' || user?.organization_role === 'president' || user?.organization_role === 'officer';
+
+  // Professional Badge Component
+  const ProfessionalBadge = ({ type, size = 'medium' }) => {
+    const badgeConfig = {
+      verified: {
+        icon: 'shield-checkmark',
+        color: '#1877F2',
+        label: 'Verified',
+        bgColor: 'rgba(24, 119, 242, 0.1)',
+        borderColor: '#1877F2'
+      },
+      official: {
+        icon: 'shield-checkmark',
+        color: '#4CAF50',
+        label: 'Official',
+        bgColor: 'rgba(76, 175, 80, 0.1)',
+        borderColor: '#4CAF50'
+      },
+      featured: {
+        icon: 'star',
+        color: '#FFD700',
+        label: 'Featured',
+        bgColor: 'rgba(255, 215, 0, 0.1)',
+        borderColor: '#FFD700'
+      },
+      popular: {
+        icon: 'trending-up',
+        color: '#FF6B6B',
+        label: 'Popular',
+        bgColor: 'rgba(255, 107, 107, 0.1)',
+        borderColor: '#FF6B6B'
+      }
+    };
+
+    const config = badgeConfig[type];
+    const isSmall = size === 'small';
+    const iconSize = isSmall ? 14 : 16;
+    const fontSize = isSmall ? 10 : 12;
+    const padding = isSmall ? 6 : 8;
+
+    return (
+      <View style={[
+        styles.badgeContainer,
+        { 
+          backgroundColor: config.bgColor,
+          borderColor: config.borderColor,
+          paddingHorizontal: padding,
+          paddingVertical: padding - 2,
+          borderRadius: 8
+        }
+      ]}>
+        <Ionicons name={config.icon} size={iconSize} color={config.color} />
+        <Text style={[
+          styles.badgeText, 
+          { 
+            color: config.color, 
+            fontSize: fontSize,
+            marginLeft: 4
+          }
+        ]}>
+          {config.label}
+        </Text>
+      </View>
+    );
+  };
+
+  // Community Creation Section with Dropdown
+  const CommunityCreationSection = () => (
+    <View style={styles.creationSection}>
+      <TouchableOpacity 
+        style={styles.creationHeader}
+        onPress={() => setShowFeatured(!showFeatured)}
+        activeOpacity={0.7}
+      >
+        <View style={styles.creationHeaderLeft}>
+          <Ionicons name="rocket-outline" size={28} color="#4ECDC4" />
+          <View style={styles.creationTitleContainer}>
+            <Text style={styles.creationTitle}>Start Your Community</Text>
+            <Text style={styles.creationSubtitle}>
+              {userCommunityStats.createdCommunities}/{userCommunityStats.maxFreeCommunities} free communities used
+            </Text>
+          </View>
+        </View>
+        <View style={styles.creationHeaderRight}>
+          <ProfessionalBadge type="featured" size="medium" />
+          <Ionicons 
+            name={showFeatured ? 'chevron-up' : 'chevron-down'} 
+            size={20} 
+            color="rgba(255, 255, 255, 0.6)" 
+            style={styles.dropdownIcon}
+          />
+        </View>
+      </TouchableOpacity>
+
+      {showFeatured && (
+        <View style={styles.creationContent}>
+          <View style={styles.tierCard}>
+            <View style={styles.tierHeader}>
+              <View style={styles.tierTitleContainer}>
+                <Text style={styles.tierName}>Free Plan</Text>
+                <Text style={styles.tierDescription}>
+                  Perfect for student clubs and study groups
+                </Text>
+              </View>
+              <View style={[
+                styles.communityCount,
+                userCommunityStats.createdCommunities >= userCommunityStats.maxFreeCommunities && styles.communityCountFull
+              ]}>
+                <Text style={styles.countText}>
+                  {userCommunityStats.createdCommunities}/{userCommunityStats.maxFreeCommunities}
+                </Text>
+              </View>
+            </View>
+            
+            <View style={styles.featuresList}>
+              <Text style={styles.featureItem}>• Create up to 3 communities</Text>
+              <Text style={styles.featureItem}>• Basic community features</Text>
+              <Text style={styles.featureItem}>• Up to 50 members each</Text>
+              <Text style={styles.featureItem}>• Basic moderation tools</Text>
+            </View>
+            
+            <TouchableOpacity 
+              style={[
+                styles.createButton,
+                userCommunityStats.createdCommunities >= userCommunityStats.maxFreeCommunities && styles.disabledButton
+              ]}
+              onPress={() => navigation.navigate('CreateCommunity', { tier: 'free' })}
+              disabled={userCommunityStats.createdCommunities >= userCommunityStats.maxFreeCommunities}
+            >
+              <Text style={styles.createButtonText}>
+                {userCommunityStats.createdCommunities >= userCommunityStats.maxFreeCommunities ? 'Free Limit Reached' : 'Create Free Community'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={[styles.tierCard, styles.premiumCard]}>
+            <View style={styles.tierHeader}>
+              <View style={styles.tierTitleContainer}>
+                <Text style={styles.premiumTierName}>Premium Plan</Text>
+                <Text style={styles.tierDescription}>
+                  Advanced tools for serious community builders
+                </Text>
+              </View>
+              <ProfessionalBadge type="verified" size="medium" />
+            </View>
+            
+            <View style={styles.featuresList}>
+              <Text style={styles.premiumFeatureItem}>• Unlimited communities</Text>
+              <Text style={styles.premiumFeatureItem}>• Verified creator badge</Text>
+              <Text style={styles.premiumFeatureItem}>• Advanced analytics</Text>
+              <Text style={styles.premiumFeatureItem}>• Priority support</Text>
+              <Text style={styles.premiumFeatureItem}>• Custom branding</Text>
+              <Text style={styles.premiumFeatureItem}>• Unlimited members</Text>
+            </View>
+            
+            <TouchableOpacity 
+              style={styles.premiumButton}
+              onPress={() => navigation.navigate('PremiumSubscription')}
+            >
+              <Text style={styles.premiumButtonText}>Upgrade to Premium</Text>
+              <Text style={styles.premiumButtonSubtext}>₱99/month or ₱999/year</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+    </View>
+  );
 
   const renderCategoryChip = ({ item }) => (
     <TouchableOpacity
@@ -167,6 +383,12 @@ export default function CommunityScreen({ navigation }) {
       onPress={() => setActiveCategory(item.id)}
       activeOpacity={0.7}
     >
+      <Ionicons 
+        name={item.icon} 
+        size={16} 
+        color={activeCategory === item.id ? colors.homeBackground : colors.white} 
+        style={styles.categoryIcon}
+      />
       <Text style={[
         styles.categoryChipText,
         activeCategory === item.id && styles.categoryChipTextSelected
@@ -176,100 +398,180 @@ export default function CommunityScreen({ navigation }) {
     </TouchableOpacity>
   );
 
+  const renderQuickAction = ({ item }) => (
+    <TouchableOpacity 
+      style={[styles.quickActionButton, { backgroundColor: item.color }]}
+      onPress={() => item.action()}
+      activeOpacity={0.7}
+    >
+      <Ionicons 
+        name={item.icon} 
+        size={24} 
+        color={colors.white} 
+        style={styles.actionIcon}
+      />
+      <Text style={styles.actionLabel}>{item.label}</Text>
+    </TouchableOpacity>
+  );
+
+  // Community Card with REAL DATA
   const renderCommunityCard = ({ item }) => {
-    const isJoined = joinedCommunities.includes(item.id);
+    const isExpanded = expandedItems[item.id];
+    const isJoined = item.isJoined;
     
+    const categoryConfig = {
+      academic: { icon: 'school-outline', color: '#4ECDC4' },
+      social: { icon: 'people-outline', color: '#FFA726' },
+      support: { icon: 'heart-outline', color: '#FF6B6B' },
+      hobbies: { icon: 'game-controller-outline', color: '#45B7D1' },
+      sports: { icon: 'basketball-outline', color: '#FFD700' }
+    };
+    
+    const config = categoryConfig[item.category] || { icon: 'people-outline', color: '#4ECDC4' };
+
     return (
-      <TouchableOpacity style={styles.communityCard} activeOpacity={0.7}>
+      <TouchableOpacity 
+        style={styles.communityCard}
+        onPress={() => toggleExpand(item.id)}
+        activeOpacity={0.7}
+      >
         <View style={styles.cardHeader}>
-          <View style={styles.communityIconContainer}>
-            <Text style={styles.communityIcon}>{item.icon}</Text>
+          <View style={[styles.cardIconContainer, { backgroundColor: `${config.color}20` }]}>
+            <Ionicons name={config.icon} size={20} color={config.color} />
           </View>
-          <View style={styles.communityInfo}>
-            <Text style={styles.communityName}>{item.name}</Text>
-            <Text style={styles.communityDescription}>{item.description}</Text>
-            <View style={styles.communityStats}>
-              <Text style={styles.memberCount}>{item.memberCount} members</Text>
-              <Text style={styles.activityText}>• {item.recentActivity}</Text>
+          <View style={styles.cardContent}>
+            <View style={styles.cardTitleRow}>
+              <Text style={styles.cardTitle}>{item.name}</Text>
+              {item.is_featured && <ProfessionalBadge type="featured" size="small" />}
+              {item.is_official && <ProfessionalBadge type="official" size="small" />}
             </View>
+            <Text style={styles.cardDescription}>{item.description}</Text>
+            <View style={styles.communityStats}>
+              <View style={styles.statItem}>
+                <Ionicons name="people" size={14} color="rgba(255, 255, 255, 0.6)" />
+                <Text style={styles.statText}>{item.member_count} members</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Ionicons name="time-outline" size={14} color="rgba(255, 255, 255, 0.6)" />
+                <Text style={styles.statText}>
+                  {new Date(item.created_at).toLocaleDateString()}
+                </Text>
+              </View>
+            </View>
+          </View>
+          <View style={styles.cardActions}>
+            <Ionicons 
+              name={isExpanded ? 'chevron-up' : 'chevron-down'} 
+              size={20} 
+              color="rgba(255, 255, 255, 0.6)" 
+            />
+            <TouchableOpacity 
+              style={[
+                styles.joinButton,
+                isJoined && styles.joinedButton
+              ]}
+              onPress={(e) => {
+                e.stopPropagation();
+                if (isJoined) {
+                  handleLeaveCommunity(item.id);
+                } else {
+                  handleJoinCommunity(item.id);
+                }
+              }}
+            >
+              <Text style={[
+                styles.joinButtonText,
+                isJoined && styles.joinedButtonText
+              ]}>
+                {isJoined ? 'Joined' : 'Join'}
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
         
-        <View style={styles.cardFooter}>
-          <View style={styles.categoryBadge}>
-            <Text style={styles.categoryText}>{item.category}</Text>
+        {isExpanded && (
+          <View style={styles.expandedContent}>
+            <View style={styles.expandedDetails}>
+              <View style={styles.detailRow}>
+                <Ionicons name="business-outline" size={16} color="rgba(255, 255, 255, 0.6)" />
+                <Text style={styles.detailText}>Category: {item.category}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Ionicons name="lock-closed-outline" size={16} color="rgba(255, 255, 255, 0.6)" />
+                <Text style={styles.detailText}>Privacy: {item.privacy}</Text>
+              </View>
+              {item.rules && (
+                <View style={styles.detailRow}>
+                  <Ionicons name="document-text-outline" size={16} color="rgba(255, 255, 255, 0.6)" />
+                  <Text style={styles.detailText}>Rules: {item.rules}</Text>
+                </View>
+              )}
+            </View>
+            <TouchableOpacity 
+              style={styles.viewCommunityButton}
+              onPress={() => navigation.navigate('CommunityDetail', { communityId: item.id })}
+            >
+              <Text style={styles.viewCommunityText}>View Community</Text>
+              <Ionicons name="arrow-forward" size={16} color="#4ECDC4" />
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity 
-            style={[
-              styles.joinButton,
-              isJoined && styles.joinedButton
-            ]}
-            onPress={() => handleJoinCommunity(item.id)}
-            activeOpacity={0.7}
-          >
-            <Text style={[
-              styles.joinButtonText,
-              isJoined && styles.joinedButtonText
-            ]}>
-              {isJoined ? 'Joined' : 'Join'}
-            </Text>
-          </TouchableOpacity>
-        </View>
+        )}
       </TouchableOpacity>
     );
   };
 
-  const renderFeaturedCard = ({ item }) => (
-    <TouchableOpacity style={styles.featuredCard} activeOpacity={0.7}>
-      <View style={styles.featuredIconContainer}>
-        <Text style={styles.featuredIcon}>{item.icon}</Text>
-      </View>
-      <View style={styles.featuredContent}>
-        <Text style={styles.featuredName}>{item.name}</Text>
-        <Text style={styles.featuredDescription}>{item.description}</Text>
-        <View style={styles.featuredStats}>
-          <Text style={styles.featuredMemberCount}>{item.memberCount} members</Text>
-          <View style={[
-            styles.featuredBadge,
-            item.category === 'academic' && styles.academicBadge,
-            item.category === 'support' && styles.supportBadge,
-            item.category === 'hobbies' && styles.hobbiesBadge
-          ]}>
-            <Text style={styles.featuredBadgeText}>{item.category}</Text>
-          </View>
-        </View>
-      </View>
-    </TouchableOpacity>
+  const toggleExpand = (itemId) => {
+    setExpandedItems(prev => ({
+      ...prev,
+      [itemId]: !prev[itemId]
+    }));
+  };
+
+  const handleScroll = Animated.event(
+    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+    { useNativeDriver: false }
   );
+
+  // Filter communities based on active category
+  const filteredCommunities = communities.filter(community => {
+    if (activeCategory === 'all') return true;
+    if (activeCategory === 'my') return community.isJoined;
+    return community.category === activeCategory;
+  });
+
+  const featuredCommunities = communities.filter(community => community.is_featured);
+  const myCommunities = communities.filter(community => community.isJoined);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <StatusBar barStyle="light-content" backgroundColor={colors.homeBackground} />
       
-      {/* Header Background */}
-      <ImageBackground 
-        source={require('../../../assets/create_post_screen_icons/createpost_header_bg.png')}
-        style={styles.headerBackground}
-        resizeMode="cover"
-      >
-        <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Communities</Text>
-        </View>
-      </ImageBackground>
+      <Animated.View style={[styles.headerContainer, { height: headerHeight }]}>
+        <ImageBackground 
+          source={require('../../../assets/create_post_screen_icons/createpost_header_bg.png')}
+          style={styles.headerBackground}
+          resizeMode="cover"
+        >
+          <Animated.View style={[styles.headerContent, { opacity: headerTitleOpacity }]}>
+            <Text style={styles.headerTitle}>Communities</Text>
+            <Text style={styles.headerSubtitle}>Connect with like-minded students</Text>
+          </Animated.View>
 
-      <ScrollView 
-        style={styles.container}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        {/* Search Field */}
+          <Animated.View style={[styles.collapsedHeaderContent, { opacity: collapsedTitleOpacity }]}>
+            <Text style={styles.collapsedHeaderTitle}>Communities</Text>
+            {canEditCommunities && (
+              <TouchableOpacity style={styles.editHeaderButton} onPress={handleEditCommunities}>
+                <Ionicons name="create-outline" size={16} color={colors.white} />
+              </TouchableOpacity>
+            )}
+          </Animated.View>
+        </ImageBackground>
+      </Animated.View>
+
+      <Animated.View style={[styles.stickySection, { transform: [{ translateY: searchSectionTranslateY }] }]}>
         <View style={styles.searchContainer}>
           <View style={styles.searchInputWrapper}>
-            <Image 
-              source={require('../../../assets/bottom_navigation_icons/search_icon_fill.png')}
-              style={styles.searchIcon}
-              resizeMode="contain"
-            />
+            <Ionicons name="search" size={20} color="rgba(255, 255, 255, 0.6)" style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
               placeholder="Search for communities, interests..."
@@ -279,28 +581,77 @@ export default function CommunityScreen({ navigation }) {
               onSubmitEditing={handleSearch}
               returnKeyType="search"
             />
+            {canEditCommunities && (
+              <TouchableOpacity style={styles.quickEditButton} onPress={handleCreateCommunity}>
+                <Ionicons name="add-circle-outline" size={22} color="#4ECDC4" />
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
-        {/* Create Community Button */}
-        <View style={styles.createSection}>
-          <TouchableOpacity 
-            style={styles.createButton}
-            onPress={handleCreateCommunity}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.createButtonIcon}>+</Text>
-            <Text style={styles.createButtonText}>Create Community</Text>
-          </TouchableOpacity>
+        <View style={styles.categoriesSection}>
+          <FlatList
+            data={categories}
+            renderItem={renderCategoryChip}
+            keyExtractor={(item) => item.id}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categoriesList}
+          />
+        </View>
+      </Animated.View>
+
+      <ScrollView 
+        ref={scrollViewRef}
+        style={styles.container}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.white}
+            colors={[colors.white]}
+          />
+        }
+      >
+        <CommunityCreationSection />
+
+        <View style={styles.quickActionsSection}>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>Quick Actions</Text>
+            {canEditCommunities && (
+              <TouchableOpacity style={styles.manageButton} onPress={handleEditCommunities}>
+                <Text style={styles.manageButtonText}>Manage</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          <FlatList
+            data={quickActions}
+            renderItem={renderQuickAction}
+            keyExtractor={(item) => item.id}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.quickActionsList}
+          />
         </View>
 
-        {/* My Communities Section */}
         {myCommunities.length > 0 && (
-          <View style={styles.myCommunitiesSection}>
+          <View style={styles.contentSection}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>My Communities</Text>
-              <Text style={styles.sectionSubtitle}>{myCommunities.length} joined</Text>
+              <View style={styles.sectionHeaderContent}>
+                <View style={styles.sectionHeaderRow}>
+                  <Text style={styles.sectionTitle}>My Communities</Text>
+                  <ProfessionalBadge type="verified" size="small" />
+                </View>
+                <Text style={styles.sectionSubtitle}>
+                  {myCommunities.length} communities you've joined
+                </Text>
+              </View>
             </View>
+            
             <FlatList
               data={myCommunities}
               renderItem={renderCommunityCard}
@@ -311,61 +662,74 @@ export default function CommunityScreen({ navigation }) {
           </View>
         )}
 
-        {/* Featured Communities */}
-        <View style={styles.featuredSection}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Featured Communities</Text>
-            <Text style={styles.sectionSubtitle}>Popular on campus</Text>
+        {featuredCommunities.length > 0 && (
+          <View style={styles.contentSection}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionHeaderContent}>
+                <View style={styles.sectionHeaderRow}>
+                  <Text style={styles.sectionTitle}>Featured Communities</Text>
+                  <ProfessionalBadge type="featured" size="small" />
+                </View>
+                <Text style={styles.sectionSubtitle}>
+                  Popular and recommended communities
+                </Text>
+              </View>
+            </View>
+            
+            <FlatList
+              data={featuredCommunities}
+              renderItem={renderCommunityCard}
+              keyExtractor={(item) => item.id}
+              scrollEnabled={false}
+              showsVerticalScrollIndicator={false}
+            />
           </View>
-          <FlatList
-            data={featuredCommunities}
-            renderItem={renderFeaturedCard}
-            keyExtractor={(item) => item.id}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.featuredList}
-          />
-        </View>
+        )}
 
-        {/* Category Chips */}
-        <View style={styles.categoriesSection}>
-          <Text style={styles.sectionTitle}>Browse Categories</Text>
-          <FlatList
-            data={categories}
-            renderItem={renderCategoryChip}
-            keyExtractor={(item) => item.id}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.categoriesList}
-          />
-        </View>
-
-        {/* All Communities */}
-        <View style={styles.allCommunitiesSection}>
+        <View style={styles.contentSection}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>
-              {activeCategory === 'all' && 'All Communities'}
-              {activeCategory === 'academic' && 'Academic Communities'}
-              {activeCategory === 'social' && 'Social Communities'}
-              {activeCategory === 'support' && 'Support Communities'}
-              {activeCategory === 'hobbies' && 'Hobby Communities'}
-              {activeCategory === 'sports' && 'Sports Communities'}
-            </Text>
-            <Text style={styles.sectionSubtitle}>
-              {filteredCommunities.length} communities
-            </Text>
+            <View style={styles.sectionHeaderContent}>
+              <View style={styles.sectionHeaderRow}>
+                <Text style={styles.sectionTitle}>
+                  {activeCategory === 'all' && 'All Communities'}
+                  {activeCategory === 'academic' && 'Academic Communities'}
+                  {activeCategory === 'social' && 'Social Communities'}
+                  {activeCategory === 'support' && 'Support Communities'}
+                  {activeCategory === 'hobbies' && 'Hobby Communities'}
+                  {activeCategory === 'sports' && 'Sports Communities'}
+                  {activeCategory === 'my' && 'My Communities'}
+                </Text>
+                <Text style={styles.sectionCount}>
+                  {filteredCommunities.length} communities
+                </Text>
+              </View>
+              <Text style={styles.sectionSubtitle}>
+                {activeCategory === 'my' 
+                  ? 'Communities you are a member of' 
+                  : 'Browse all available communities'
+                }
+              </Text>
+            </View>
           </View>
           
-          <FlatList
-            data={filteredCommunities}
-            renderItem={renderCommunityCard}
-            keyExtractor={(item) => item.id}
-            scrollEnabled={false}
-            showsVerticalScrollIndicator={false}
-          />
+          {filteredCommunities.length > 0 ? (
+            <FlatList
+              data={filteredCommunities}
+              renderItem={renderCommunityCard}
+              keyExtractor={(item) => item.id}
+              scrollEnabled={false}
+              showsVerticalScrollIndicator={false}
+            />
+          ) : (
+            <Text style={styles.emptyStateText}>
+              {activeCategory === 'my' 
+                ? "You haven't joined any communities yet. Explore and join some!"
+                : 'No communities found in this category.'
+              }
+            </Text>
+          )}
         </View>
 
-        {/* Bottom Spacer */}
         <View style={styles.bottomSpacer} />
       </ScrollView>
     </SafeAreaView>
@@ -377,34 +741,246 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.homeBackground,
   },
+  headerContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    overflow: 'hidden',
+  },
   headerBackground: {
     width: '100%',
-    height: 140,
+    height: '100%',
     justifyContent: 'center',
+    alignItems: 'center',
   },
   headerContent: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   headerTitle: {
     fontSize: 28,
-    fontFamily: fonts.medium,
+    fontFamily: fonts.bold,
     color: colors.white,
     textAlign: 'center',
-    letterSpacing: 1.5,
+    letterSpacing: 0.5,
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    fontFamily: fonts.normal,
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  collapsedHeaderContent: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 12,
+  },
+  collapsedHeaderTitle: {
+    fontSize: 20,
+    fontFamily: fonts.bold,
+    color: colors.white,
+  },
+  editHeaderButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  stickySection: {
+    position: 'absolute',
+    top: 160,
+    left: 0,
+    right: 0,
+    zIndex: 20,
+    backgroundColor: colors.homeBackground,
+    paddingTop: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
   container: {
     flex: 1,
     backgroundColor: colors.homeBackground,
+    marginTop: 160,
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 20,
+    paddingTop: 140,
+    paddingBottom: 30,
+  },
+  badgeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderRadius: 8,
+  },
+  badgeText: {
+    fontFamily: fonts.semiBold,
+    letterSpacing: 0.3,
+  },
+  creationSection: {
+    marginHorizontal: 20,
+    marginTop: 10,
+    marginBottom: 30,
+  },
+  creationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+    padding: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  creationHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 12,
+  },
+  creationHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  creationTitleContainer: {
+    flex: 1,
+  },
+  creationTitle: {
+    fontSize: 20,
+    fontFamily: fonts.bold,
+    color: colors.white,
+    marginBottom: 4,
+  },
+  creationSubtitle: {
+    fontSize: 14,
+    fontFamily: fonts.normal,
+    color: 'rgba(255, 255, 255, 0.7)',
+  },
+  dropdownIcon: {
+    marginLeft: 8,
+  },
+  creationContent: {
+    marginTop: 8,
+  },
+  tierCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    marginBottom: 16,
+  },
+  premiumCard: {
+    backgroundColor: 'rgba(255, 215, 0, 0.08)',
+    borderColor: 'rgba(255, 215, 0, 0.3)',
+  },
+  tierHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  tierTitleContainer: {
+    flex: 1,
+  },
+  tierName: {
+    fontSize: 18,
+    fontFamily: fonts.bold,
+    color: colors.white,
+    marginBottom: 6,
+  },
+  premiumTierName: {
+    fontSize: 18,
+    fontFamily: fonts.bold,
+    color: '#FFD700',
+    marginBottom: 6,
+  },
+  tierDescription: {
+    fontSize: 14,
+    fontFamily: fonts.normal,
+    color: 'rgba(255, 255, 255, 0.7)',
+    lineHeight: 18,
+  },
+  communityCount: {
+    backgroundColor: 'rgba(76, 175, 80, 0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  communityCountFull: {
+    backgroundColor: 'rgba(255, 107, 107, 0.2)',
+  },
+  countText: {
+    fontSize: 14,
+    fontFamily: fonts.bold,
+    color: '#4CAF50',
+  },
+  featuresList: {
+    marginBottom: 20,
+  },
+  featureItem: {
+    fontSize: 14,
+    fontFamily: fonts.normal,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginBottom: 6,
+    lineHeight: 18,
+  },
+  premiumFeatureItem: {
+    fontSize: 14,
+    fontFamily: fonts.normal,
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginBottom: 6,
+    lineHeight: 18,
+  },
+  createButton: {
+    backgroundColor: '#4ECDC4',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  disabledButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  createButtonText: {
+    fontSize: 16,
+    fontFamily: fonts.bold,
+    color: colors.white,
+  },
+  premiumButton: {
+    backgroundColor: '#FFD700',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  premiumButtonText: {
+    fontSize: 16,
+    fontFamily: fonts.bold,
+    color: '#000',
+  },
+  premiumButtonSubtext: {
+    fontSize: 12,
+    fontFamily: fonts.normal,
+    color: 'rgba(0, 0, 0, 0.7)',
+    marginTop: 4,
   },
   searchContainer: {
     paddingHorizontal: 20,
-    marginTop: 20,
-    marginBottom: 10,
+    marginBottom: 16,
   },
   searchInputWrapper: {
     flexDirection: 'row',
@@ -412,15 +988,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
     borderRadius: 16,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderWidth: 1.5,
     borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   searchIcon: {
-    width: 20,
-    height: 20,
     marginRight: 12,
-    tintColor: 'rgba(255, 255, 255, 0.6)',
   },
   searchInput: {
     flex: 1,
@@ -429,170 +1002,127 @@ const styles = StyleSheet.create({
     color: colors.white,
     padding: 0,
   },
-  createSection: {
-    paddingHorizontal: 20,
-    marginBottom: 20,
+  quickEditButton: {
+    padding: 4,
+    marginLeft: 8,
   },
-  createButton: {
+  sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    borderRadius: 16,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-  },
-  createButtonIcon: {
-    fontSize: 20,
-    color: colors.white,
-    marginRight: 8,
-    fontFamily: fonts.bold,
-  },
-  createButtonText: {
-    fontSize: 16,
-    fontFamily: fonts.medium,
-    color: colors.white,
-  },
-  myCommunitiesSection: {
-    marginBottom: 25,
-  },
-  featuredSection: {
-    marginBottom: 25,
-  },
-  categoriesSection: {
-    marginBottom: 20,
-  },
-  allCommunitiesSection: {
-    marginBottom: 10,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 15,
+    marginBottom: 16,
     paddingHorizontal: 20,
+  },
+  manageButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
+  },
+  manageButtonText: {
+    fontSize: 14,
+    fontFamily: fonts.medium,
+    color: '#4ECDC4',
+  },
+  quickActionsSection: {
+    marginBottom: 30,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontFamily: fonts.medium,
+    fontSize: 20,
+    fontFamily: fonts.bold,
     color: colors.white,
   },
-  sectionSubtitle: {
+  sectionCount: {
     fontSize: 14,
-    fontFamily: fonts.normal,
+    fontFamily: fonts.medium,
     color: 'rgba(255, 255, 255, 0.6)',
   },
-  featuredList: {
+  quickActionsList: {
     paddingHorizontal: 20,
+    gap: 12,
   },
-  featuredCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 16,
-    padding: 16,
-    marginRight: 12,
-    width: 200,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  featuredIconContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  quickActionButton: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+    borderRadius: 16,
+    minWidth: 120,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
-  featuredIcon: {
-    fontSize: 24,
-  },
-  featuredContent: {
-    flex: 1,
-  },
-  featuredName: {
-    fontSize: 16,
-    fontFamily: fonts.medium,
-    color: colors.white,
-    marginBottom: 4,
-  },
-  featuredDescription: {
-    fontSize: 12,
-    fontFamily: fonts.normal,
-    color: 'rgba(255, 255, 255, 0.6)',
+  actionIcon: {
     marginBottom: 8,
-    lineHeight: 16,
   },
-  featuredStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  featuredMemberCount: {
-    fontSize: 12,
-    fontFamily: fonts.normal,
-    color: 'rgba(255, 255, 255, 0.5)',
-  },
-  featuredBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  academicBadge: {
-    backgroundColor: 'rgba(33, 150, 243, 0.2)',
-    borderWidth: 1,
-    borderColor: 'rgba(33, 150, 243, 0.5)',
-  },
-  supportBadge: {
-    backgroundColor: 'rgba(76, 175, 80, 0.2)',
-    borderWidth: 1,
-    borderColor: 'rgba(76, 175, 80, 0.5)',
-  },
-  hobbiesBadge: {
-    backgroundColor: 'rgba(156, 39, 176, 0.2)',
-    borderWidth: 1,
-    borderColor: 'rgba(156, 39, 176, 0.5)',
-  },
-  featuredBadgeText: {
-    fontSize: 10,
+  actionLabel: {
+    fontSize: 14,
     fontFamily: fonts.medium,
     color: colors.white,
+    textAlign: 'center',
+  },
+  categoriesSection: {
+    paddingHorizontal: 20,
+    paddingBottom: 16,
   },
   categoriesList: {
-    paddingHorizontal: 20,
+    gap: 8,
   },
   categoryChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderWidth: 1.5,
     borderColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 16,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    marginRight: 12,
-    minWidth: 80,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    minWidth: 100,
   },
   categoryChipSelected: {
     backgroundColor: colors.white,
     borderColor: colors.white,
   },
+  categoryIcon: {
+    marginRight: 6,
+  },
   categoryChipText: {
     fontSize: 14,
     fontFamily: fonts.medium,
     color: 'rgba(255, 255, 255, 0.9)',
-    textAlign: 'center',
   },
   categoryChipTextSelected: {
     color: colors.homeBackground,
     fontFamily: fonts.semiBold,
   },
+  contentSection: {
+    marginBottom: 30,
+  },
+  sectionHeader: {
+    marginBottom: 20,
+  },
+  sectionHeaderContent: {
+    paddingHorizontal: 20,
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    fontFamily: fonts.normal,
+    color: 'rgba(255, 255, 255, 0.6)',
+    marginTop: 4,
+  },
+  emptyStateText: {
+    fontSize: 14,
+    fontFamily: fonts.normal,
+    color: 'rgba(255, 255, 255, 0.4)',
+    textAlign: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 40,
+    fontStyle: 'italic',
+  },
   communityCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     marginHorizontal: 20,
     marginBottom: 12,
-    padding: 16,
+    padding: 20,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
@@ -600,67 +1130,56 @@ const styles = StyleSheet.create({
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 12,
   },
-  communityIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  cardIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: 16,
+  },
+  cardContent: {
+    flex: 1,
     marginRight: 12,
   },
-  communityIcon: {
-    fontSize: 18,
+  cardTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 6,
+    flexWrap: 'wrap',
   },
-  communityInfo: {
-    flex: 1,
-  },
-  communityName: {
+  cardTitle: {
     fontSize: 16,
-    fontFamily: fonts.medium,
+    fontFamily: fonts.bold,
     color: colors.white,
-    marginBottom: 4,
   },
-  communityDescription: {
+  cardDescription: {
     fontSize: 14,
     fontFamily: fonts.normal,
     color: 'rgba(255, 255, 255, 0.6)',
+    lineHeight: 20,
     marginBottom: 8,
-    lineHeight: 18,
   },
   communityStats: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 16,
   },
-  memberCount: {
+  statItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  statText: {
     fontSize: 12,
     fontFamily: fonts.normal,
     color: 'rgba(255, 255, 255, 0.5)',
-    marginRight: 8,
   },
-  activityText: {
-    fontSize: 12,
-    fontFamily: fonts.normal,
-    color: 'rgba(255, 255, 255, 0.4)',
-  },
-  cardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  categoryBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  categoryText: {
-    fontSize: 12,
-    fontFamily: fonts.medium,
-    color: 'rgba(255, 255, 255, 0.8)',
-    textTransform: 'capitalize',
+  cardActions: {
+    alignItems: 'flex-end',
+    gap: 8,
   },
   joinButton: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
@@ -669,6 +1188,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
+    minWidth: 70,
+    alignItems: 'center',
   },
   joinedButton: {
     backgroundColor: '#4CAF50',
@@ -682,7 +1203,43 @@ const styles = StyleSheet.create({
   joinedButtonText: {
     color: colors.white,
   },
+  expandedContent: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  expandedDetails: {
+    gap: 8,
+    marginBottom: 16,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  detailText: {
+    fontSize: 14,
+    fontFamily: fonts.normal,
+    color: 'rgba(255, 255, 255, 0.7)',
+    flex: 1,
+  },
+  viewCommunityButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(78, 205, 196, 0.1)',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    gap: 8,
+  },
+  viewCommunityText: {
+    fontSize: 14,
+    fontFamily: fonts.medium,
+    color: '#4ECDC4',
+  },
   bottomSpacer: {
-    height: 20,
+    height: 30,
   },
 });
