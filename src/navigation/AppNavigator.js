@@ -37,6 +37,15 @@ import FacultyNotificationsScreen from '../screens/faculty/NotificationsScreen';
 // Import MessageScreen
 import StudentMessagesScreen from '../screens/student/MessagesScreen';
 
+// Import CreateCommunityScreen (Student only for now)
+import StudentCreateCommunityScreen from '../screens/student/CreateCommunityScreen';
+
+// Import CommunityDetailScreen
+import CommunityDetailScreen from '../screens/student/CommunityDetailScreen';
+
+// Import CreateCommunityPostScreen
+import CreateCommunityPostScreen from '../screens/student/CreateCommunityPostScreen';
+
 import BottomNavigation from '../components/BottomNavigation';
 
 const Stack = createNativeStackNavigator();
@@ -146,6 +155,33 @@ export default function AppNavigator() {
         component={EditProfileScreen}
         options={{
           animation: 'slide_from_right',
+        }}
+      />
+      
+      {/* CREATE COMMUNITY SCREEN - STUDENT ONLY (for now) */}
+      <Stack.Screen 
+        name="CreateCommunity" 
+        component={StudentCreateCommunityScreen}
+        options={{
+          animation: 'slide_from_right',
+        }}
+      />
+      
+      {/* COMMUNITY DETAIL SCREEN */}
+      <Stack.Screen 
+        name="CommunityDetail" 
+        component={CommunityDetailScreen}
+        options={{
+          animation: 'slide_from_right',
+        }}
+      />
+      
+      {/* CREATE COMMUNITY POST SCREEN */}
+      <Stack.Screen 
+        name="CreateCommunityPost" 
+        component={CreateCommunityPostScreen}
+        options={{
+          animation: 'slide_from_bottom',
         }}
       />
     </Stack.Navigator>

@@ -1,3 +1,84 @@
+# Supabase Database Structure Analysis
+
+1. Database Schema Overview
+```sql
+SELECT table_name, table_type 
+FROM information_schema.tables 
+WHERE table_schema = 'public'
+ORDER BY table_name;
+
+Results:
+
+<!-- PASTE JSON RESULTS FOR TABLE_OVERVIEW HERE -->
+[
+  {
+    "table_name": "bookmarks",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "communities",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "community_members",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "community_post_likes",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "community_posts",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "faculty",
+    "table_type": "VIEW"
+  },
+  {
+    "table_name": "follows",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "post_likes",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "posts",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "profiles",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "reposts",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "students",
+    "table_type": "VIEW"
+  }
+]
+
+
+
+
+2. Table Columns Details
+SELECT
+    table_name,
+    column_name,
+    data_type,
+    is_nullable,
+    column_default,
+    ordinal_position
+FROM information_schema.columns 
+WHERE table_schema = 'public'
+ORDER BY table_name, ordinal_position;
+
+Results:
+
+<!-- PASTE JSON RESULTS FOR COLUMN_DETAILS HERE -->
 [
   {
     "table_name": "bookmarks",
@@ -5,8 +86,7 @@
     "data_type": "uuid",
     "is_nullable": "NO",
     "column_default": "gen_random_uuid()",
-    "is_primary_key": "YES",
-    "foreign_key": null
+    "ordinal_position": 1
   },
   {
     "table_name": "bookmarks",
@@ -14,8 +94,7 @@
     "data_type": "uuid",
     "is_nullable": "YES",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": "posts.id"
+    "ordinal_position": 2
   },
   {
     "table_name": "bookmarks",
@@ -23,8 +102,7 @@
     "data_type": "uuid",
     "is_nullable": "YES",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 3
   },
   {
     "table_name": "bookmarks",
@@ -32,8 +110,7 @@
     "data_type": "timestamp with time zone",
     "is_nullable": "YES",
     "column_default": "timezone('utc'::text, now())",
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 4
   },
   {
     "table_name": "communities",
@@ -41,8 +118,7 @@
     "data_type": "uuid",
     "is_nullable": "NO",
     "column_default": "gen_random_uuid()",
-    "is_primary_key": "YES",
-    "foreign_key": null
+    "ordinal_position": 1
   },
   {
     "table_name": "communities",
@@ -50,8 +126,7 @@
     "data_type": "text",
     "is_nullable": "NO",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 2
   },
   {
     "table_name": "communities",
@@ -59,8 +134,7 @@
     "data_type": "text",
     "is_nullable": "YES",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 3
   },
   {
     "table_name": "communities",
@@ -68,8 +142,7 @@
     "data_type": "text",
     "is_nullable": "NO",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 4
   },
   {
     "table_name": "communities",
@@ -77,8 +150,7 @@
     "data_type": "text",
     "is_nullable": "YES",
     "column_default": "'public'::text",
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 5
   },
   {
     "table_name": "communities",
@@ -86,8 +158,7 @@
     "data_type": "text",
     "is_nullable": "YES",
     "column_default": "'people-outline'::text",
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 6
   },
   {
     "table_name": "communities",
@@ -95,8 +166,7 @@
     "data_type": "integer",
     "is_nullable": "YES",
     "column_default": "1",
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 7
   },
   {
     "table_name": "communities",
@@ -104,8 +174,7 @@
     "data_type": "uuid",
     "is_nullable": "NO",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": "profiles.id"
+    "ordinal_position": 8
   },
   {
     "table_name": "communities",
@@ -113,8 +182,7 @@
     "data_type": "boolean",
     "is_nullable": "YES",
     "column_default": "false",
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 9
   },
   {
     "table_name": "communities",
@@ -122,8 +190,7 @@
     "data_type": "boolean",
     "is_nullable": "YES",
     "column_default": "false",
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 10
   },
   {
     "table_name": "communities",
@@ -131,8 +198,7 @@
     "data_type": "text",
     "is_nullable": "YES",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 11
   },
   {
     "table_name": "communities",
@@ -140,8 +206,7 @@
     "data_type": "integer",
     "is_nullable": "YES",
     "column_default": "50",
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 12
   },
   {
     "table_name": "communities",
@@ -149,8 +214,7 @@
     "data_type": "timestamp with time zone",
     "is_nullable": "YES",
     "column_default": "now()",
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 13
   },
   {
     "table_name": "communities",
@@ -158,8 +222,7 @@
     "data_type": "timestamp with time zone",
     "is_nullable": "YES",
     "column_default": "now()",
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 14
   },
   {
     "table_name": "community_members",
@@ -167,8 +230,7 @@
     "data_type": "uuid",
     "is_nullable": "NO",
     "column_default": "gen_random_uuid()",
-    "is_primary_key": "YES",
-    "foreign_key": null
+    "ordinal_position": 1
   },
   {
     "table_name": "community_members",
@@ -176,8 +238,7 @@
     "data_type": "uuid",
     "is_nullable": "YES",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": "communities.id"
+    "ordinal_position": 2
   },
   {
     "table_name": "community_members",
@@ -185,8 +246,7 @@
     "data_type": "uuid",
     "is_nullable": "YES",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": "profiles.id"
+    "ordinal_position": 3
   },
   {
     "table_name": "community_members",
@@ -194,8 +254,7 @@
     "data_type": "text",
     "is_nullable": "YES",
     "column_default": "'member'::text",
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 4
   },
   {
     "table_name": "community_members",
@@ -203,8 +262,7 @@
     "data_type": "timestamp with time zone",
     "is_nullable": "YES",
     "column_default": "now()",
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 5
   },
   {
     "table_name": "community_post_likes",
@@ -212,8 +270,7 @@
     "data_type": "uuid",
     "is_nullable": "NO",
     "column_default": "gen_random_uuid()",
-    "is_primary_key": "YES",
-    "foreign_key": null
+    "ordinal_position": 1
   },
   {
     "table_name": "community_post_likes",
@@ -221,8 +278,7 @@
     "data_type": "uuid",
     "is_nullable": "YES",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": "community_posts.id"
+    "ordinal_position": 2
   },
   {
     "table_name": "community_post_likes",
@@ -230,8 +286,7 @@
     "data_type": "uuid",
     "is_nullable": "YES",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": "profiles.id"
+    "ordinal_position": 3
   },
   {
     "table_name": "community_post_likes",
@@ -239,8 +294,7 @@
     "data_type": "timestamp with time zone",
     "is_nullable": "YES",
     "column_default": "now()",
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 4
   },
   {
     "table_name": "community_posts",
@@ -248,8 +302,7 @@
     "data_type": "uuid",
     "is_nullable": "NO",
     "column_default": "gen_random_uuid()",
-    "is_primary_key": "YES",
-    "foreign_key": null
+    "ordinal_position": 1
   },
   {
     "table_name": "community_posts",
@@ -257,8 +310,7 @@
     "data_type": "uuid",
     "is_nullable": "YES",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": "communities.id"
+    "ordinal_position": 2
   },
   {
     "table_name": "community_posts",
@@ -266,8 +318,7 @@
     "data_type": "uuid",
     "is_nullable": "YES",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": "profiles.id"
+    "ordinal_position": 3
   },
   {
     "table_name": "community_posts",
@@ -275,8 +326,7 @@
     "data_type": "text",
     "is_nullable": "YES",
     "column_default": "'Anonymous User'::text",
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 4
   },
   {
     "table_name": "community_posts",
@@ -284,8 +334,7 @@
     "data_type": "text",
     "is_nullable": "NO",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 5
   },
   {
     "table_name": "community_posts",
@@ -293,8 +342,7 @@
     "data_type": "integer",
     "is_nullable": "YES",
     "column_default": "0",
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 6
   },
   {
     "table_name": "community_posts",
@@ -302,8 +350,7 @@
     "data_type": "integer",
     "is_nullable": "YES",
     "column_default": "0",
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 7
   },
   {
     "table_name": "community_posts",
@@ -311,8 +358,7 @@
     "data_type": "timestamp with time zone",
     "is_nullable": "YES",
     "column_default": "now()",
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 8
   },
   {
     "table_name": "community_posts",
@@ -320,8 +366,7 @@
     "data_type": "timestamp with time zone",
     "is_nullable": "YES",
     "column_default": "now()",
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 9
   },
   {
     "table_name": "faculty",
@@ -329,8 +374,7 @@
     "data_type": "uuid",
     "is_nullable": "YES",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 1
   },
   {
     "table_name": "faculty",
@@ -338,8 +382,7 @@
     "data_type": "text",
     "is_nullable": "YES",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 2
   },
   {
     "table_name": "faculty",
@@ -347,8 +390,7 @@
     "data_type": "text",
     "is_nullable": "YES",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 3
   },
   {
     "table_name": "faculty",
@@ -356,8 +398,7 @@
     "data_type": "text",
     "is_nullable": "YES",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 4
   },
   {
     "table_name": "faculty",
@@ -365,8 +406,7 @@
     "data_type": "integer",
     "is_nullable": "YES",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 5
   },
   {
     "table_name": "faculty",
@@ -374,8 +414,7 @@
     "data_type": "timestamp with time zone",
     "is_nullable": "YES",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 6
   },
   {
     "table_name": "faculty",
@@ -383,8 +422,7 @@
     "data_type": "timestamp with time zone",
     "is_nullable": "YES",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 7
   },
   {
     "table_name": "faculty",
@@ -392,8 +430,7 @@
     "data_type": "text",
     "is_nullable": "YES",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 8
   },
   {
     "table_name": "follows",
@@ -401,8 +438,7 @@
     "data_type": "uuid",
     "is_nullable": "NO",
     "column_default": "gen_random_uuid()",
-    "is_primary_key": "YES",
-    "foreign_key": null
+    "ordinal_position": 1
   },
   {
     "table_name": "follows",
@@ -410,8 +446,7 @@
     "data_type": "uuid",
     "is_nullable": "YES",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": "profiles.id"
+    "ordinal_position": 2
   },
   {
     "table_name": "follows",
@@ -419,8 +454,7 @@
     "data_type": "uuid",
     "is_nullable": "YES",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": "profiles.id"
+    "ordinal_position": 3
   },
   {
     "table_name": "follows",
@@ -428,8 +462,7 @@
     "data_type": "timestamp with time zone",
     "is_nullable": "NO",
     "column_default": "timezone('utc'::text, now())",
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 4
   },
   {
     "table_name": "post_likes",
@@ -437,8 +470,7 @@
     "data_type": "uuid",
     "is_nullable": "NO",
     "column_default": "gen_random_uuid()",
-    "is_primary_key": "YES",
-    "foreign_key": null
+    "ordinal_position": 1
   },
   {
     "table_name": "post_likes",
@@ -446,8 +478,7 @@
     "data_type": "uuid",
     "is_nullable": "YES",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": "posts.id"
+    "ordinal_position": 2
   },
   {
     "table_name": "post_likes",
@@ -455,8 +486,7 @@
     "data_type": "uuid",
     "is_nullable": "YES",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 3
   },
   {
     "table_name": "post_likes",
@@ -464,8 +494,7 @@
     "data_type": "timestamp with time zone",
     "is_nullable": "YES",
     "column_default": "timezone('utc'::text, now())",
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 4
   },
   {
     "table_name": "posts",
@@ -473,8 +502,7 @@
     "data_type": "uuid",
     "is_nullable": "NO",
     "column_default": "gen_random_uuid()",
-    "is_primary_key": "YES",
-    "foreign_key": null
+    "ordinal_position": 1
   },
   {
     "table_name": "posts",
@@ -482,8 +510,7 @@
     "data_type": "text",
     "is_nullable": "NO",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 2
   },
   {
     "table_name": "posts",
@@ -491,8 +518,7 @@
     "data_type": "text",
     "is_nullable": "NO",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 3
   },
   {
     "table_name": "posts",
@@ -500,8 +526,7 @@
     "data_type": "uuid",
     "is_nullable": "YES",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 4
   },
   {
     "table_name": "posts",
@@ -509,8 +534,7 @@
     "data_type": "text",
     "is_nullable": "YES",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 5
   },
   {
     "table_name": "posts",
@@ -518,8 +542,7 @@
     "data_type": "boolean",
     "is_nullable": "YES",
     "column_default": "true",
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 6
   },
   {
     "table_name": "posts",
@@ -527,8 +550,7 @@
     "data_type": "timestamp with time zone",
     "is_nullable": "YES",
     "column_default": "now()",
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 7
   },
   {
     "table_name": "posts",
@@ -536,8 +558,7 @@
     "data_type": "integer",
     "is_nullable": "YES",
     "column_default": "0",
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 8
   },
   {
     "table_name": "posts",
@@ -545,8 +566,7 @@
     "data_type": "integer",
     "is_nullable": "YES",
     "column_default": "0",
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 9
   },
   {
     "table_name": "posts",
@@ -554,8 +574,7 @@
     "data_type": "integer",
     "is_nullable": "YES",
     "column_default": "0",
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 10
   },
   {
     "table_name": "posts",
@@ -563,8 +582,7 @@
     "data_type": "integer",
     "is_nullable": "YES",
     "column_default": "0",
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 11
   },
   {
     "table_name": "profiles",
@@ -572,8 +590,7 @@
     "data_type": "uuid",
     "is_nullable": "NO",
     "column_default": null,
-    "is_primary_key": "YES",
-    "foreign_key": null
+    "ordinal_position": 1
   },
   {
     "table_name": "profiles",
@@ -581,8 +598,7 @@
     "data_type": "text",
     "is_nullable": "NO",
     "column_default": "'student'::text",
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 2
   },
   {
     "table_name": "profiles",
@@ -590,8 +606,7 @@
     "data_type": "text",
     "is_nullable": "YES",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 3
   },
   {
     "table_name": "profiles",
@@ -599,8 +614,7 @@
     "data_type": "text",
     "is_nullable": "YES",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 4
   },
   {
     "table_name": "profiles",
@@ -608,8 +622,7 @@
     "data_type": "integer",
     "is_nullable": "YES",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 5
   },
   {
     "table_name": "profiles",
@@ -617,8 +630,7 @@
     "data_type": "timestamp with time zone",
     "is_nullable": "YES",
     "column_default": "now()",
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 6
   },
   {
     "table_name": "profiles",
@@ -626,8 +638,7 @@
     "data_type": "timestamp with time zone",
     "is_nullable": "YES",
     "column_default": "now()",
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 7
   },
   {
     "table_name": "profiles",
@@ -635,8 +646,7 @@
     "data_type": "text",
     "is_nullable": "NO",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 8
   },
   {
     "table_name": "profiles",
@@ -644,8 +654,7 @@
     "data_type": "text",
     "is_nullable": "YES",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 9
   },
   {
     "table_name": "profiles",
@@ -653,8 +662,7 @@
     "data_type": "text",
     "is_nullable": "YES",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 10
   },
   {
     "table_name": "profiles",
@@ -662,8 +670,7 @@
     "data_type": "text",
     "is_nullable": "YES",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 11
   },
   {
     "table_name": "profiles",
@@ -671,8 +678,7 @@
     "data_type": "text",
     "is_nullable": "YES",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 12
   },
   {
     "table_name": "profiles",
@@ -680,8 +686,7 @@
     "data_type": "text",
     "is_nullable": "YES",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 13
   },
   {
     "table_name": "profiles",
@@ -689,8 +694,7 @@
     "data_type": "boolean",
     "is_nullable": "YES",
     "column_default": "true",
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 14
   },
   {
     "table_name": "profiles",
@@ -698,8 +702,7 @@
     "data_type": "date",
     "is_nullable": "YES",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 15
   },
   {
     "table_name": "reposts",
@@ -707,8 +710,7 @@
     "data_type": "uuid",
     "is_nullable": "NO",
     "column_default": "gen_random_uuid()",
-    "is_primary_key": "YES",
-    "foreign_key": null
+    "ordinal_position": 1
   },
   {
     "table_name": "reposts",
@@ -716,8 +718,7 @@
     "data_type": "uuid",
     "is_nullable": "YES",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": "posts.id"
+    "ordinal_position": 2
   },
   {
     "table_name": "reposts",
@@ -725,8 +726,7 @@
     "data_type": "uuid",
     "is_nullable": "YES",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 3
   },
   {
     "table_name": "reposts",
@@ -734,8 +734,7 @@
     "data_type": "timestamp with time zone",
     "is_nullable": "YES",
     "column_default": "timezone('utc'::text, now())",
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 4
   },
   {
     "table_name": "students",
@@ -743,8 +742,7 @@
     "data_type": "uuid",
     "is_nullable": "YES",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 1
   },
   {
     "table_name": "students",
@@ -752,8 +750,7 @@
     "data_type": "text",
     "is_nullable": "YES",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 2
   },
   {
     "table_name": "students",
@@ -761,8 +758,7 @@
     "data_type": "text",
     "is_nullable": "YES",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 3
   },
   {
     "table_name": "students",
@@ -770,8 +766,7 @@
     "data_type": "text",
     "is_nullable": "YES",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 4
   },
   {
     "table_name": "students",
@@ -779,8 +774,7 @@
     "data_type": "integer",
     "is_nullable": "YES",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 5
   },
   {
     "table_name": "students",
@@ -788,8 +782,7 @@
     "data_type": "timestamp with time zone",
     "is_nullable": "YES",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 6
   },
   {
     "table_name": "students",
@@ -797,8 +790,7 @@
     "data_type": "timestamp with time zone",
     "is_nullable": "YES",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 7
   },
   {
     "table_name": "students",
@@ -806,7 +798,514 @@
     "data_type": "text",
     "is_nullable": "YES",
     "column_default": null,
-    "is_primary_key": "NO",
-    "foreign_key": null
+    "ordinal_position": 8
   }
 ]
+
+
+
+
+3. Table Row Counts
+SELECT 'communities' as table_name, COUNT(*) as row_count FROM communities
+UNION ALL
+SELECT 'community_members', COUNT(*) FROM community_members
+UNION ALL
+SELECT 'community_posts', COUNT(*) FROM community_posts
+UNION ALL
+SELECT 'community_post_likes', COUNT(*) FROM community_post_likes
+UNION ALL
+SELECT 'profiles', COUNT(*) FROM profiles
+UNION ALL
+SELECT 'posts', COUNT(*) FROM posts
+UNION ALL
+SELECT 'bookmarks', COUNT(*) FROM bookmarks;
+
+Results:
+
+<!-- PASTE JSON RESULTS FOR ROW_COUNTS HERE -->
+[
+  {
+    "table_name": "communities",
+    "row_count": 3
+  },
+  {
+    "table_name": "community_members",
+    "row_count": 1
+  },
+  {
+    "table_name": "community_posts",
+    "row_count": 0
+  },
+  {
+    "table_name": "community_post_likes",
+    "row_count": 0
+  },
+  {
+    "table_name": "profiles",
+    "row_count": 9
+  },
+  {
+    "table_name": "posts",
+    "row_count": 9
+  },
+  {
+    "table_name": "bookmarks",
+    "row_count": 4
+  }
+]
+
+
+
+
+4. Row Level Security (RLS) Policies
+SELECT schemaname, tablename, policyname, roles, cmd
+FROM pg_policies 
+WHERE schemaname = 'public'
+ORDER BY tablename, policyname;
+
+Results:
+
+<!-- PASTE JSON RESULTS FOR RLS_POLICIES HERE -->
+[
+  {
+    "schemaname": "public",
+    "tablename": "bookmarks",
+    "policyname": "Users can bookmark posts",
+    "roles": "{public}",
+    "cmd": "INSERT"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "bookmarks",
+    "policyname": "Users can remove bookmarks",
+    "roles": "{public}",
+    "cmd": "DELETE"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "bookmarks",
+    "policyname": "Users can view their bookmarks",
+    "roles": "{public}",
+    "cmd": "SELECT"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "communities",
+    "policyname": "Anyone can view public communities",
+    "roles": "{public}",
+    "cmd": "SELECT"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "communities",
+    "policyname": "Community admins can update their communities",
+    "roles": "{public}",
+    "cmd": "UPDATE"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "communities",
+    "policyname": "Community members can view private communities",
+    "roles": "{public}",
+    "cmd": "SELECT"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "communities",
+    "policyname": "Users can create communities",
+    "roles": "{public}",
+    "cmd": "INSERT"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "community_members",
+    "policyname": "Anyone can view community members",
+    "roles": "{public}",
+    "cmd": "SELECT"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "community_members",
+    "policyname": "Users can join public communities",
+    "roles": "{public}",
+    "cmd": "INSERT"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "community_members",
+    "policyname": "Users can leave communities",
+    "roles": "{public}",
+    "cmd": "DELETE"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "community_post_likes",
+    "policyname": "Community members can like posts",
+    "roles": "{public}",
+    "cmd": "INSERT"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "community_post_likes",
+    "policyname": "Community members can view likes",
+    "roles": "{public}",
+    "cmd": "SELECT"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "community_posts",
+    "policyname": "Community members can create posts",
+    "roles": "{public}",
+    "cmd": "INSERT"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "community_posts",
+    "policyname": "Community members can view posts",
+    "roles": "{public}",
+    "cmd": "SELECT"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "post_likes",
+    "policyname": "Anyone can view likes",
+    "roles": "{public}",
+    "cmd": "SELECT"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "post_likes",
+    "policyname": "Users can like posts",
+    "roles": "{public}",
+    "cmd": "INSERT"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "post_likes",
+    "policyname": "Users can unlike their posts",
+    "roles": "{public}",
+    "cmd": "DELETE"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "posts",
+    "policyname": "Anyone can view posts",
+    "roles": "{public}",
+    "cmd": "SELECT"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "posts",
+    "policyname": "Users can create posts",
+    "roles": "{public}",
+    "cmd": "INSERT"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "posts",
+    "policyname": "Users can delete own posts",
+    "roles": "{public}",
+    "cmd": "DELETE"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "posts",
+    "policyname": "Users can update own posts",
+    "roles": "{public}",
+    "cmd": "UPDATE"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "profiles",
+    "policyname": "Anyone can insert profiles",
+    "roles": "{public}",
+    "cmd": "INSERT"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "profiles",
+    "policyname": "Anyone can view profiles",
+    "roles": "{public}",
+    "cmd": "SELECT"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "profiles",
+    "policyname": "Users can update own profile",
+    "roles": "{public}",
+    "cmd": "UPDATE"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "reposts",
+    "policyname": "Anyone can view reposts",
+    "roles": "{public}",
+    "cmd": "SELECT"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "reposts",
+    "policyname": "Users can delete their reposts",
+    "roles": "{public}",
+    "cmd": "DELETE"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "reposts",
+    "policyname": "Users can repost",
+    "roles": "{public}",
+    "cmd": "INSERT"
+  }
+]
+
+
+
+
+5. Community Membership Analysis
+SELECT 
+    c.name as community_name,
+    c.id as community_id,
+    p.display_name as member_name,
+    p.id as user_id,
+    cm.role,
+    c.created_by as community_creator_id
+FROM community_members cm
+JOIN communities c ON cm.community_id = c.id
+JOIN profiles p ON cm.user_id = p.id
+ORDER BY c.name, cm.role;
+
+Results:
+
+<!-- PASTE JSON RESULTS FOR COMMUNITY_MEMBERSHIPS HERE -->
+[
+  {
+    "community_name": "community 1 try",
+    "community_id": "f5d96551-88a2-4423-9ab6-d43c1f91926f",
+    "member_name": "Dream",
+    "user_id": "2194f59d-51c0-49e6-becd-386ba40be14f",
+    "role": "member",
+    "community_creator_id": "2194f59d-51c0-49e6-becd-386ba40be14f"
+  }
+]
+
+
+
+
+6. User Profiles Inspection
+SELECT id, display_name, username, school_email, user_type 
+FROM profiles 
+LIMIT 5;
+
+Results:
+
+<!-- PASTE JSON RESULTS FOR USER_PROFILES HERE -->  
+[
+  {
+    "id": "4a49f035-8349-4961-98a2-5758c12a12d7",
+    "display_name": "Ako si Oheb",
+    "username": "STU",
+    "school_email": "student1@gmail.com",
+    "user_type": "student"
+  },
+  {
+    "id": "86faec90-7c59-44b7-ae5d-7e3a65fe526b",
+    "display_name": "FAC",
+    "username": "FAC",
+    "school_email": "faculty1@gmail.com",
+    "user_type": "faculty"
+  },
+  {
+    "id": "47493b0c-aa3b-4f1a-a2b5-b93fca3d81cb",
+    "display_name": "ALT",
+    "username": "ALT",
+    "school_email": "altheradrian@gmail.com",
+    "user_type": "student"
+  },
+  {
+    "id": "2194f59d-51c0-49e6-becd-386ba40be14f",
+    "display_name": "Dream",
+    "username": "ALT",
+    "school_email": "alther@gmail.com",
+    "user_type": "student"
+  },
+  {
+    "id": "d8799416-7627-4596-966c-345b015c496a",
+    "display_name": "STU",
+    "username": "STU",
+    "school_email": "student2@gmail.com",
+    "user_type": "student"
+  }
+]
+
+
+
+
+7. Profiles Table Structure
+SELECT column_name, data_type 
+FROM information_schema.columns 
+WHERE table_name = 'profiles' AND table_schema = 'public'
+ORDER BY ordinal_position;
+
+Results:
+
+<!-- PASTE JSON RESULTS FOR PROFILES_STRUCTURE HERE -->
+[
+  {
+    "column_name": "id",
+    "data_type": "uuid"
+  },
+  {
+    "column_name": "role",
+    "data_type": "text"
+  },
+  {
+    "column_name": "student_id",
+    "data_type": "text"
+  },
+  {
+    "column_name": "school_email",
+    "data_type": "text"
+  },
+  {
+    "column_name": "age",
+    "data_type": "integer"
+  },
+  {
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "column_name": "updated_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "column_name": "user_type",
+    "data_type": "text"
+  },
+  {
+    "column_name": "username",
+    "data_type": "text"
+  },
+  {
+    "column_name": "avatar_url",
+    "data_type": "text"
+  },
+  {
+    "column_name": "department",
+    "data_type": "text"
+  },
+  {
+    "column_name": "display_name",
+    "data_type": "text"
+  },
+  {
+    "column_name": "cover_url",
+    "data_type": "text"
+  },
+  {
+    "column_name": "post_anonymously",
+    "data_type": "boolean"
+  },
+  {
+    "column_name": "birthday",
+    "data_type": "date"
+  }
+]
+
+
+
+
+8. Database Relationships (Foreign Keys)
+SELECT
+    tc.table_name,
+    kcu.column_name,
+    ccu.table_name AS foreign_table_name,
+    ccu.column_name AS foreign_column_name
+FROM information_schema.table_constraints AS tc
+JOIN information_schema.key_column_usage AS kcu
+    ON tc.constraint_name = kcu.constraint_name
+JOIN information_schema.constraint_column_usage AS ccu
+    ON ccu.constraint_name = tc.constraint_name
+WHERE tc.constraint_type = 'FOREIGN KEY' AND tc.table_schema = 'public';
+
+Results:
+
+<!-- PASTE JSON RESULTS FOR FOREIGN_KEYS HERE -->
+[
+  {
+    "table_name": "post_likes",
+    "column_name": "post_id",
+    "foreign_table_name": "posts",
+    "foreign_column_name": "id"
+  },
+  {
+    "table_name": "reposts",
+    "column_name": "post_id",
+    "foreign_table_name": "posts",
+    "foreign_column_name": "id"
+  },
+  {
+    "table_name": "bookmarks",
+    "column_name": "post_id",
+    "foreign_table_name": "posts",
+    "foreign_column_name": "id"
+  },
+  {
+    "table_name": "follows",
+    "column_name": "follower_user_id",
+    "foreign_table_name": "profiles",
+    "foreign_column_name": "id"
+  },
+  {
+    "table_name": "follows",
+    "column_name": "following_user_id",
+    "foreign_table_name": "profiles",
+    "foreign_column_name": "id"
+  },
+  {
+    "table_name": "communities",
+    "column_name": "created_by",
+    "foreign_table_name": "profiles",
+    "foreign_column_name": "id"
+  },
+  {
+    "table_name": "community_members",
+    "column_name": "community_id",
+    "foreign_table_name": "communities",
+    "foreign_column_name": "id"
+  },
+  {
+    "table_name": "community_members",
+    "column_name": "user_id",
+    "foreign_table_name": "profiles",
+    "foreign_column_name": "id"
+  },
+  {
+    "table_name": "community_posts",
+    "column_name": "community_id",
+    "foreign_table_name": "communities",
+    "foreign_column_name": "id"
+  },
+  {
+    "table_name": "community_posts",
+    "column_name": "author_id",
+    "foreign_table_name": "profiles",
+    "foreign_column_name": "id"
+  },
+  {
+    "table_name": "community_post_likes",
+    "column_name": "post_id",
+    "foreign_table_name": "community_posts",
+    "foreign_column_name": "id"
+  },
+  {
+    "table_name": "community_post_likes",
+    "column_name": "user_id",
+    "foreign_table_name": "profiles",
+    "foreign_column_name": "id"
+  }
+]
+
+
+
+---Supabase Current Structure---

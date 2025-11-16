@@ -39,7 +39,7 @@ export default function CommunityScreen({ navigation }) {
     isVerifiedCreator: false
   });
   
-  const { user } = useContext(UserContext);
+  const { user, refreshCommunities } = useContext(UserContext);
   const scrollY = useRef(new Animated.Value(0)).current;
   const scrollViewRef = useRef(null);
 
@@ -109,13 +109,13 @@ export default function CommunityScreen({ navigation }) {
     }
   ];
 
-  // Load communities from database
+  // Load communities from database - ADD refreshCommunities DEPENDENCY
   useEffect(() => {
     if (user?.id) {
       loadCommunities();
       loadUserCommunityStats();
     }
-  }, [activeCategory, user?.id]);
+  }, [activeCategory, user?.id, refreshCommunities]); // ADD refreshCommunities here
 
   const loadCommunities = async () => {
     if (!user?.id) return;
@@ -181,6 +181,7 @@ export default function CommunityScreen({ navigation }) {
       const { error } = await joinCommunity(communityId, user.id);
       if (!error) {
         loadCommunities();
+        loadUserCommunityStats();
       } else {
         console.error('Error joining community:', error);
         alert('Failed to join community. Please try again.');
@@ -195,6 +196,7 @@ export default function CommunityScreen({ navigation }) {
       const { error } = await leaveCommunity(communityId, user.id);
       if (!error) {
         loadCommunities();
+        loadUserCommunityStats();
       } else {
         console.error('Error leaving community:', error);
         alert('Failed to leave community. Please try again.');

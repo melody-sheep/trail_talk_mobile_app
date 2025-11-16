@@ -7,6 +7,8 @@ export const UserContext = createContext();
 export const UserProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [refreshCommunities, setRefreshCommunities] = useState(0);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
     // Get initial session
@@ -24,9 +26,18 @@ export const UserProvider = ({ children }) => {
     return () => subscription.unsubscribe();
   }, []);
 
+  const triggerCommunityRefresh = () => {
+    console.log('Triggering community refresh...');
+    setRefreshCommunities(prev => prev + 1);
+    setRefreshTrigger(prev => prev + 1);
+  };
+
   const value = {
     user,
     loading,
+    refreshCommunities,
+    refreshTrigger,
+    triggerCommunityRefresh,
     signOut: () => supabase.auth.signOut(),
   };
 

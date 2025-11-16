@@ -210,6 +210,101 @@ export const leaveCommunity = async (communityId, userId) => {
   }
 };
 
+// Delete a community (admin only) - FIXED VERSION
+export const deleteCommunity = async (communityId, userId) => {
+  try {
+    console.log('Starting community deletion process...');
+    console.log('Community ID:', communityId);
+    console.log('User ID:', userId);
+
+    // First verify user is admin of this community
+    const { data: membership, error: membershipError } = await supabase
+      .from('community_members')
+      .select('role')
+      .eq('community_id', communityId)
+      .eq('user_id', userId)
+      .single();
+
+    if (membershipError) {
+      console.error('Membership check error:', membershipError);
+      throw new Error('Unable to verify admin permissions');
+    }
+
+    if (!membership || membership.role !== 'admin') {
+      throw new Error('You must be an admin to delete this community');
+    }
+
+    console.log('User is admin, proceeding with deletion...');
+
+    // Delete in this order to respect foreign key constraints:
+    
+    // 1. First get all community post IDs
+    const { data: communityPosts, error: postsQueryError } = await supabase
+      .from('community_posts')
+      .select('id')
+      .eq('community_id', communityId);
+
+    if (postsQueryError) {
+      console.error('Error fetching community posts:', postsQueryError);
+    }
+
+    console.log('Found posts to delete:', communityPosts?.length || 0);
+
+    // 2. Delete community post likes if there are posts
+    if (communityPosts && communityPosts.length > 0) {
+      const postIds = communityPosts.map(post => post.id);
+      const { error: likesError } = await supabase
+        .from('community_post_likes')
+        .delete()
+        .in('post_id', postIds);
+
+      if (likesError) {
+        console.error('Error deleting post likes:', likesError);
+      }
+      console.log('Deleted post likes');
+    }
+
+    // 3. Delete community posts
+    const { error: postsError } = await supabase
+      .from('community_posts')
+      .delete()
+      .eq('community_id', communityId);
+
+    if (postsError) {
+      console.error('Error deleting posts:', postsError);
+    }
+    console.log('Deleted community posts');
+
+    // 4. Delete community members
+    const { error: membersError } = await supabase
+      .from('community_members')
+      .delete()
+      .eq('community_id', communityId);
+
+    if (membersError) {
+      console.error('Error deleting members:', membersError);
+    }
+    console.log('Deleted community members');
+
+    // 5. Finally delete the community - REMOVED .select().single()
+    const { error } = await supabase
+      .from('communities')
+      .delete()
+      .eq('id', communityId);
+
+    if (error) {
+      console.error('Error deleting community:', error);
+      throw error;
+    }
+
+    console.log('Community deleted successfully');
+    return { data: { success: true }, error: null };
+  } catch (error) {
+    console.error('Error deleting community:', error);
+    return { data: null, error };
+  }
+};
+
 // Check if user can create more communities (free tier limit)
 export const canUserCreateCommunity = async (userId) => {
   try {
@@ -240,47 +335,58 @@ export const canUserCreateCommunity = async (userId) => {
   }
 };
 
-// Get community details with member count and user status
-export const getCommunityDetails = async (communityId, userId = null) => {
-  try {
-    const { data: community, error } = await supabase
-      .from('communities')
-      .select('*')
-      .eq('id', communityId)
-      .single();
-
-    if (error) throw error;
-
-    // Check if user is a member (if userId provided)
-    let isMember = false;
-    let userRole = null;
-    
-    if (userId) {
-      const { data: membership } = await supabase
-        .from('community_members')
-        .select('role')
-        .eq('community_id', communityId)
-        .eq('user_id', userId)
+  // Get community details with member count and user status
+  export const getCommunityDetails = async (communityId, userId = null) => {
+    try {
+      const { data: community, error } = await supabase
+        .from('communities')
+        .select('*')
+        .eq('id', communityId)
         .single();
 
-      isMember = !!membership;
-      userRole = membership?.role || null;
-    }
+      if (error) {
+        // If community doesn't exist or user doesn't have access
+        if (error.code === 'PGRST116') {
+          return { data: null, error: new Error('Community not found or access denied') };
+        }
+        throw error;
+      }
 
-    return { 
-      data: {
-        ...community,
-        isMember,
-        userRole,
-        isAdmin: userRole === 'admin'
-      }, 
-      error: null 
-    };
-  } catch (error) {
-    console.error('Error fetching community details:', error);
-    return { data: null, error };
-  }
-};
+      // Check if user is a member (if userId provided)
+      let isMember = false;
+      let userRole = null;
+      
+      if (userId) {
+        const { data: membership, error: membershipError } = await supabase
+          .from('community_members')
+          .select('role')
+          .eq('community_id', communityId)
+          .eq('user_id', userId)
+          .single();
+
+        // If membership doesn't exist, user is not a member
+        if (membershipError && membershipError.code !== 'PGRST116') {
+          console.error('Error checking membership:', membershipError);
+        }
+        
+        isMember = !!membership;
+        userRole = membership?.role || null;
+      }
+
+      return { 
+        data: {
+          ...community,
+          isMember,
+          userRole,
+          isAdmin: userRole === 'admin'
+        }, 
+        error: null 
+      };
+    } catch (error) {
+      console.error('Error fetching community details:', error);
+      return { data: null, error };
+    }
+  };
 
 // Get community members
 export const getCommunityMembers = async (communityId) => {
