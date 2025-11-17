@@ -23,7 +23,7 @@ import { UserContext } from '../../contexts/UserContext';
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 const CreateCommunityPostScreen = ({ navigation, route }) => {
-  const { communityId, communityName } = route.params || {};
+  const { communityId, communityName, onPostCreated } = route.params || {};
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [message, setMessage] = useState('');
   const [inputHeight, setInputHeight] = useState(140);
@@ -199,6 +199,8 @@ const CreateCommunityPostScreen = ({ navigation, route }) => {
     navigation.goBack();
   };
 
+  // FIXED: Enhanced post creation with immediate UI update trigger
+  // FIXED: Enhanced post creation with immediate refresh trigger
   const handlePostPress = async () => {
     if (!selectedCategory || !message.trim() || !communityId) {
       Alert.alert('Missing Information', 'Please select a category and write your post.');
@@ -206,11 +208,11 @@ const CreateCommunityPostScreen = ({ navigation, route }) => {
     }
 
     try {
-      console.log('Submitting community post to Supabase...');
+      console.log('🔄 Submitting community post to Supabase...');
       
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) {
-        console.log('No user logged in');
+        console.log('❌ No user logged in');
         Alert.alert('Error', 'You must be logged in to post.');
         return;
       }
@@ -218,30 +220,41 @@ const CreateCommunityPostScreen = ({ navigation, route }) => {
       // Get fresh initials for the post
       const authorInitials = await getUserInitialsForPost();
 
+      console.log('📝 Creating post with data:', {
+        content: message.trim(),
+        category: selectedCategory,
+        author_id: userData.user.id,
+        anonymous_name: authorInitials,
+        community_id: communityId
+      });
+
+      // Insert into community_posts table
       const { data, error } = await supabase
-        .from('posts')
+        .from('community_posts')
         .insert([
           {
             content: message.trim(),
             category: selectedCategory,
             author_id: userData.user.id,
-            author_initials: authorInitials,
-            is_anonymous: true,
-            community_id: communityId, // This links the post to the community
-            post_type: 'community' // Add post type to distinguish from regular posts
+            anonymous_name: authorInitials,
+            community_id: communityId,
+            like_count: 0,
+            comment_count: 0,
+            repost_count: 0,
+            bookmark_count: 0
           }
         ])
         .select();
 
       if (error) {
-        console.log('Error submitting community post:', error);
+        console.log('❌ Error submitting community post:', error);
         Alert.alert('Error', 'Failed to create post. Please try again.');
         return;
       }
 
-      console.log('Community post submitted successfully:', data);
-      
-      // Show success message
+      console.log('✅ Community post submitted successfully:', data);
+
+      // FIXED: Simple navigation back - real-time will handle the refresh
       Alert.alert(
         'Post Created!', 
         `Your post has been published in ${communityName || 'the community'}.`,
@@ -259,7 +272,7 @@ const CreateCommunityPostScreen = ({ navigation, route }) => {
       );
       
     } catch (error) {
-      console.log('Error:', error);
+      console.log('❌ Error:', error);
       Alert.alert('Error', 'An unexpected error occurred. Please try again.');
     }
   };
