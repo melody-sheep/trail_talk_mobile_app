@@ -15,13 +15,13 @@ import FacultyCreatePostScreen from '../screens/faculty/CreatePostScreen';
 import StudentProfileScreen from '../screens/student/ProfileScreen';
 import FacultyProfileScreen from '../screens/faculty/ProfileScreen';
 
-// Import BOTH EditProfileScreens - ADD THIS LINE
+// Import BOTH EditProfileScreens
 import EditProfileScreen from '../screens/student/EditProfileScreen';
-import FacultyEditProfileScreen from '../screens/faculty/EditProfileScreen'; // ADD THIS
+import FacultyEditProfileScreen from '../screens/faculty/EditProfileScreen';
 
 // Import SearchScreen
 import StudentSearchScreen from '../screens/student/SearchScreen';
-import FacultySearchScreen from '../screens/student/SearchScreen'; // Using same for now
+import FacultySearchScreen from '../screens/faculty/SearchScreen';
 
 // Import SupportScreen
 import StudentSupportScreen from '../screens/student/SupportScreen';
@@ -37,15 +37,20 @@ import FacultyNotificationsScreen from '../screens/faculty/NotificationsScreen';
 
 // Import MessageScreen
 import StudentMessagesScreen from '../screens/student/MessagesScreen';
+import FacultyMessagesScreen from '../screens/faculty/MessagesScreen';
 
-// Import CreateCommunityScreen (Student only for now)
+// Import Community Screens - STUDENT
 import StudentCreateCommunityScreen from '../screens/student/CreateCommunityScreen';
+import StudentCommunityDetailScreen from '../screens/student/CommunityDetailScreen';
+import StudentCommunityFeedScreen from '../screens/student/CommunityFeedScreen';
+import StudentCreateCommunityPostScreen from '../screens/student/CreateCommunityPostScreen';
 
-// Import CommunityDetailScreen
-import CommunityDetailScreen from '../screens/student/CommunityDetailScreen';
+// Import Community Screens - FACULTY
+import FacultyCreateCommunityScreen from '../screens/faculty/CreateCommunityScreen';
+import FacultyCommunityDetailScreen from '../screens/faculty/CommunityDetailScreen';
+import FacultyCommunityFeedScreen from '../screens/faculty/CommunityFeedScreen';
 
-// Import CreateCommunityPostScreen
-import CreateCommunityPostScreen from '../screens/student/CreateCommunityPostScreen';
+// Import Shared Screens
 import CommentScreen from '../screens/student/CommentScreen';
 
 import BottomNavigation from '../components/BottomNavigation';
@@ -94,7 +99,7 @@ function FacultyTabNavigator() {
       <FacultyTab.Screen name="FacultySupport" component={FacultySupportScreen} />
       <FacultyTab.Screen name="FacultyCommunity" component={FacultyCommunityScreen} />
       <FacultyTab.Screen name="FacultyNotifications" component={FacultyNotificationsScreen} />
-      <FacultyTab.Screen name="FacultyMessages" component={PlaceholderScreen} />
+      <FacultyTab.Screen name="FacultyMessages" component={FacultyMessagesScreen} />
     </FacultyTab.Navigator>
   );
 }
@@ -119,7 +124,7 @@ export default function AppNavigator() {
       {/* MAIN APP - FACULTY */}
       <Stack.Screen name="FacultyMain" component={FacultyTabNavigator} />
       
-      {/* CREATE POST SCREENS - These are outside the tab navigator */}
+      {/* CREATE POST SCREENS */}
       <Stack.Screen 
         name="StudentCreatePost" 
         component={StudentCreatePostScreen}
@@ -127,18 +132,20 @@ export default function AppNavigator() {
           animation: 'slide_from_bottom',
         }}
       />
-      <Stack.Screen
-        name="CommentScreen"
-        component={CommentScreen}
-        options={{
-          animation: 'slide_from_right',
-        }}
-      />
       <Stack.Screen 
         name="FacultyCreatePost" 
         component={FacultyCreatePostScreen}
         options={{
           animation: 'slide_from_bottom',
+        }}
+      />
+      
+      {/* COMMENT SCREEN */}
+      <Stack.Screen
+        name="CommentScreen"
+        component={CommentScreen}
+        options={{
+          animation: 'slide_from_right',
         }}
       />
       
@@ -158,7 +165,7 @@ export default function AppNavigator() {
         }}
       />
       
-      {/* EDIT PROFILE SCREENS - BOTH STUDENT AND FACULTY */}
+      {/* EDIT PROFILE SCREENS */}
       <Stack.Screen 
         name="EditProfile" 
         component={EditProfileScreen}
@@ -166,7 +173,6 @@ export default function AppNavigator() {
           animation: 'slide_from_right',
         }}
       />
-      {/* ADD THIS NEW SCREEN FOR FACULTY */}
       <Stack.Screen 
         name="FacultyEditProfile" 
         component={FacultyEditProfileScreen}
@@ -175,7 +181,60 @@ export default function AppNavigator() {
         }}
       />
       
-      {/* CREATE COMMUNITY SCREEN - STUDENT ONLY (for now) */}
+      {/* COMMUNITY SCREENS - STUDENT */}
+      <Stack.Screen 
+        name="StudentCreateCommunity" 
+        component={StudentCreateCommunityScreen}
+        options={{
+          animation: 'slide_from_right',
+        }}
+      />
+      <Stack.Screen 
+        name="StudentCommunityDetail" 
+        component={StudentCommunityDetailScreen}
+        options={{
+          animation: 'slide_from_right',
+        }}
+      />
+      <Stack.Screen 
+        name="StudentCommunityFeed" 
+        component={StudentCommunityFeedScreen}
+        options={{
+          animation: 'slide_from_right',
+        }}
+      />
+      <Stack.Screen 
+        name="StudentCreateCommunityPost" 
+        component={StudentCreateCommunityPostScreen}
+        options={{
+          animation: 'slide_from_bottom',
+        }}
+      />
+      
+      {/* COMMUNITY SCREENS - FACULTY */}
+      <Stack.Screen 
+        name="FacultyCreateCommunity" 
+        component={FacultyCreateCommunityScreen}
+        options={{
+          animation: 'slide_from_right',
+        }}
+      />
+      <Stack.Screen 
+        name="FacultyCommunityDetail" 
+        component={FacultyCommunityDetailScreen}
+        options={{
+          animation: 'slide_from_right',
+        }}
+      />
+      <Stack.Screen 
+        name="FacultyCommunityFeed" 
+        component={FacultyCommunityFeedScreen}
+        options={{
+          animation: 'slide_from_right',
+        }}
+      />
+      
+      {/* LEGACY COMMUNITY SCREENS (for backward compatibility) */}
       <Stack.Screen 
         name="CreateCommunity" 
         component={StudentCreateCommunityScreen}
@@ -183,20 +242,16 @@ export default function AppNavigator() {
           animation: 'slide_from_right',
         }}
       />
-      
-      {/* COMMUNITY DETAIL SCREEN */}
       <Stack.Screen 
         name="CommunityDetail" 
-        component={CommunityDetailScreen}
+        component={StudentCommunityDetailScreen}
         options={{
           animation: 'slide_from_right',
         }}
       />
-      
-      {/* CREATE COMMUNITY POST SCREEN */}
       <Stack.Screen 
         name="CreateCommunityPost" 
-        component={CreateCommunityPostScreen}
+        component={StudentCreateCommunityPostScreen}
         options={{
           animation: 'slide_from_bottom',
         }}
