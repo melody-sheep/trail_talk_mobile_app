@@ -1,1517 +1,895 @@
-# Supabase Database Structure Analysis
+| table_name               | table_type |
+| ------------------------ | ---------- |
+| bookmarks                | BASE TABLE |
+| comments                 | BASE TABLE |
+| communities              | BASE TABLE |
+| community_members        | BASE TABLE |
+| community_post_bookmarks | BASE TABLE |
+| community_post_likes     | BASE TABLE |
+| community_post_reposts   | BASE TABLE |
+| community_posts          | BASE TABLE |
+| faculty                  | VIEW       |
+| followers                | BASE TABLE |
+| follows                  | BASE TABLE |
+| notifications            | BASE TABLE |
+| post_likes               | BASE TABLE |
+| posts                    | BASE TABLE |
+| profiles                 | BASE TABLE |
+| reposts                  | BASE TABLE |
+| students                 | VIEW       |
 
-1. Database Schema Overview
-```sql
-SELECT table_name, table_type 
-FROM information_schema.tables 
-WHERE table_schema = 'public'
-ORDER BY table_name;
+| table_name               | column_name       | data_type                | is_nullable | column_default               | ordinal_position |
+| ------------------------ | ----------------- | ------------------------ | ----------- | ---------------------------- | ---------------- |
+| bookmarks                | id                | uuid                     | NO          | gen_random_uuid()            | 1                |
+| bookmarks                | post_id           | uuid                     | YES         | null                         | 2                |
+| bookmarks                | user_id           | uuid                     | YES         | null                         | 3                |
+| bookmarks                | created_at        | timestamp with time zone | YES         | timezone('utc'::text, now()) | 4                |
+| comments                 | id                | uuid                     | NO          | gen_random_uuid()            | 1                |
+| comments                 | post_id           | uuid                     | YES         | null                         | 2                |
+| comments                 | user_id           | uuid                     | YES         | null                         | 3                |
+| comments                 | content           | text                     | NO          | null                         | 4                |
+| comments                 | is_anonymous      | boolean                  | YES         | false                        | 5                |
+| comments                 | anonymous_name    | text                     | YES         | 'Anonymous User'::text       | 6                |
+| comments                 | created_at        | timestamp with time zone | YES         | now()                        | 7                |
+| comments                 | updated_at        | timestamp with time zone | YES         | now()                        | 8                |
+| communities              | id                | uuid                     | NO          | gen_random_uuid()            | 1                |
+| communities              | name              | text                     | NO          | null                         | 2                |
+| communities              | description       | text                     | YES         | null                         | 3                |
+| communities              | category          | text                     | NO          | null                         | 4                |
+| communities              | privacy           | text                     | YES         | 'public'::text               | 5                |
+| communities              | icon              | text                     | YES         | 'people-outline'::text       | 6                |
+| communities              | member_count      | integer                  | YES         | 1                            | 7                |
+| communities              | created_by        | uuid                     | NO          | null                         | 8                |
+| communities              | is_featured       | boolean                  | YES         | false                        | 9                |
+| communities              | is_official       | boolean                  | YES         | false                        | 10               |
+| communities              | rules             | text                     | YES         | null                         | 11               |
+| communities              | max_members       | integer                  | YES         | 50                           | 12               |
+| communities              | created_at        | timestamp with time zone | YES         | now()                        | 13               |
+| communities              | updated_at        | timestamp with time zone | YES         | now()                        | 14               |
+| community_members        | id                | uuid                     | NO          | gen_random_uuid()            | 1                |
+| community_members        | community_id      | uuid                     | YES         | null                         | 2                |
+| community_members        | user_id           | uuid                     | YES         | null                         | 3                |
+| community_members        | role              | text                     | YES         | 'member'::text               | 4                |
+| community_members        | joined_at         | timestamp with time zone | YES         | now()                        | 5                |
+| community_post_bookmarks | id                | uuid                     | NO          | gen_random_uuid()            | 1                |
+| community_post_bookmarks | post_id           | uuid                     | YES         | null                         | 2                |
+| community_post_bookmarks | user_id           | uuid                     | YES         | null                         | 3                |
+| community_post_bookmarks | created_at        | timestamp with time zone | YES         | now()                        | 4                |
+| community_post_likes     | id                | uuid                     | NO          | gen_random_uuid()            | 1                |
+| community_post_likes     | post_id           | uuid                     | YES         | null                         | 2                |
+| community_post_likes     | user_id           | uuid                     | YES         | null                         | 3                |
+| community_post_likes     | created_at        | timestamp with time zone | YES         | now()                        | 4                |
+| community_post_reposts   | id                | uuid                     | NO          | gen_random_uuid()            | 1                |
+| community_post_reposts   | post_id           | uuid                     | YES         | null                         | 2                |
+| community_post_reposts   | user_id           | uuid                     | YES         | null                         | 3                |
+| community_post_reposts   | created_at        | timestamp with time zone | YES         | now()                        | 4                |
+| community_posts          | id                | uuid                     | NO          | gen_random_uuid()            | 1                |
+| community_posts          | community_id      | uuid                     | YES         | null                         | 2                |
+| community_posts          | author_id         | uuid                     | YES         | null                         | 3                |
+| community_posts          | anonymous_name    | text                     | YES         | 'Anonymous User'::text       | 4                |
+| community_posts          | content           | text                     | NO          | null                         | 5                |
+| community_posts          | category          | text                     | YES         | 'Discussion'::text           | 6                |
+| community_posts          | like_count        | integer                  | YES         | 0                            | 7                |
+| community_posts          | comment_count     | integer                  | YES         | 0                            | 8                |
+| community_posts          | repost_count      | integer                  | YES         | 0                            | 9                |
+| community_posts          | bookmark_count    | integer                  | YES         | 0                            | 10               |
+| community_posts          | created_at        | timestamp with time zone | YES         | now()                        | 11               |
+| community_posts          | updated_at        | timestamp with time zone | YES         | now()                        | 12               |
+| community_posts          | is_anonymous      | boolean                  | YES         | false                        | 13               |
+| faculty                  | id                | uuid                     | YES         | null                         | 1                |
+| faculty                  | role              | text                     | YES         | null                         | 2                |
+| faculty                  | student_id        | text                     | YES         | null                         | 3                |
+| faculty                  | school_email      | text                     | YES         | null                         | 4                |
+| faculty                  | age               | integer                  | YES         | null                         | 5                |
+| faculty                  | created_at        | timestamp with time zone | YES         | null                         | 6                |
+| faculty                  | updated_at        | timestamp with time zone | YES         | null                         | 7                |
+| faculty                  | user_type         | text                     | YES         | null                         | 8                |
+| followers                | id                | uuid                     | NO          | gen_random_uuid()            | 1                |
+| followers                | follower_id       | uuid                     | YES         | null                         | 2                |
+| followers                | following_id      | uuid                     | YES         | null                         | 3                |
+| followers                | created_at        | timestamp with time zone | YES         | now()                        | 4                |
+| follows                  | id                | uuid                     | NO          | gen_random_uuid()            | 1                |
+| follows                  | follower_user_id  | uuid                     | YES         | null                         | 2                |
+| follows                  | following_user_id | uuid                     | YES         | null                         | 3                |
+| follows                  | created_at        | timestamp with time zone | NO          | timezone('utc'::text, now()) | 4                |
+| notifications            | id                | uuid                     | NO          | gen_random_uuid()            | 1                |
+| notifications            | user_id           | uuid                     | YES         | null                         | 2                |
+| notifications            | actor_id          | uuid                     | YES         | null                         | 3                |
+| notifications            | type              | text                     | NO          | null                         | 4                |
+| notifications            | post_id           | uuid                     | YES         | null                         | 5                |
+| notifications            | community_post_id | uuid                     | YES         | null                         | 6                |
+| notifications            | is_read           | boolean                  | YES         | false                        | 7                |
+| notifications            | created_at        | timestamp with time zone | YES         | now()                        | 8                |
+| post_likes               | id                | uuid                     | NO          | gen_random_uuid()            | 1                |
+| post_likes               | post_id           | uuid                     | YES         | null                         | 2                |
+| post_likes               | user_id           | uuid                     | YES         | null                         | 3                |
+| post_likes               | created_at        | timestamp with time zone | YES         | timezone('utc'::text, now()) | 4                |
+| posts                    | id                | uuid                     | NO          | gen_random_uuid()            | 1                |
+| posts                    | content           | text                     | NO          | null                         | 2                |
+| posts                    | category          | text                     | NO          | null                         | 3                |
+| posts                    | author_id         | uuid                     | YES         | null                         | 4                |
+| posts                    | author_initials   | text                     | YES         | null                         | 5                |
+| posts                    | is_anonymous      | boolean                  | YES         | true                         | 6                |
+| posts                    | created_at        | timestamp with time zone | YES         | now()                        | 7                |
+| posts                    | likes_count       | integer                  | YES         | 0                            | 8                |
+| posts                    | comments_count    | integer                  | YES         | 0                            | 9                |
+| posts                    | reposts_count     | integer                  | YES         | 0                            | 10               |
+| posts                    | bookmarks_count   | integer                  | YES         | 0                            | 11               |
+| profiles                 | id                | uuid                     | NO          | null                         | 1                |
+| profiles                 | role              | text                     | NO          | 'student'::text              | 2                |
+| profiles                 | student_id        | text                     | YES         | null                         | 3                |
+| profiles                 | school_email      | text                     | YES         | null                         | 4                |
+| profiles                 | age               | integer                  | YES         | null                         | 5                |
 
-Results:
+| table_name               | row_count |
+| ------------------------ | --------- |
+| bookmarks                | 12        |
+| comments                 | 19        |
+| communities              | 5         |
+| community_members        | 8         |
+| community_post_bookmarks | 0         |
+| community_post_likes     | 0         |
+| community_post_reposts   | 0         |
+| community_posts          | 5         |
+| follows                  | 0         |
+| post_likes               | 19        |
+| posts                    | 14        |
+| profiles                 | 12        |
+| reposts                  | 14        |
 
-<!-- PASTE JSON RESULTS FOR TABLE_OVERVIEW HERE -->
-[
-  {
-    "table_name": "bookmarks",
-    "table_type": "BASE TABLE"
-  },
-  {
-    "table_name": "comments",
-    "table_type": "BASE TABLE"
-  },
-  {
-    "table_name": "communities",
-    "table_type": "BASE TABLE"
-  },
-  {
-    "table_name": "community_members",
-    "table_type": "BASE TABLE"
-  },
-  {
-    "table_name": "community_post_bookmarks",
-    "table_type": "BASE TABLE"
-  },
-  {
-    "table_name": "community_post_likes",
-    "table_type": "BASE TABLE"
-  },
-  {
-    "table_name": "community_post_reposts",
-    "table_type": "BASE TABLE"
-  },
-  {
-    "table_name": "community_posts",
-    "table_type": "BASE TABLE"
-  },
-  {
-    "table_name": "faculty",
-    "table_type": "VIEW"
-  },
-  {
-    "table_name": "follows",
-    "table_type": "BASE TABLE"
-  },
-  {
-    "table_name": "post_likes",
-    "table_type": "BASE TABLE"
-  },
-  {
-    "table_name": "posts",
-    "table_type": "BASE TABLE"
-  },
-  {
-    "table_name": "profiles",
-    "table_type": "BASE TABLE"
-  },
-  {
-    "table_name": "reposts",
-    "table_type": "BASE TABLE"
-  },
-  {
-    "table_name": "students",
-    "table_type": "VIEW"
-  }
-]
+| schemaname | tablename                | policyname                               | roles    | cmd    | permissive |
+| ---------- | ------------------------ | ---------------------------------------- | -------- | ------ | ---------- |
+| public     | bookmarks                | Allow select bookmarks                   | {public} | SELECT | PERMISSIVE |
+| public     | bookmarks                | Users can bookmark posts                 | {public} | INSERT | PERMISSIVE |
+| public     | bookmarks                | Users can remove bookmarks               | {public} | DELETE | PERMISSIVE |
+| public     | bookmarks                | Users can view their bookmarks           | {public} | SELECT | PERMISSIVE |
+| public     | comments                 | Anyone can view comments                 | {public} | SELECT | PERMISSIVE |
+| public     | comments                 | Users can create comments                | {public} | INSERT | PERMISSIVE |
+| public     | comments                 | Users can delete own comments            | {public} | DELETE | PERMISSIVE |
+| public     | comments                 | Users can update own comments            | {public} | UPDATE | PERMISSIVE |
+| public     | communities              | Enable delete for users based on user_id | {public} | DELETE | PERMISSIVE |
+| public     | communities              | Enable insert for authenticated users    | {public} | INSERT | PERMISSIVE |
+| public     | communities              | Enable read access for all users         | {public} | SELECT | PERMISSIVE |
+| public     | communities              | Enable update for users based on user_id | {public} | UPDATE | PERMISSIVE |
+| public     | community_members        | Enable all for authenticated users       | {public} | ALL    | PERMISSIVE |
+| public     | community_members        | Enable read access for all users         | {public} | SELECT | PERMISSIVE |
+| public     | community_post_bookmarks | Enable all for authenticated users       | {public} | ALL    | PERMISSIVE |
+| public     | community_post_bookmarks | Enable read access for all users         | {public} | SELECT | PERMISSIVE |
+| public     | community_post_likes     | Enable all for authenticated users       | {public} | ALL    | PERMISSIVE |
+| public     | community_post_likes     | Enable read access for all users         | {public} | SELECT | PERMISSIVE |
+| public     | community_post_reposts   | Enable all for authenticated users       | {public} | ALL    | PERMISSIVE |
+| public     | community_post_reposts   | Enable read access for all users         | {public} | SELECT | PERMISSIVE |
+| public     | community_posts          | Enable delete for authors                | {public} | DELETE | PERMISSIVE |
+| public     | community_posts          | Enable insert for authenticated users    | {public} | INSERT | PERMISSIVE |
+| public     | community_posts          | Enable read access for all users         | {public} | SELECT | PERMISSIVE |
+| public     | community_posts          | Enable update for authors                | {public} | UPDATE | PERMISSIVE |
+| public     | followers                | Users can manage their follows           | {public} | ALL    | PERMISSIVE |
+| public     | followers                | Users can view followers                 | {public} | SELECT | PERMISSIVE |
+| public     | notifications            | Users can insert notifications           | {public} | INSERT | PERMISSIVE |
+| public     | notifications            | Users can update own notifications       | {public} | UPDATE | PERMISSIVE |
+| public     | notifications            | Users can view own notifications         | {public} | SELECT | PERMISSIVE |
+| public     | post_likes               | Anyone can view likes                    | {public} | SELECT | PERMISSIVE |
+| public     | post_likes               | Users can like posts                     | {public} | INSERT | PERMISSIVE |
+| public     | post_likes               | Users can unlike their posts             | {public} | DELETE | PERMISSIVE |
+| public     | posts                    | Anyone can view posts                    | {public} | SELECT | PERMISSIVE |
+| public     | posts                    | Users can create posts                   | {public} | INSERT | PERMISSIVE |
+| public     | posts                    | Users can delete own posts               | {public} | DELETE | PERMISSIVE |
+| public     | posts                    | Users can update own posts               | {public} | UPDATE | PERMISSIVE |
+| public     | profiles                 | Anyone can insert profiles               | {public} | INSERT | PERMISSIVE |
+| public     | profiles                 | Anyone can view profiles                 | {public} | SELECT | PERMISSIVE |
+| public     | profiles                 | Users can update own profile             | {public} | UPDATE | PERMISSIVE |
+| public     | reposts                  | Anyone can view reposts                  | {public} | SELECT | PERMISSIVE |
+| public     | reposts                  | Users can delete their reposts           | {public} | DELETE | PERMISSIVE |
+| public     | reposts                  | Users can repost                         | {public} | INSERT | PERMISSIVE |
 
+| tablename                | rowsecurity |
+| ------------------------ | ----------- |
+| bookmarks                | true        |
+| comments                 | true        |
+| communities              | true        |
+| community_members        | true        |
+| community_post_bookmarks | true        |
+| community_post_likes     | true        |
+| community_post_reposts   | true        |
+| community_posts          | true        |
+| followers                | true        |
+| follows                  | true        |
+| notifications            | true        |
+| post_likes               | true        |
+| posts                    | true        |
+| profiles                 | true        |
+| reposts                  | true        |
 
+| table_name               | column_name       | foreign_table_name | foreign_column_name |
+| ------------------------ | ----------------- | ------------------ | ------------------- |
+| bookmarks                | post_id           | posts              | id                  |
+| comments                 | post_id           | posts              | id                  |
+| comments                 | user_id           | profiles           | id                  |
+| communities              | created_by        | profiles           | id                  |
+| community_members        | community_id      | communities        | id                  |
+| community_members        | user_id           | profiles           | id                  |
+| community_post_bookmarks | post_id           | community_posts    | id                  |
+| community_post_bookmarks | user_id           | profiles           | id                  |
+| community_post_likes     | post_id           | community_posts    | id                  |
+| community_post_likes     | user_id           | profiles           | id                  |
+| community_post_reposts   | post_id           | community_posts    | id                  |
+| community_post_reposts   | user_id           | profiles           | id                  |
+| community_posts          | author_id         | profiles           | id                  |
+| community_posts          | community_id      | communities        | id                  |
+| followers                | follower_id       | profiles           | id                  |
+| followers                | following_id      | profiles           | id                  |
+| follows                  | follower_user_id  | profiles           | id                  |
+| follows                  | following_user_id | profiles           | id                  |
+| notifications            | actor_id          | profiles           | id                  |
+| notifications            | community_post_id | community_posts    | id                  |
+| notifications            | post_id           | posts              | id                  |
+| notifications            | user_id           | profiles           | id                  |
+| post_likes               | post_id           | posts              | id                  |
+| reposts                  | post_id           | posts              | id                  |
 
+| table_name               | column_name |
+| ------------------------ | ----------- |
+| bookmarks                | id          |
+| comments                 | id          |
+| communities              | id          |
+| community_members        | id          |
+| community_post_bookmarks | id          |
+| community_post_likes     | id          |
+| community_post_reposts   | id          |
+| community_posts          | id          |
+| followers                | id          |
+| follows                  | id          |
+| notifications            | id          |
+| post_likes               | id          |
+| posts                    | id          |
+| profiles                 | id          |
+| reposts                  | id          |
 
-2. Table Columns Details
+| tablename                | indexname                                      | indexdef                                                                                                                               |
+| ------------------------ | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| bookmarks                | bookmarks_pkey                                 | CREATE UNIQUE INDEX bookmarks_pkey ON public.bookmarks USING btree (id)                                                                |
+| bookmarks                | bookmarks_post_id_user_id_key                  | CREATE UNIQUE INDEX bookmarks_post_id_user_id_key ON public.bookmarks USING btree (post_id, user_id)                                   |
+| comments                 | comments_created_at_idx                        | CREATE INDEX comments_created_at_idx ON public.comments USING btree (created_at DESC)                                                  |
+| comments                 | comments_pkey                                  | CREATE UNIQUE INDEX comments_pkey ON public.comments USING btree (id)                                                                  |
+| comments                 | comments_post_id_idx                           | CREATE INDEX comments_post_id_idx ON public.comments USING btree (post_id)                                                             |
+| comments                 | comments_user_id_idx                           | CREATE INDEX comments_user_id_idx ON public.comments USING btree (user_id)                                                             |
+| communities              | communities_pkey                               | CREATE UNIQUE INDEX communities_pkey ON public.communities USING btree (id)                                                            |
+| community_members        | community_members_community_id_user_id_key     | CREATE UNIQUE INDEX community_members_community_id_user_id_key ON public.community_members USING btree (community_id, user_id)         |
+| community_members        | community_members_pkey                         | CREATE UNIQUE INDEX community_members_pkey ON public.community_members USING btree (id)                                                |
+| community_post_bookmarks | community_post_bookmarks_pkey                  | CREATE UNIQUE INDEX community_post_bookmarks_pkey ON public.community_post_bookmarks USING btree (id)                                  |
+| community_post_bookmarks | community_post_bookmarks_post_id_user_id_key   | CREATE UNIQUE INDEX community_post_bookmarks_post_id_user_id_key ON public.community_post_bookmarks USING btree (post_id, user_id)     |
+| community_post_likes     | community_post_likes_pkey                      | CREATE UNIQUE INDEX community_post_likes_pkey ON public.community_post_likes USING btree (id)                                          |
+| community_post_likes     | community_post_likes_post_id_user_id_key       | CREATE UNIQUE INDEX community_post_likes_post_id_user_id_key ON public.community_post_likes USING btree (post_id, user_id)             |
+| community_post_reposts   | community_post_reposts_pkey                    | CREATE UNIQUE INDEX community_post_reposts_pkey ON public.community_post_reposts USING btree (id)                                      |
+| community_post_reposts   | community_post_reposts_post_id_user_id_key     | CREATE UNIQUE INDEX community_post_reposts_post_id_user_id_key ON public.community_post_reposts USING btree (post_id, user_id)         |
+| community_posts          | community_posts_pkey                           | CREATE UNIQUE INDEX community_posts_pkey ON public.community_posts USING btree (id)                                                    |
+| followers                | followers_pkey                                 | CREATE UNIQUE INDEX followers_pkey ON public.followers USING btree (id)                                                                |
+| follows                  | follows_follower_user_id_following_user_id_key | CREATE UNIQUE INDEX follows_follower_user_id_following_user_id_key ON public.follows USING btree (follower_user_id, following_user_id) |
+| follows                  | follows_follower_user_id_idx                   | CREATE INDEX follows_follower_user_id_idx ON public.follows USING btree (follower_user_id)                                             |
+| follows                  | follows_pkey                                   | CREATE UNIQUE INDEX follows_pkey ON public.follows USING btree (id)                                                                    |
+| notifications            | idx_notifications_created_at                   | CREATE INDEX idx_notifications_created_at ON public.notifications USING btree (created_at DESC)                                        |
+| notifications            | idx_notifications_user_id                      | CREATE INDEX idx_notifications_user_id ON public.notifications USING btree (user_id)                                                   |
+| notifications            | notifications_pkey                             | CREATE UNIQUE INDEX notifications_pkey ON public.notifications USING btree (id)                                                        |
+| post_likes               | post_likes_pkey                                | CREATE UNIQUE INDEX post_likes_pkey ON public.post_likes USING btree (id)                                                              |
+| post_likes               | post_likes_post_id_user_id_key                 | CREATE UNIQUE INDEX post_likes_post_id_user_id_key ON public.post_likes USING btree (post_id, user_id)                                 |
+| posts                    | posts_author_id_created_at_idx                 | CREATE INDEX posts_author_id_created_at_idx ON public.posts USING btree (author_id, created_at DESC)                                   |
+| posts                    | posts_author_id_idx                            | CREATE INDEX posts_author_id_idx ON public.posts USING btree (author_id)                                                               |
+| posts                    | posts_created_at_idx                           | CREATE INDEX posts_created_at_idx ON public.posts USING btree (created_at DESC)                                                        |
+| posts                    | posts_pkey                                     | CREATE UNIQUE INDEX posts_pkey ON public.posts USING btree (id)                                                                        |
+| profiles                 | profiles_pkey                                  | CREATE UNIQUE INDEX profiles_pkey ON public.profiles USING btree (id)                                                                  |
+| reposts                  | reposts_pkey                                   | CREATE UNIQUE INDEX reposts_pkey ON public.reposts USING btree (id)                                                                    |
+| reposts                  | reposts_post_id_user_id_key                    | CREATE UNIQUE INDEX reposts_post_id_user_id_key ON public.reposts USING btree (post_id, user_id)                                       |
+
+| table_name               | table_type | column_count | row_count |
+| ------------------------ | ---------- | ------------ | --------- |
+| bookmarks                | BASE TABLE | 4            | 12        |
+| comments                 | BASE TABLE | 8            | 19        |
+| communities              | BASE TABLE | 14           | 5         |
+| community_members        | BASE TABLE | 5            | 8         |
+| community_post_bookmarks | BASE TABLE | 4            | 0         |
+| community_post_likes     | BASE TABLE | 4            | 0         |
+| community_post_reposts   | BASE TABLE | 4            | 0         |
+| community_posts          | BASE TABLE | 13           | 5         |
+| faculty                  | VIEW       | 8            | 0         |
+| followers                | BASE TABLE | 4            | 0         |
+| follows                  | BASE TABLE | 4            | 0         |
+| notifications            | BASE TABLE | 8            | 0         |
+| post_likes               | BASE TABLE | 4            | 19        |
+| posts                    | BASE TABLE | 11           | 14        |
+| profiles                 | BASE TABLE | 15           | 12        |
+| reposts                  | BASE TABLE | 4            | 14        |
+| students                 | VIEW       | 8            | 0         |
+
+| routine_name                   | routine_type | return_type |
+| ------------------------------ | ------------ | ----------- |
+| decrement_community_post_likes | FUNCTION     | void        |
+| decrement_member_count         | FUNCTION     | void        |
+| delete_community_cascade       | FUNCTION     | boolean     |
+| handle_new_user                | FUNCTION     | trigger     |
+| handle_updated_at              | FUNCTION     | trigger     |
+| increment_community_post_likes | FUNCTION     | void        |
+| increment_member_count         | FUNCTION     | void        |
+| notify_insert                  | FUNCTION     | void        |
+| trg_notify_bookmark            | FUNCTION     | trigger     |
+| trg_notify_comment             | FUNCTION     | trigger     |
+| trg_notify_community_post      | FUNCTION     | trigger     |
+| trg_notify_like                | FUNCTION     | trigger     |
+| trg_notify_new_post            | FUNCTION     | trigger     |
+| trg_notify_repost              | FUNCTION     | trigger     |
+| update_post_comments_count     | FUNCTION     | trigger     |
+
+| trigger_name                 | event_manipulation | event_object_table | action_timing | action_orientation |
+| ---------------------------- | ------------------ | ------------------ | ------------- | ------------------ |
+| bookmarks_notify             | INSERT             | bookmarks          | AFTER         | ROW                |
+| comments_notify              | INSERT             | comments           | AFTER         | ROW                |
+| update_post_comments_trigger | DELETE             | comments           | AFTER         | ROW                |
+| update_post_comments_trigger | INSERT             | comments           | AFTER         | ROW                |
+| community_posts_notify       | INSERT             | community_posts    | AFTER         | ROW                |
+| post_likes_notify            | INSERT             | post_likes         | AFTER         | ROW                |
+| posts_notify_followers       | INSERT             | posts              | AFTER         | ROW                |
+| reposts_notify               | INSERT             | reposts            | AFTER         | ROW                |
+
+| table_name               | privilege_type | grantee       |
+| ------------------------ | -------------- | ------------- |
+| bookmarks                | DELETE         | service_role  |
+| bookmarks                | DELETE         | anon          |
+| bookmarks                | DELETE         | authenticated |
+| bookmarks                | DELETE         | postgres      |
+| bookmarks                | INSERT         | anon          |
+| bookmarks                | INSERT         | authenticated |
+| bookmarks                | INSERT         | postgres      |
+| bookmarks                | INSERT         | service_role  |
+| bookmarks                | REFERENCES     | authenticated |
+| bookmarks                | REFERENCES     | service_role  |
+| bookmarks                | REFERENCES     | postgres      |
+| bookmarks                | REFERENCES     | anon          |
+| bookmarks                | SELECT         | postgres      |
+| bookmarks                | SELECT         | authenticated |
+| bookmarks                | SELECT         | anon          |
+| bookmarks                | SELECT         | service_role  |
+| bookmarks                | TRIGGER        | service_role  |
+| bookmarks                | TRIGGER        | authenticated |
+| bookmarks                | TRIGGER        | anon          |
+| bookmarks                | TRIGGER        | postgres      |
+| bookmarks                | TRUNCATE       | service_role  |
+| bookmarks                | TRUNCATE       | authenticated |
+| bookmarks                | TRUNCATE       | anon          |
+| bookmarks                | TRUNCATE       | postgres      |
+| bookmarks                | UPDATE         | anon          |
+| bookmarks                | UPDATE         | postgres      |
+| bookmarks                | UPDATE         | service_role  |
+| bookmarks                | UPDATE         | authenticated |
+| comments                 | DELETE         | service_role  |
+| comments                 | DELETE         | postgres      |
+| comments                 | DELETE         | anon          |
+| comments                 | DELETE         | authenticated |
+| comments                 | INSERT         | authenticated |
+| comments                 | INSERT         | service_role  |
+| comments                 | INSERT         | anon          |
+| comments                 | INSERT         | postgres      |
+| comments                 | REFERENCES     | authenticated |
+| comments                 | REFERENCES     | service_role  |
+| comments                 | REFERENCES     | anon          |
+| comments                 | REFERENCES     | postgres      |
+| comments                 | SELECT         | anon          |
+| comments                 | SELECT         | authenticated |
+| comments                 | SELECT         | service_role  |
+| comments                 | SELECT         | postgres      |
+| comments                 | TRIGGER        | service_role  |
+| comments                 | TRIGGER        | anon          |
+| comments                 | TRIGGER        | postgres      |
+| comments                 | TRIGGER        | authenticated |
+| comments                 | TRUNCATE       | anon          |
+| comments                 | TRUNCATE       | postgres      |
+| comments                 | TRUNCATE       | service_role  |
+| comments                 | TRUNCATE       | authenticated |
+| comments                 | UPDATE         | service_role  |
+| comments                 | UPDATE         | authenticated |
+| comments                 | UPDATE         | postgres      |
+| comments                 | UPDATE         | anon          |
+| communities              | DELETE         | authenticated |
+| communities              | DELETE         | service_role  |
+| communities              | DELETE         | postgres      |
+| communities              | DELETE         | anon          |
+| communities              | INSERT         | anon          |
+| communities              | INSERT         | authenticated |
+| communities              | INSERT         | postgres      |
+| communities              | INSERT         | service_role  |
+| communities              | REFERENCES     | service_role  |
+| communities              | REFERENCES     | postgres      |
+| communities              | REFERENCES     | authenticated |
+| communities              | REFERENCES     | anon          |
+| communities              | SELECT         | service_role  |
+| communities              | SELECT         | authenticated |
+| communities              | SELECT         | anon          |
+| communities              | SELECT         | postgres      |
+| communities              | TRIGGER        | postgres      |
+| communities              | TRIGGER        | service_role  |
+| communities              | TRIGGER        | anon          |
+| communities              | TRIGGER        | authenticated |
+| communities              | TRUNCATE       | postgres      |
+| communities              | TRUNCATE       | authenticated |
+| communities              | TRUNCATE       | service_role  |
+| communities              | TRUNCATE       | anon          |
+| communities              | UPDATE         | postgres      |
+| communities              | UPDATE         | authenticated |
+| communities              | UPDATE         | anon          |
+| communities              | UPDATE         | service_role  |
+| community_members        | DELETE         | anon          |
+| community_members        | DELETE         | authenticated |
+| community_members        | DELETE         | service_role  |
+| community_members        | DELETE         | postgres      |
+| community_members        | INSERT         | postgres      |
+| community_members        | INSERT         | authenticated |
+| community_members        | INSERT         | service_role  |
+| community_members        | INSERT         | anon          |
+| community_members        | REFERENCES     | anon          |
+| community_members        | REFERENCES     | authenticated |
+| community_members        | REFERENCES     | service_role  |
+| community_members        | REFERENCES     | postgres      |
+| community_members        | SELECT         | postgres      |
+| community_members        | SELECT         | authenticated |
+| community_members        | SELECT         | service_role  |
+| community_members        | SELECT         | anon          |
+| community_members        | TRIGGER        | postgres      |
+| community_members        | TRIGGER        | anon          |
+| community_members        | TRIGGER        | service_role  |
+| community_members        | TRIGGER        | authenticated |
+| community_members        | TRUNCATE       | anon          |
+| community_members        | TRUNCATE       | postgres      |
+| community_members        | TRUNCATE       | service_role  |
+| community_members        | TRUNCATE       | authenticated |
+| community_members        | UPDATE         | service_role  |
+| community_members        | UPDATE         | authenticated |
+| community_members        | UPDATE         | postgres      |
+| community_members        | UPDATE         | anon          |
+| community_post_bookmarks | DELETE         | authenticated |
+| community_post_bookmarks | DELETE         | service_role  |
+| community_post_bookmarks | DELETE         | anon          |
+| community_post_bookmarks | DELETE         | postgres      |
+| community_post_bookmarks | INSERT         | anon          |
+| community_post_bookmarks | INSERT         | service_role  |
+| community_post_bookmarks | INSERT         | postgres      |
+| community_post_bookmarks | INSERT         | authenticated |
+| community_post_bookmarks | REFERENCES     | authenticated |
+| community_post_bookmarks | REFERENCES     | service_role  |
+| community_post_bookmarks | REFERENCES     | anon          |
+| community_post_bookmarks | REFERENCES     | postgres      |
+| community_post_bookmarks | SELECT         | postgres      |
+| community_post_bookmarks | SELECT         | authenticated |
+| community_post_bookmarks | SELECT         | anon          |
+| community_post_bookmarks | SELECT         | service_role  |
+| community_post_bookmarks | TRIGGER        | authenticated |
+| community_post_bookmarks | TRIGGER        | postgres      |
+| community_post_bookmarks | TRIGGER        | anon          |
+| community_post_bookmarks | TRIGGER        | service_role  |
+| community_post_bookmarks | TRUNCATE       | authenticated |
+| community_post_bookmarks | TRUNCATE       | service_role  |
+| community_post_bookmarks | TRUNCATE       | postgres      |
+| community_post_bookmarks | TRUNCATE       | anon          |
+| community_post_bookmarks | UPDATE         | service_role  |
+| community_post_bookmarks | UPDATE         | anon          |
+| community_post_bookmarks | UPDATE         | postgres      |
+| community_post_bookmarks | UPDATE         | authenticated |
+| community_post_likes     | DELETE         | service_role  |
+| community_post_likes     | DELETE         | anon          |
+| community_post_likes     | DELETE         | authenticated |
+| community_post_likes     | DELETE         | postgres      |
+| community_post_likes     | INSERT         | postgres      |
+| community_post_likes     | INSERT         | authenticated |
+| community_post_likes     | INSERT         | service_role  |
+| community_post_likes     | INSERT         | anon          |
+| community_post_likes     | REFERENCES     | service_role  |
+| community_post_likes     | REFERENCES     | authenticated |
+| community_post_likes     | REFERENCES     | postgres      |
+| community_post_likes     | REFERENCES     | anon          |
+| community_post_likes     | SELECT         | authenticated |
+| community_post_likes     | SELECT         | anon          |
+| community_post_likes     | SELECT         | postgres      |
+| community_post_likes     | SELECT         | service_role  |
+| community_post_likes     | TRIGGER        | postgres      |
+| community_post_likes     | TRIGGER        | authenticated |
+| community_post_likes     | TRIGGER        | service_role  |
+| community_post_likes     | TRIGGER        | anon          |
+| community_post_likes     | TRUNCATE       | service_role  |
+| community_post_likes     | TRUNCATE       | postgres      |
+| community_post_likes     | TRUNCATE       | anon          |
+| community_post_likes     | TRUNCATE       | authenticated |
+| community_post_likes     | UPDATE         | anon          |
+| community_post_likes     | UPDATE         | postgres      |
+| community_post_likes     | UPDATE         | authenticated |
+| community_post_likes     | UPDATE         | service_role  |
+| community_post_reposts   | DELETE         | anon          |
+| community_post_reposts   | DELETE         | service_role  |
+| community_post_reposts   | DELETE         | postgres      |
+| community_post_reposts   | DELETE         | authenticated |
+| community_post_reposts   | INSERT         | postgres      |
+| community_post_reposts   | INSERT         | authenticated |
+| community_post_reposts   | INSERT         | anon          |
+| community_post_reposts   | INSERT         | service_role  |
+| community_post_reposts   | REFERENCES     | anon          |
+| community_post_reposts   | REFERENCES     | postgres      |
+| community_post_reposts   | REFERENCES     | authenticated |
+| community_post_reposts   | REFERENCES     | service_role  |
+| community_post_reposts   | SELECT         | authenticated |
+| community_post_reposts   | SELECT         | postgres      |
+| community_post_reposts   | SELECT         | anon          |
+| community_post_reposts   | SELECT         | service_role  |
+| community_post_reposts   | TRIGGER        | postgres      |
+| community_post_reposts   | TRIGGER        | anon          |
+| community_post_reposts   | TRIGGER        | authenticated |
+| community_post_reposts   | TRIGGER        | service_role  |
+| community_post_reposts   | TRUNCATE       | anon          |
+| community_post_reposts   | TRUNCATE       | postgres      |
+| community_post_reposts   | TRUNCATE       | authenticated |
+| community_post_reposts   | TRUNCATE       | service_role  |
+| community_post_reposts   | UPDATE         | authenticated |
+| community_post_reposts   | UPDATE         | postgres      |
+| community_post_reposts   | UPDATE         | anon          |
+| community_post_reposts   | UPDATE         | service_role  |
+| community_posts          | DELETE         | anon          |
+| community_posts          | DELETE         | service_role  |
+| community_posts          | DELETE         | postgres      |
+| community_posts          | DELETE         | authenticated |
+| community_posts          | INSERT         | authenticated |
+| community_posts          | INSERT         | anon          |
+| community_posts          | INSERT         | service_role  |
+| community_posts          | INSERT         | postgres      |
+| community_posts          | REFERENCES     | authenticated |
+| community_posts          | REFERENCES     | postgres      |
+| community_posts          | REFERENCES     | anon          |
+| community_posts          | REFERENCES     | service_role  |
+| community_posts          | SELECT         | authenticated |
+| community_posts          | SELECT         | postgres      |
+| community_posts          | SELECT         | anon          |
+| community_posts          | SELECT         | service_role  |
+| community_posts          | TRIGGER        | service_role  |
+| community_posts          | TRIGGER        | authenticated |
+| community_posts          | TRIGGER        | postgres      |
+| community_posts          | TRIGGER        | anon          |
+| community_posts          | TRUNCATE       | service_role  |
+| community_posts          | TRUNCATE       | anon          |
+| community_posts          | TRUNCATE       | postgres      |
+| community_posts          | TRUNCATE       | authenticated |
+| community_posts          | UPDATE         | authenticated |
+| community_posts          | UPDATE         | service_role  |
+| community_posts          | UPDATE         | anon          |
+| community_posts          | UPDATE         | postgres      |
+| faculty                  | DELETE         | service_role  |
+| faculty                  | DELETE         | postgres      |
+| faculty                  | DELETE         | anon          |
+| faculty                  | DELETE         | authenticated |
+| faculty                  | INSERT         | anon          |
+| faculty                  | INSERT         | authenticated |
+| faculty                  | INSERT         | postgres      |
+| faculty                  | INSERT         | service_role  |
+| faculty                  | REFERENCES     | postgres      |
+| faculty                  | REFERENCES     | service_role  |
+| faculty                  | REFERENCES     | anon          |
+| faculty                  | REFERENCES     | authenticated |
+| faculty                  | SELECT         | authenticated |
+| faculty                  | SELECT         | anon          |
+| faculty                  | SELECT         | postgres      |
+| faculty                  | SELECT         | service_role  |
+| faculty                  | TRIGGER        | anon          |
+| faculty                  | TRIGGER        | authenticated |
+| faculty                  | TRIGGER        | service_role  |
+| faculty                  | TRIGGER        | postgres      |
+| faculty                  | TRUNCATE       | postgres      |
+| faculty                  | TRUNCATE       | authenticated |
+| faculty                  | TRUNCATE       | anon          |
+| faculty                  | TRUNCATE       | service_role  |
+| faculty                  | UPDATE         | postgres      |
+| faculty                  | UPDATE         | authenticated |
+| faculty                  | UPDATE         | service_role  |
+| faculty                  | UPDATE         | anon          |
+| followers                | DELETE         | service_role  |
+| followers                | DELETE         | authenticated |
+| followers                | DELETE         | postgres      |
+| followers                | DELETE         | anon          |
+| followers                | INSERT         | anon          |
+| followers                | INSERT         | postgres      |
+| followers                | INSERT         | service_role  |
+| followers                | INSERT         | authenticated |
+| followers                | REFERENCES     | postgres      |
+| followers                | REFERENCES     | service_role  |
+| followers                | REFERENCES     | authenticated |
+| followers                | REFERENCES     | anon          |
+| followers                | SELECT         | authenticated |
+| followers                | SELECT         | anon          |
+| followers                | SELECT         | service_role  |
+| followers                | SELECT         | postgres      |
+| followers                | TRIGGER        | authenticated |
+| followers                | TRIGGER        | anon          |
+| followers                | TRIGGER        | postgres      |
+| followers                | TRIGGER        | service_role  |
+| followers                | TRUNCATE       | service_role  |
+| followers                | TRUNCATE       | authenticated |
+| followers                | TRUNCATE       | anon          |
+| followers                | TRUNCATE       | postgres      |
+| followers                | UPDATE         | authenticated |
+| followers                | UPDATE         | postgres      |
+| followers                | UPDATE         | anon          |
+| followers                | UPDATE         | service_role  |
+| follows                  | DELETE         | authenticated |
+| follows                  | DELETE         | postgres      |
+| follows                  | DELETE         | anon          |
+| follows                  | DELETE         | service_role  |
+| follows                  | INSERT         | service_role  |
+| follows                  | INSERT         | anon          |
+| follows                  | INSERT         | authenticated |
+| follows                  | INSERT         | postgres      |
+| follows                  | REFERENCES     | anon          |
+| follows                  | REFERENCES     | service_role  |
+| follows                  | REFERENCES     | postgres      |
+| follows                  | REFERENCES     | authenticated |
+| follows                  | SELECT         | authenticated |
+| follows                  | SELECT         | postgres      |
+| follows                  | SELECT         | anon          |
+| follows                  | SELECT         | service_role  |
+| follows                  | TRIGGER        | postgres      |
+| follows                  | TRIGGER        | anon          |
+| follows                  | TRIGGER        | authenticated |
+| follows                  | TRIGGER        | service_role  |
+| follows                  | TRUNCATE       | anon          |
+| follows                  | TRUNCATE       | service_role  |
+| follows                  | TRUNCATE       | authenticated |
+| follows                  | TRUNCATE       | postgres      |
+| follows                  | UPDATE         | service_role  |
+| follows                  | UPDATE         | authenticated |
+| follows                  | UPDATE         | anon          |
+| follows                  | UPDATE         | postgres      |
+| notifications            | DELETE         | anon          |
+| notifications            | DELETE         | postgres      |
+| notifications            | DELETE         | authenticated |
+| notifications            | DELETE         | service_role  |
+| notifications            | INSERT         | authenticated |
+| notifications            | INSERT         | anon          |
+| notifications            | INSERT         | service_role  |
+| notifications            | INSERT         | postgres      |
+| notifications            | REFERENCES     | authenticated |
+| notifications            | REFERENCES     | service_role  |
+| notifications            | REFERENCES     | postgres      |
+| notifications            | REFERENCES     | anon          |
+| notifications            | SELECT         | authenticated |
+| notifications            | SELECT         | postgres      |
+| notifications            | SELECT         | anon          |
+| notifications            | SELECT         | service_role  |
+| notifications            | TRIGGER        | service_role  |
+| notifications            | TRIGGER        | anon          |
+| notifications            | TRIGGER        | authenticated |
+| notifications            | TRIGGER        | postgres      |
+| notifications            | TRUNCATE       | anon          |
+| notifications            | TRUNCATE       | authenticated |
+| notifications            | TRUNCATE       | postgres      |
+| notifications            | TRUNCATE       | service_role  |
+| notifications            | UPDATE         | postgres      |
+| notifications            | UPDATE         | anon          |
+| notifications            | UPDATE         | service_role  |
+| notifications            | UPDATE         | authenticated |
+| post_likes               | DELETE         | authenticated |
+| post_likes               | DELETE         | anon          |
+| post_likes               | DELETE         | postgres      |
+| post_likes               | DELETE         | service_role  |
+| post_likes               | INSERT         | postgres      |
+| post_likes               | INSERT         | service_role  |
+| post_likes               | INSERT         | anon          |
+| post_likes               | INSERT         | authenticated |
+| post_likes               | REFERENCES     | anon          |
+| post_likes               | REFERENCES     | authenticated |
+| post_likes               | REFERENCES     | service_role  |
+| post_likes               | REFERENCES     | postgres      |
+| post_likes               | SELECT         | anon          |
+| post_likes               | SELECT         | authenticated |
+| post_likes               | SELECT         | service_role  |
+| post_likes               | SELECT         | postgres      |
+| post_likes               | TRIGGER        | service_role  |
+| post_likes               | TRIGGER        | authenticated |
+| post_likes               | TRIGGER        | postgres      |
+| post_likes               | TRIGGER        | anon          |
+| post_likes               | TRUNCATE       | service_role  |
+| post_likes               | TRUNCATE       | authenticated |
+| post_likes               | TRUNCATE       | anon          |
+| post_likes               | TRUNCATE       | postgres      |
+| post_likes               | UPDATE         | service_role  |
+| post_likes               | UPDATE         | anon          |
+| post_likes               | UPDATE         | authenticated |
+| post_likes               | UPDATE         | postgres      |
+| posts                    | DELETE         | service_role  |
+| posts                    | DELETE         | anon          |
+| posts                    | DELETE         | postgres      |
+| posts                    | DELETE         | authenticated |
+| posts                    | INSERT         | authenticated |
+| posts                    | INSERT         | anon          |
+| posts                    | INSERT         | postgres      |
+| posts                    | INSERT         | service_role  |
+| posts                    | REFERENCES     | authenticated |
+| posts                    | REFERENCES     | service_role  |
+| posts                    | REFERENCES     | postgres      |
+| posts                    | REFERENCES     | anon          |
+| posts                    | SELECT         | authenticated |
+| posts                    | SELECT         | anon          |
+| posts                    | SELECT         | service_role  |
+| posts                    | SELECT         | postgres      |
+| posts                    | TRIGGER        | postgres      |
+| posts                    | TRIGGER        | authenticated |
+| posts                    | TRIGGER        | anon          |
+| posts                    | TRIGGER        | service_role  |
+| posts                    | TRUNCATE       | anon          |
+| posts                    | TRUNCATE       | service_role  |
+| posts                    | TRUNCATE       | authenticated |
+| posts                    | TRUNCATE       | postgres      |
+| posts                    | UPDATE         | authenticated |
+| posts                    | UPDATE         | service_role  |
+| posts                    | UPDATE         | anon          |
+| posts                    | UPDATE         | postgres      |
+| profiles                 | DELETE         | authenticated |
+| profiles                 | DELETE         | service_role  |
+| profiles                 | DELETE         | anon          |
+| profiles                 | DELETE         | postgres      |
+| profiles                 | INSERT         | postgres      |
+| profiles                 | INSERT         | service_role  |
+| profiles                 | INSERT         | anon          |
+| profiles                 | INSERT         | authenticated |
+| profiles                 | REFERENCES     | postgres      |
+| profiles                 | REFERENCES     | service_role  |
+| profiles                 | REFERENCES     | authenticated |
+| profiles                 | REFERENCES     | anon          |
+| profiles                 | SELECT         | anon          |
+| profiles                 | SELECT         | service_role  |
+| profiles                 | SELECT         | postgres      |
+| profiles                 | SELECT         | authenticated |
+| profiles                 | TRIGGER        | anon          |
+| profiles                 | TRIGGER        | service_role  |
+| profiles                 | TRIGGER        | authenticated |
+| profiles                 | TRIGGER        | postgres      |
+| profiles                 | TRUNCATE       | authenticated |
+| profiles                 | TRUNCATE       | postgres      |
+| profiles                 | TRUNCATE       | anon          |
+| profiles                 | TRUNCATE       | service_role  |
+| profiles                 | UPDATE         | service_role  |
+| profiles                 | UPDATE         | postgres      |
+| profiles                 | UPDATE         | authenticated |
+| profiles                 | UPDATE         | anon          |
+| reposts                  | DELETE         | service_role  |
+| reposts                  | DELETE         | authenticated |
+| reposts                  | DELETE         | postgres      |
+| reposts                  | DELETE         | anon          |
+| reposts                  | INSERT         | postgres      |
+| reposts                  | INSERT         | service_role  |
+| reposts                  | INSERT         | anon          |
+| reposts                  | INSERT         | authenticated |
+| reposts                  | REFERENCES     | anon          |
+| reposts                  | REFERENCES     | postgres      |
+| reposts                  | REFERENCES     | authenticated |
+| reposts                  | REFERENCES     | service_role  |
+| reposts                  | SELECT         | postgres      |
+| reposts                  | SELECT         | anon          |
+| reposts                  | SELECT         | authenticated |
+| reposts                  | SELECT         | service_role  |
+| reposts                  | TRIGGER        | authenticated |
+| reposts                  | TRIGGER        | postgres      |
+| reposts                  | TRIGGER        | anon          |
+| reposts                  | TRIGGER        | service_role  |
+| reposts                  | TRUNCATE       | authenticated |
+| reposts                  | TRUNCATE       | anon          |
+| reposts                  | TRUNCATE       | postgres      |
+| reposts                  | TRUNCATE       | service_role  |
+| reposts                  | UPDATE         | postgres      |
+| reposts                  | UPDATE         | anon          |
+| reposts                  | UPDATE         | authenticated |
+| reposts                  | UPDATE         | service_role  |
+| students                 | DELETE         | anon          |
+| students                 | DELETE         | postgres      |
+| students                 | DELETE         | service_role  |
+| students                 | DELETE         | authenticated |
+| students                 | INSERT         | anon          |
+| students                 | INSERT         | postgres      |
+| students                 | INSERT         | service_role  |
+| students                 | INSERT         | authenticated |
+| students                 | REFERENCES     | service_role  |
+| students                 | REFERENCES     | postgres      |
+| students                 | REFERENCES     | anon          |
+| students                 | REFERENCES     | authenticated |
+| students                 | SELECT         | service_role  |
+| students                 | SELECT         | anon          |
+| students                 | SELECT         | postgres      |
+| students                 | SELECT         | authenticated |
+| students                 | TRIGGER        | authenticated |
+| students                 | TRIGGER        | anon          |
+| students                 | TRIGGER        | postgres      |
+| students                 | TRIGGER        | service_role  |
+| students                 | TRUNCATE       | authenticated |
+| students                 | TRUNCATE       | postgres      |
+| students                 | TRUNCATE       | service_role  |
+| students                 | TRUNCATE       | anon          |
+| students                 | UPDATE         | postgres      |
+| students                 | UPDATE         | anon          |
+| students                 | UPDATE         | authenticated |
+| students                 | UPDATE         | service_role  |
+
+| table_name               | data_type                | count |
+| ------------------------ | ------------------------ | ----- |
+| bookmarks                | timestamp with time zone | 1     |
+| bookmarks                | uuid                     | 3     |
+| comments                 | boolean                  | 1     |
+| comments                 | text                     | 2     |
+| comments                 | timestamp with time zone | 2     |
+| comments                 | uuid                     | 3     |
+| communities              | boolean                  | 2     |
+| communities              | integer                  | 2     |
+| communities              | text                     | 6     |
+| communities              | timestamp with time zone | 2     |
+| communities              | uuid                     | 2     |
+| community_members        | text                     | 1     |
+| community_members        | timestamp with time zone | 1     |
+| community_members        | uuid                     | 3     |
+| community_post_bookmarks | timestamp with time zone | 1     |
+| community_post_bookmarks | uuid                     | 3     |
+| community_post_likes     | timestamp with time zone | 1     |
+| community_post_likes     | uuid                     | 3     |
+| community_post_reposts   | timestamp with time zone | 1     |
+| community_post_reposts   | uuid                     | 3     |
+| community_posts          | boolean                  | 1     |
+| community_posts          | integer                  | 4     |
+| community_posts          | text                     | 3     |
+| community_posts          | timestamp with time zone | 2     |
+| community_posts          | uuid                     | 3     |
+| faculty                  | integer                  | 1     |
+| faculty                  | text                     | 4     |
+| faculty                  | timestamp with time zone | 2     |
+| faculty                  | uuid                     | 1     |
+| followers                | timestamp with time zone | 1     |
+| followers                | uuid                     | 3     |
+| follows                  | timestamp with time zone | 1     |
+| follows                  | uuid                     | 3     |
+| notifications            | boolean                  | 1     |
+| notifications            | text                     | 1     |
+| notifications            | timestamp with time zone | 1     |
+| notifications            | uuid                     | 5     |
+| post_likes               | timestamp with time zone | 1     |
+| post_likes               | uuid                     | 3     |
+| posts                    | boolean                  | 1     |
+| posts                    | integer                  | 4     |
+| posts                    | text                     | 3     |
+| posts                    | timestamp with time zone | 1     |
+| posts                    | uuid                     | 2     |
+| profiles                 | boolean                  | 1     |
+| profiles                 | date                     | 1     |
+| profiles                 | integer                  | 1     |
+| profiles                 | text                     | 9     |
+| profiles                 | timestamp with time zone | 2     |
+| profiles                 | uuid                     | 1     |
+| reposts                  | timestamp with time zone | 1     |
+| reposts                  | uuid                     | 3     |
+| students                 | integer                  | 1     |
+| students                 | text                     | 4     |
+| students                 | timestamp with time zone | 2     |
+| students                 | uuid                     | 1     |
+
 SELECT
-    table_name,
-    column_name,
-    data_type,
-    is_nullable,
-    column_default,
-    ordinal_position
-FROM information_schema.columns 
-WHERE table_schema = 'public'
-ORDER BY table_name, ordinal_position;
+    c.table_name,
+    c.column_name,
+    c.data_type
+FROM information_schema.columns c
+WHERE c.table_schema = 'public'
+    AND c.column_name IN ('user_id', 'author_id', 'post_id', 'community_id')
+    AND NOT EXISTS (
+        SELECT 1 
+        FROM information_schema.table_constraints tc
+        JOIN information_schema.key_column_usage kcu 
+            ON tc.constraint_name = kcu.constraint_name
+        WHERE tc.table_schema = 'public'
+            AND tc.constraint_type = 'FOREIGN KEY'
+            AND kcu.table_name = c.table_name
+            AND kcu.column_name = c.column_name
+    )
+ORDER BY c.table_name, c.column_name;
 
-Results:
-
-<!-- PASTE JSON RESULTS FOR COLUMN_DETAILS HERE -->
-[
-  {
-    "table_name": "bookmarks",
-    "column_name": "id",
-    "data_type": "uuid",
-    "is_nullable": "NO",
-    "column_default": "gen_random_uuid()",
-    "ordinal_position": 1
-  },
-  {
-    "table_name": "bookmarks",
-    "column_name": "post_id",
-    "data_type": "uuid",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 2
-  },
-  {
-    "table_name": "bookmarks",
-    "column_name": "user_id",
-    "data_type": "uuid",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 3
-  },
-  {
-    "table_name": "bookmarks",
-    "column_name": "created_at",
-    "data_type": "timestamp with time zone",
-    "is_nullable": "YES",
-    "column_default": "timezone('utc'::text, now())",
-    "ordinal_position": 4
-  },
-  {
-    "table_name": "comments",
-    "column_name": "id",
-    "data_type": "uuid",
-    "is_nullable": "NO",
-    "column_default": "gen_random_uuid()",
-    "ordinal_position": 1
-  },
-  {
-    "table_name": "comments",
-    "column_name": "post_id",
-    "data_type": "uuid",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 2
-  },
-  {
-    "table_name": "comments",
-    "column_name": "user_id",
-    "data_type": "uuid",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 3
-  },
-  {
-    "table_name": "comments",
-    "column_name": "content",
-    "data_type": "text",
-    "is_nullable": "NO",
-    "column_default": null,
-    "ordinal_position": 4
-  },
-  {
-    "table_name": "comments",
-    "column_name": "is_anonymous",
-    "data_type": "boolean",
-    "is_nullable": "YES",
-    "column_default": "false",
-    "ordinal_position": 5
-  },
-  {
-    "table_name": "comments",
-    "column_name": "anonymous_name",
-    "data_type": "text",
-    "is_nullable": "YES",
-    "column_default": "'Anonymous User'::text",
-    "ordinal_position": 6
-  },
-  {
-    "table_name": "comments",
-    "column_name": "created_at",
-    "data_type": "timestamp with time zone",
-    "is_nullable": "YES",
-    "column_default": "now()",
-    "ordinal_position": 7
-  },
-  {
-    "table_name": "comments",
-    "column_name": "updated_at",
-    "data_type": "timestamp with time zone",
-    "is_nullable": "YES",
-    "column_default": "now()",
-    "ordinal_position": 8
-  },
-  {
-    "table_name": "communities",
-    "column_name": "id",
-    "data_type": "uuid",
-    "is_nullable": "NO",
-    "column_default": "gen_random_uuid()",
-    "ordinal_position": 1
-  },
-  {
-    "table_name": "communities",
-    "column_name": "name",
-    "data_type": "text",
-    "is_nullable": "NO",
-    "column_default": null,
-    "ordinal_position": 2
-  },
-  {
-    "table_name": "communities",
-    "column_name": "description",
-    "data_type": "text",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 3
-  },
-  {
-    "table_name": "communities",
-    "column_name": "category",
-    "data_type": "text",
-    "is_nullable": "NO",
-    "column_default": null,
-    "ordinal_position": 4
-  },
-  {
-    "table_name": "communities",
-    "column_name": "privacy",
-    "data_type": "text",
-    "is_nullable": "YES",
-    "column_default": "'public'::text",
-    "ordinal_position": 5
-  },
-  {
-    "table_name": "communities",
-    "column_name": "icon",
-    "data_type": "text",
-    "is_nullable": "YES",
-    "column_default": "'people-outline'::text",
-    "ordinal_position": 6
-  },
-  {
-    "table_name": "communities",
-    "column_name": "member_count",
-    "data_type": "integer",
-    "is_nullable": "YES",
-    "column_default": "1",
-    "ordinal_position": 7
-  },
-  {
-    "table_name": "communities",
-    "column_name": "created_by",
-    "data_type": "uuid",
-    "is_nullable": "NO",
-    "column_default": null,
-    "ordinal_position": 8
-  },
-  {
-    "table_name": "communities",
-    "column_name": "is_featured",
-    "data_type": "boolean",
-    "is_nullable": "YES",
-    "column_default": "false",
-    "ordinal_position": 9
-  },
-  {
-    "table_name": "communities",
-    "column_name": "is_official",
-    "data_type": "boolean",
-    "is_nullable": "YES",
-    "column_default": "false",
-    "ordinal_position": 10
-  },
-  {
-    "table_name": "communities",
-    "column_name": "rules",
-    "data_type": "text",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 11
-  },
-  {
-    "table_name": "communities",
-    "column_name": "max_members",
-    "data_type": "integer",
-    "is_nullable": "YES",
-    "column_default": "50",
-    "ordinal_position": 12
-  },
-  {
-    "table_name": "communities",
-    "column_name": "created_at",
-    "data_type": "timestamp with time zone",
-    "is_nullable": "YES",
-    "column_default": "now()",
-    "ordinal_position": 13
-  },
-  {
-    "table_name": "communities",
-    "column_name": "updated_at",
-    "data_type": "timestamp with time zone",
-    "is_nullable": "YES",
-    "column_default": "now()",
-    "ordinal_position": 14
-  },
-  {
-    "table_name": "community_members",
-    "column_name": "id",
-    "data_type": "uuid",
-    "is_nullable": "NO",
-    "column_default": "gen_random_uuid()",
-    "ordinal_position": 1
-  },
-  {
-    "table_name": "community_members",
-    "column_name": "community_id",
-    "data_type": "uuid",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 2
-  },
-  {
-    "table_name": "community_members",
-    "column_name": "user_id",
-    "data_type": "uuid",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 3
-  },
-  {
-    "table_name": "community_members",
-    "column_name": "role",
-    "data_type": "text",
-    "is_nullable": "YES",
-    "column_default": "'member'::text",
-    "ordinal_position": 4
-  },
-  {
-    "table_name": "community_members",
-    "column_name": "joined_at",
-    "data_type": "timestamp with time zone",
-    "is_nullable": "YES",
-    "column_default": "now()",
-    "ordinal_position": 5
-  },
-  {
-    "table_name": "community_post_bookmarks",
-    "column_name": "id",
-    "data_type": "uuid",
-    "is_nullable": "NO",
-    "column_default": "gen_random_uuid()",
-    "ordinal_position": 1
-  },
-  {
-    "table_name": "community_post_bookmarks",
-    "column_name": "post_id",
-    "data_type": "uuid",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 2
-  },
-  {
-    "table_name": "community_post_bookmarks",
-    "column_name": "user_id",
-    "data_type": "uuid",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 3
-  },
-  {
-    "table_name": "community_post_bookmarks",
-    "column_name": "created_at",
-    "data_type": "timestamp with time zone",
-    "is_nullable": "YES",
-    "column_default": "now()",
-    "ordinal_position": 4
-  },
-  {
-    "table_name": "community_post_likes",
-    "column_name": "id",
-    "data_type": "uuid",
-    "is_nullable": "NO",
-    "column_default": "gen_random_uuid()",
-    "ordinal_position": 1
-  },
-  {
-    "table_name": "community_post_likes",
-    "column_name": "post_id",
-    "data_type": "uuid",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 2
-  },
-  {
-    "table_name": "community_post_likes",
-    "column_name": "user_id",
-    "data_type": "uuid",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 3
-  },
-  {
-    "table_name": "community_post_likes",
-    "column_name": "created_at",
-    "data_type": "timestamp with time zone",
-    "is_nullable": "YES",
-    "column_default": "now()",
-    "ordinal_position": 4
-  },
-  {
-    "table_name": "community_post_reposts",
-    "column_name": "id",
-    "data_type": "uuid",
-    "is_nullable": "NO",
-    "column_default": "gen_random_uuid()",
-    "ordinal_position": 1
-  },
-  {
-    "table_name": "community_post_reposts",
-    "column_name": "post_id",
-    "data_type": "uuid",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 2
-  },
-  {
-    "table_name": "community_post_reposts",
-    "column_name": "user_id",
-    "data_type": "uuid",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 3
-  },
-  {
-    "table_name": "community_post_reposts",
-    "column_name": "created_at",
-    "data_type": "timestamp with time zone",
-    "is_nullable": "YES",
-    "column_default": "now()",
-    "ordinal_position": 4
-  },
-  {
-    "table_name": "community_posts",
-    "column_name": "id",
-    "data_type": "uuid",
-    "is_nullable": "NO",
-    "column_default": "gen_random_uuid()",
-    "ordinal_position": 1
-  },
-  {
-    "table_name": "community_posts",
-    "column_name": "community_id",
-    "data_type": "uuid",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 2
-  },
-  {
-    "table_name": "community_posts",
-    "column_name": "author_id",
-    "data_type": "uuid",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 3
-  },
-  {
-    "table_name": "community_posts",
-    "column_name": "anonymous_name",
-    "data_type": "text",
-    "is_nullable": "YES",
-    "column_default": "'Anonymous User'::text",
-    "ordinal_position": 4
-  },
-  {
-    "table_name": "community_posts",
-    "column_name": "content",
-    "data_type": "text",
-    "is_nullable": "NO",
-    "column_default": null,
-    "ordinal_position": 5
-  },
-  {
-    "table_name": "community_posts",
-    "column_name": "category",
-    "data_type": "text",
-    "is_nullable": "YES",
-    "column_default": "'Discussion'::text",
-    "ordinal_position": 6
-  },
-  {
-    "table_name": "community_posts",
-    "column_name": "like_count",
-    "data_type": "integer",
-    "is_nullable": "YES",
-    "column_default": "0",
-    "ordinal_position": 7
-  },
-  {
-    "table_name": "community_posts",
-    "column_name": "comment_count",
-    "data_type": "integer",
-    "is_nullable": "YES",
-    "column_default": "0",
-    "ordinal_position": 8
-  },
-  {
-    "table_name": "community_posts",
-    "column_name": "repost_count",
-    "data_type": "integer",
-    "is_nullable": "YES",
-    "column_default": "0",
-    "ordinal_position": 9
-  },
-  {
-    "table_name": "community_posts",
-    "column_name": "bookmark_count",
-    "data_type": "integer",
-    "is_nullable": "YES",
-    "column_default": "0",
-    "ordinal_position": 10
-  },
-  {
-    "table_name": "community_posts",
-    "column_name": "created_at",
-    "data_type": "timestamp with time zone",
-    "is_nullable": "YES",
-    "column_default": "now()",
-    "ordinal_position": 11
-  },
-  {
-    "table_name": "community_posts",
-    "column_name": "updated_at",
-    "data_type": "timestamp with time zone",
-    "is_nullable": "YES",
-    "column_default": "now()",
-    "ordinal_position": 12
-  },
-  {
-    "table_name": "faculty",
-    "column_name": "id",
-    "data_type": "uuid",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 1
-  },
-  {
-    "table_name": "faculty",
-    "column_name": "role",
-    "data_type": "text",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 2
-  },
-  {
-    "table_name": "faculty",
-    "column_name": "student_id",
-    "data_type": "text",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 3
-  },
-  {
-    "table_name": "faculty",
-    "column_name": "school_email",
-    "data_type": "text",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 4
-  },
-  {
-    "table_name": "faculty",
-    "column_name": "age",
-    "data_type": "integer",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 5
-  },
-  {
-    "table_name": "faculty",
-    "column_name": "created_at",
-    "data_type": "timestamp with time zone",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 6
-  },
-  {
-    "table_name": "faculty",
-    "column_name": "updated_at",
-    "data_type": "timestamp with time zone",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 7
-  },
-  {
-    "table_name": "faculty",
-    "column_name": "user_type",
-    "data_type": "text",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 8
-  },
-  {
-    "table_name": "follows",
-    "column_name": "id",
-    "data_type": "uuid",
-    "is_nullable": "NO",
-    "column_default": "gen_random_uuid()",
-    "ordinal_position": 1
-  },
-  {
-    "table_name": "follows",
-    "column_name": "follower_user_id",
-    "data_type": "uuid",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 2
-  },
-  {
-    "table_name": "follows",
-    "column_name": "following_user_id",
-    "data_type": "uuid",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 3
-  },
-  {
-    "table_name": "follows",
-    "column_name": "created_at",
-    "data_type": "timestamp with time zone",
-    "is_nullable": "NO",
-    "column_default": "timezone('utc'::text, now())",
-    "ordinal_position": 4
-  },
-  {
-    "table_name": "post_likes",
-    "column_name": "id",
-    "data_type": "uuid",
-    "is_nullable": "NO",
-    "column_default": "gen_random_uuid()",
-    "ordinal_position": 1
-  },
-  {
-    "table_name": "post_likes",
-    "column_name": "post_id",
-    "data_type": "uuid",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 2
-  },
-  {
-    "table_name": "post_likes",
-    "column_name": "user_id",
-    "data_type": "uuid",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 3
-  },
-  {
-    "table_name": "post_likes",
-    "column_name": "created_at",
-    "data_type": "timestamp with time zone",
-    "is_nullable": "YES",
-    "column_default": "timezone('utc'::text, now())",
-    "ordinal_position": 4
-  },
-  {
-    "table_name": "posts",
-    "column_name": "id",
-    "data_type": "uuid",
-    "is_nullable": "NO",
-    "column_default": "gen_random_uuid()",
-    "ordinal_position": 1
-  },
-  {
-    "table_name": "posts",
-    "column_name": "content",
-    "data_type": "text",
-    "is_nullable": "NO",
-    "column_default": null,
-    "ordinal_position": 2
-  },
-  {
-    "table_name": "posts",
-    "column_name": "category",
-    "data_type": "text",
-    "is_nullable": "NO",
-    "column_default": null,
-    "ordinal_position": 3
-  },
-  {
-    "table_name": "posts",
-    "column_name": "author_id",
-    "data_type": "uuid",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 4
-  },
-  {
-    "table_name": "posts",
-    "column_name": "author_initials",
-    "data_type": "text",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 5
-  },
-  {
-    "table_name": "posts",
-    "column_name": "is_anonymous",
-    "data_type": "boolean",
-    "is_nullable": "YES",
-    "column_default": "true",
-    "ordinal_position": 6
-  },
-  {
-    "table_name": "posts",
-    "column_name": "created_at",
-    "data_type": "timestamp with time zone",
-    "is_nullable": "YES",
-    "column_default": "now()",
-    "ordinal_position": 7
-  },
-  {
-    "table_name": "posts",
-    "column_name": "likes_count",
-    "data_type": "integer",
-    "is_nullable": "YES",
-    "column_default": "0",
-    "ordinal_position": 8
-  },
-  {
-    "table_name": "posts",
-    "column_name": "comments_count",
-    "data_type": "integer",
-    "is_nullable": "YES",
-    "column_default": "0",
-    "ordinal_position": 9
-  },
-  {
-    "table_name": "posts",
-    "column_name": "reposts_count",
-    "data_type": "integer",
-    "is_nullable": "YES",
-    "column_default": "0",
-    "ordinal_position": 10
-  },
-  {
-    "table_name": "posts",
-    "column_name": "bookmarks_count",
-    "data_type": "integer",
-    "is_nullable": "YES",
-    "column_default": "0",
-    "ordinal_position": 11
-  },
-  {
-    "table_name": "profiles",
-    "column_name": "id",
-    "data_type": "uuid",
-    "is_nullable": "NO",
-    "column_default": null,
-    "ordinal_position": 1
-  },
-  {
-    "table_name": "profiles",
-    "column_name": "role",
-    "data_type": "text",
-    "is_nullable": "NO",
-    "column_default": "'student'::text",
-    "ordinal_position": 2
-  },
-  {
-    "table_name": "profiles",
-    "column_name": "student_id",
-    "data_type": "text",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 3
-  },
-  {
-    "table_name": "profiles",
-    "column_name": "school_email",
-    "data_type": "text",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 4
-  },
-  {
-    "table_name": "profiles",
-    "column_name": "age",
-    "data_type": "integer",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 5
-  },
-  {
-    "table_name": "profiles",
-    "column_name": "created_at",
-    "data_type": "timestamp with time zone",
-    "is_nullable": "YES",
-    "column_default": "now()",
-    "ordinal_position": 6
-  },
-  {
-    "table_name": "profiles",
-    "column_name": "updated_at",
-    "data_type": "timestamp with time zone",
-    "is_nullable": "YES",
-    "column_default": "now()",
-    "ordinal_position": 7
-  },
-  {
-    "table_name": "profiles",
-    "column_name": "user_type",
-    "data_type": "text",
-    "is_nullable": "NO",
-    "column_default": null,
-    "ordinal_position": 8
-  },
-  {
-    "table_name": "profiles",
-    "column_name": "username",
-    "data_type": "text",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 9
-  },
-  {
-    "table_name": "profiles",
-    "column_name": "avatar_url",
-    "data_type": "text",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 10
-  },
-  {
-    "table_name": "profiles",
-    "column_name": "department",
-    "data_type": "text",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 11
-  },
-  {
-    "table_name": "profiles",
-    "column_name": "display_name",
-    "data_type": "text",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 12
-  },
-  {
-    "table_name": "profiles",
-    "column_name": "cover_url",
-    "data_type": "text",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 13
-  },
-  {
-    "table_name": "profiles",
-    "column_name": "post_anonymously",
-    "data_type": "boolean",
-    "is_nullable": "YES",
-    "column_default": "true",
-    "ordinal_position": 14
-  },
-  {
-    "table_name": "profiles",
-    "column_name": "birthday",
-    "data_type": "date",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 15
-  },
-  {
-    "table_name": "reposts",
-    "column_name": "id",
-    "data_type": "uuid",
-    "is_nullable": "NO",
-    "column_default": "gen_random_uuid()",
-    "ordinal_position": 1
-  },
-  {
-    "table_name": "reposts",
-    "column_name": "post_id",
-    "data_type": "uuid",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 2
-  },
-  {
-    "table_name": "reposts",
-    "column_name": "user_id",
-    "data_type": "uuid",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 3
-  }
-]
-
-
-
-
-3. Table Row Counts
-SELECT 'communities' as table_name, COUNT(*) as row_count FROM communities
-UNION ALL
-SELECT 'community_members', COUNT(*) FROM community_members
-UNION ALL
-SELECT 'community_posts', COUNT(*) FROM community_posts
-UNION ALL
-SELECT 'community_post_likes', COUNT(*) FROM community_post_likes
-UNION ALL
-SELECT 'profiles', COUNT(*) FROM profiles
-UNION ALL
-SELECT 'posts', COUNT(*) FROM posts
-UNION ALL
-SELECT 'bookmarks', COUNT(*) FROM bookmarks;
-
-Results:
-
-<!-- PASTE JSON RESULTS FOR ROW_COUNTS HERE -->
-[
-  {
-    "table_name": "communities",
-    "row_count": 2
-  },
-  {
-    "table_name": "community_members",
-    "row_count": 2
-  },
-  {
-    "table_name": "community_posts",
-    "row_count": 2
-  },
-  {
-    "table_name": "community_post_likes",
-    "row_count": 0
-  },
-  {
-    "table_name": "profiles",
-    "row_count": 9
-  },
-  {
-    "table_name": "posts",
-    "row_count": 4
-  },
-  {
-    "table_name": "bookmarks",
-    "row_count": 5
-  }
-]
-
-
-
-
-4. Row Level Security (RLS) Policies
-SELECT schemaname, tablename, policyname, roles, cmd
-FROM pg_policies 
-WHERE schemaname = 'public'
-ORDER BY tablename, policyname;
-
-Results:
-
-<!-- PASTE JSON RESULTS FOR RLS_POLICIES HERE -->
-[
-  {
-    "schemaname": "public",
-    "tablename": "bookmarks",
-    "policyname": "Allow select bookmarks",
-    "roles": "{public}",
-    "cmd": "SELECT"
-  },
-  {
-    "schemaname": "public",
-    "tablename": "bookmarks",
-    "policyname": "Users can bookmark posts",
-    "roles": "{public}",
-    "cmd": "INSERT"
-  },
-  {
-    "schemaname": "public",
-    "tablename": "bookmarks",
-    "policyname": "Users can remove bookmarks",
-    "roles": "{public}",
-    "cmd": "DELETE"
-  },
-  {
-    "schemaname": "public",
-    "tablename": "bookmarks",
-    "policyname": "Users can view their bookmarks",
-    "roles": "{public}",
-    "cmd": "SELECT"
-  },
-  {
-    "schemaname": "public",
-    "tablename": "comments",
-    "policyname": "Anyone can view comments",
-    "roles": "{public}",
-    "cmd": "SELECT"
-  },
-  {
-    "schemaname": "public",
-    "tablename": "comments",
-    "policyname": "Users can create comments",
-    "roles": "{public}",
-    "cmd": "INSERT"
-  },
-  {
-    "schemaname": "public",
-    "tablename": "comments",
-    "policyname": "Users can delete own comments",
-    "roles": "{public}",
-    "cmd": "DELETE"
-  },
-  {
-    "schemaname": "public",
-    "tablename": "comments",
-    "policyname": "Users can update own comments",
-    "roles": "{public}",
-    "cmd": "UPDATE"
-  },
-  {
-    "schemaname": "public",
-    "tablename": "communities",
-    "policyname": "Enable delete for users based on user_id",
-    "roles": "{public}",
-    "cmd": "DELETE"
-  },
-  {
-    "schemaname": "public",
-    "tablename": "communities",
-    "policyname": "Enable insert for authenticated users",
-    "roles": "{public}",
-    "cmd": "INSERT"
-  },
-  {
-    "schemaname": "public",
-    "tablename": "communities",
-    "policyname": "Enable read access for all users",
-    "roles": "{public}",
-    "cmd": "SELECT"
-  },
-  {
-    "schemaname": "public",
-    "tablename": "communities",
-    "policyname": "Enable update for users based on user_id",
-    "roles": "{public}",
-    "cmd": "UPDATE"
-  },
-  {
-    "schemaname": "public",
-    "tablename": "community_members",
-    "policyname": "Enable all for authenticated users",
-    "roles": "{public}",
-    "cmd": "ALL"
-  },
-  {
-    "schemaname": "public",
-    "tablename": "community_members",
-    "policyname": "Enable read access for all users",
-    "roles": "{public}",
-    "cmd": "SELECT"
-  },
-  {
-    "schemaname": "public",
-    "tablename": "community_post_bookmarks",
-    "policyname": "Enable all for authenticated users",
-    "roles": "{public}",
-    "cmd": "ALL"
-  },
-  {
-    "schemaname": "public",
-    "tablename": "community_post_bookmarks",
-    "policyname": "Enable read access for all users",
-    "roles": "{public}",
-    "cmd": "SELECT"
-  },
-  {
-    "schemaname": "public",
-    "tablename": "community_post_likes",
-    "policyname": "Enable all for authenticated users",
-    "roles": "{public}",
-    "cmd": "ALL"
-  },
-  {
-    "schemaname": "public",
-    "tablename": "community_post_likes",
-    "policyname": "Enable read access for all users",
-    "roles": "{public}",
-    "cmd": "SELECT"
-  },
-  {
-    "schemaname": "public",
-    "tablename": "community_post_reposts",
-    "policyname": "Enable all for authenticated users",
-    "roles": "{public}",
-    "cmd": "ALL"
-  },
-  {
-    "schemaname": "public",
-    "tablename": "community_post_reposts",
-    "policyname": "Enable read access for all users",
-    "roles": "{public}",
-    "cmd": "SELECT"
-  },
-  {
-    "schemaname": "public",
-    "tablename": "community_posts",
-    "policyname": "Enable delete for authors",
-    "roles": "{public}",
-    "cmd": "DELETE"
-  },
-  {
-    "schemaname": "public",
-    "tablename": "community_posts",
-    "policyname": "Enable insert for authenticated users",
-    "roles": "{public}",
-    "cmd": "INSERT"
-  },
-  {
-    "schemaname": "public",
-    "tablename": "community_posts",
-    "policyname": "Enable read access for all users",
-    "roles": "{public}",
-    "cmd": "SELECT"
-  },
-  {
-    "schemaname": "public",
-    "tablename": "community_posts",
-    "policyname": "Enable update for authors",
-    "roles": "{public}",
-    "cmd": "UPDATE"
-  },
-  {
-    "schemaname": "public",
-    "tablename": "post_likes",
-    "policyname": "Anyone can view likes",
-    "roles": "{public}",
-    "cmd": "SELECT"
-  },
-  {
-    "schemaname": "public",
-    "tablename": "post_likes",
-    "policyname": "Users can like posts",
-    "roles": "{public}",
-    "cmd": "INSERT"
-  },
-  {
-    "schemaname": "public",
-    "tablename": "post_likes",
-    "policyname": "Users can unlike their posts",
-    "roles": "{public}",
-    "cmd": "DELETE"
-  },
-  {
-    "schemaname": "public",
-    "tablename": "posts",
-    "policyname": "Anyone can view posts",
-    "roles": "{public}",
-    "cmd": "SELECT"
-  },
-  {
-    "schemaname": "public",
-    "tablename": "posts",
-    "policyname": "Users can create posts",
-    "roles": "{public}",
-    "cmd": "INSERT"
-  },
-  {
-    "schemaname": "public",
-    "tablename": "posts",
-    "policyname": "Users can delete own posts",
-    "roles": "{public}",
-    "cmd": "DELETE"
-  },
-  {
-    "schemaname": "public",
-    "tablename": "posts",
-    "policyname": "Users can update own posts",
-    "roles": "{public}",
-    "cmd": "UPDATE"
-  },
-  {
-    "schemaname": "public",
-    "tablename": "profiles",
-    "policyname": "Anyone can insert profiles",
-    "roles": "{public}",
-    "cmd": "INSERT"
-  },
-  {
-    "schemaname": "public",
-    "tablename": "profiles",
-    "policyname": "Anyone can view profiles",
-    "roles": "{public}",
-    "cmd": "SELECT"
-  },
-  {
-    "schemaname": "public",
-    "tablename": "profiles",
-    "policyname": "Users can update own profile",
-    "roles": "{public}",
-    "cmd": "UPDATE"
-  },
-  {
-    "schemaname": "public",
-    "tablename": "reposts",
-    "policyname": "Anyone can view reposts",
-    "roles": "{public}",
-    "cmd": "SELECT"
-  },
-  {
-    "schemaname": "public",
-    "tablename": "reposts",
-    "policyname": "Users can delete their reposts",
-    "roles": "{public}",
-    "cmd": "DELETE"
-  },
-  {
-    "schemaname": "public",
-    "tablename": "reposts",
-    "policyname": "Users can repost",
-    "roles": "{public}",
-    "cmd": "INSERT"
-  }
-]
-
-
-
-
-5. Community Membership Analysis
-SELECT 
-    c.name as community_name,
-    c.id as community_id,
-    p.display_name as member_name,
-    p.id as user_id,
-    cm.role,
-    c.created_by as community_creator_id
-FROM community_members cm
-JOIN communities c ON cm.community_id = c.id
-JOIN profiles p ON cm.user_id = p.id
-ORDER BY c.name, cm.role;
-
-Results:
-
-<!-- PASTE JSON RESULTS FOR COMMUNITY_MEMBERSHIPS HERE -->
-[
-  {
-    "community_name": "comp6",
-    "community_id": "7292fa85-fab5-41a2-bbe6-216fe89175df",
-    "member_name": "Dream",
-    "user_id": "2194f59d-51c0-49e6-becd-386ba40be14f",
-    "role": "admin",
-    "community_creator_id": "2194f59d-51c0-49e6-becd-386ba40be14f"
-  },
-  {
-    "community_name": "IT STUDENTS",
-    "community_id": "3c804f18-88aa-45a9-af8e-a8211def2acc",
-    "member_name": "Alt",
-    "user_id": "47493b0c-aa3b-4f1a-a2b5-b93fca3d81cb",
-    "role": "admin",
-    "community_creator_id": "47493b0c-aa3b-4f1a-a2b5-b93fca3d81cb"
-  }
-]
-
-
-
-
-6. User Profiles Inspection
-SELECT id, display_name, username, school_email, user_type 
-FROM profiles 
-LIMIT 5;
-
-Results:
-
-<!-- PASTE JSON RESULTS FOR USER_PROFILES HERE -->  
-[
-  {
-    "id": "4a49f035-8349-4961-98a2-5758c12a12d7",
-    "display_name": "Ako si Oheb",
-    "username": "STU",
-    "school_email": "student1@gmail.com",
-    "user_type": "student"
-  },
-  {
-    "id": "86faec90-7c59-44b7-ae5d-7e3a65fe526b",
-    "display_name": "FAC",
-    "username": "FAC",
-    "school_email": "faculty1@gmail.com",
-    "user_type": "faculty"
-  },
-  {
-    "id": "47493b0c-aa3b-4f1a-a2b5-b93fca3d81cb",
-    "display_name": "ALT",
-    "username": "ALT",
-    "school_email": "altheradrian@gmail.com",
-    "user_type": "student"
-  },
-  {
-    "id": "2194f59d-51c0-49e6-becd-386ba40be14f",
-    "display_name": "Dream",
-    "username": "ALT",
-    "school_email": "alther@gmail.com",
-    "user_type": "student"
-  },
-  {
-    "id": "d8799416-7627-4596-966c-345b015c496a",
-    "display_name": "STU",
-    "username": "STU",
-    "school_email": "student2@gmail.com",
-    "user_type": "student"
-  }
-]
-
-
-
-
-7. Profiles Table Structure
-SELECT column_name, data_type 
-FROM information_schema.columns 
-WHERE table_name = 'profiles' AND table_schema = 'public'
-ORDER BY ordinal_position;
-
-Results:
-
-<!-- PASTE JSON RESULTS FOR PROFILES_STRUCTURE HERE -->
-[
-  {
-    "column_name": "id",
-    "data_type": "uuid"
-  },
-  {
-    "column_name": "role",
-    "data_type": "text"
-  },
-  {
-    "column_name": "student_id",
-    "data_type": "text"
-  },
-  {
-    "column_name": "school_email",
-    "data_type": "text"
-  },
-  {
-    "column_name": "age",
-    "data_type": "integer"
-  },
-  {
-    "column_name": "created_at",
-    "data_type": "timestamp with time zone"
-  },
-  {
-    "column_name": "updated_at",
-    "data_type": "timestamp with time zone"
-  },
-  {
-    "column_name": "user_type",
-    "data_type": "text"
-  },
-  {
-    "column_name": "username",
-    "data_type": "text"
-  },
-  {
-    "column_name": "avatar_url",
-    "data_type": "text"
-  },
-  {
-    "column_name": "department",
-    "data_type": "text"
-  },
-  {
-    "column_name": "display_name",
-    "data_type": "text"
-  },
-  {
-    "column_name": "cover_url",
-    "data_type": "text"
-  },
-  {
-    "column_name": "post_anonymously",
-    "data_type": "boolean"
-  },
-  {
-    "column_name": "birthday",
-    "data_type": "date"
-  }
-]
-
-
-
-
-8. Database Relationships (Foreign Keys)
-SELECT
-    tc.table_name,
-    kcu.column_name,
-    ccu.table_name AS foreign_table_name,
-    ccu.column_name AS foreign_column_name
-FROM information_schema.table_constraints AS tc
-JOIN information_schema.key_column_usage AS kcu
-    ON tc.constraint_name = kcu.constraint_name
-JOIN information_schema.constraint_column_usage AS ccu
-    ON ccu.constraint_name = tc.constraint_name
-WHERE tc.constraint_type = 'FOREIGN KEY' AND tc.table_schema = 'public';
-
-Results:
-
-<!-- PASTE JSON RESULTS FOR FOREIGN_KEYS HERE -->
-[
-  {
-    "table_name": "post_likes",
-    "column_name": "post_id",
-    "foreign_table_name": "posts",
-    "foreign_column_name": "id"
-  },
-  {
-    "table_name": "reposts",
-    "column_name": "post_id",
-    "foreign_table_name": "posts",
-    "foreign_column_name": "id"
-  },
-  {
-    "table_name": "bookmarks",
-    "column_name": "post_id",
-    "foreign_table_name": "posts",
-    "foreign_column_name": "id"
-  },
-  {
-    "table_name": "follows",
-    "column_name": "follower_user_id",
-    "foreign_table_name": "profiles",
-    "foreign_column_name": "id"
-  },
-  {
-    "table_name": "follows",
-    "column_name": "following_user_id",
-    "foreign_table_name": "profiles",
-    "foreign_column_name": "id"
-  },
-  {
-    "table_name": "communities",
-    "column_name": "created_by",
-    "foreign_table_name": "profiles",
-    "foreign_column_name": "id"
-  },
-  {
-    "table_name": "community_members",
-    "column_name": "community_id",
-    "foreign_table_name": "communities",
-    "foreign_column_name": "id"
-  },
-  {
-    "table_name": "community_members",
-    "column_name": "user_id",
-    "foreign_table_name": "profiles",
-    "foreign_column_name": "id"
-  },
-  {
-    "table_name": "community_posts",
-    "column_name": "community_id",
-    "foreign_table_name": "communities",
-    "foreign_column_name": "id"
-  },
-  {
-    "table_name": "community_posts",
-    "column_name": "author_id",
-    "foreign_table_name": "profiles",
-    "foreign_column_name": "id"
-  },
-  {
-    "table_name": "community_post_likes",
-    "column_name": "post_id",
-    "foreign_table_name": "community_posts",
-    "foreign_column_name": "id"
-  },
-  {
-    "table_name": "community_post_likes",
-    "column_name": "user_id",
-    "foreign_table_name": "profiles",
-    "foreign_column_name": "id"
-  },
-  {
-    "table_name": "community_post_reposts",
-    "column_name": "post_id",
-    "foreign_table_name": "community_posts",
-    "foreign_column_name": "id"
-  },
-  {
-    "table_name": "community_post_reposts",
-    "column_name": "user_id",
-    "foreign_table_name": "profiles",
-    "foreign_column_name": "id"
-  },
-  {
-    "table_name": "community_post_bookmarks",
-    "column_name": "post_id",
-    "foreign_table_name": "community_posts",
-    "foreign_column_name": "id"
-  },
-  {
-    "table_name": "community_post_bookmarks",
-    "column_name": "user_id",
-    "foreign_table_name": "profiles",
-    "foreign_column_name": "id"
-  },
-  {
-    "table_name": "comments",
-    "column_name": "post_id",
-    "foreign_table_name": "posts",
-    "foreign_column_name": "id"
-  },
-  {
-    "table_name": "comments",
-    "column_name": "user_id",
-    "foreign_table_name": "profiles",
-    "foreign_column_name": "id"
-  }
-]
-
-
-
----Supabase Current Structure---
+| metric             | value |
+| ------------------ | ----- |
+| Total Tables       | 15    |
+| Total Columns      | 122   |
+| RLS Policies       | 42    |
+| Foreign Keys       | 29    |
+| Database Functions | 15    |

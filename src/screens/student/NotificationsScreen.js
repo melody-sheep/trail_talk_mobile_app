@@ -1,5 +1,7 @@
 // src/screens/student/NotificationsScreen.js
-import React, { useState, useContext, useRef } from 'react';
+import React, { useState, useContext, useRef, useEffect, useCallback } from 'react';
+import { supabase } from '../../lib/supabase';
+import { UserContext } from '../../contexts/UserContext';
 import {
   View,
   Text,
@@ -11,99 +13,41 @@ import {
   ScrollView,
   FlatList,
   SectionList,
-  Animated
+  Animated,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../styles/colors';
 import { fonts } from '../../styles/fonts';
-import { UserContext } from '../../contexts/UserContext';
+import useNotifications from '../../hooks/useNotifications';
 
 export default function NotificationsScreen({ navigation }) {
   const { user } = useContext(UserContext);
+  const [showRaw, setShowRaw] = useState(false);
   
-  const [notifications, setNotifications] = useState([
-    {
-      id: '1',
-      type: 'like',
-      description: 'Liked your post about campus events',
-      time: '2 mins ago',
-      timestamp: new Date(),
-      isRead: false,
-      displayName: 'Alex Johnson',
-      initials: 'AJ',
-    },
-    {
-      id: '2',
-      type: 'comment',
-      description: 'Commented on your academic post',
-      time: '15 mins ago',
-      timestamp: new Date(Date.now() - 15 * 60 * 1000),
-      isRead: false,
-      displayName: 'Sarah Chen',
-      initials: 'SC',
-    },
-    {
-      id: '3',
-      type: 'follow',
-      description: 'Started following you',
-      time: '1 hour ago',
-      timestamp: new Date(Date.now() - 60 * 60 * 1000),
-      isRead: true,
-      displayName: 'Mike Rodriguez',
-      initials: 'MR',
-    },
-    {
-      id: '4',
-      type: 'community',
-      description: 'Joined your Computer Science Club',
-      time: '3 hours ago',
-      timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000),
-      isRead: true,
-      displayName: 'Emily Davis',
-      initials: 'ED',
-    },
-    {
-      id: '5',
-      type: 'system',
-      description: 'Library will close early tomorrow for maintenance',
-      time: '5 hours ago',
-      timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000),
-      isRead: true,
-      displayName: 'Campus Admin',
-      initials: 'CA',
-    },
-    {
-      id: '6',
-      type: 'mention',
-      description: 'Mentioned you in a faculty announcement',
-      time: '1 day ago',
-      timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000),
-      isRead: true,
-      displayName: 'Dr. Wilson',
-      initials: 'DW',
-    },
-    {
-      id: '7',
-      type: 'repost',
-      description: 'Reposted your event announcement',
-      time: '1 day ago',
-      timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000),
-      isRead: true,
-      displayName: 'Campus News',
-      initials: 'CN',
-    },
-    {
-      id: '8',
-      type: 'achievement',
-      description: 'You earned the "Active Contributor" badge',
-      time: '2 days ago',
-      timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-      isRead: true,
-      displayName: 'System',
-      initials: 'SYS',
+  const {
+    notifications,
+    loading,
+    error,
+    unreadCount,
+    fetchNotifications,
+    markAsRead,
+    markAllAsRead
+  } = useNotifications(user?.id);
+
+  // Ensure we fetch when the signed-in user becomes available (avoid race conditions)
+  useEffect(() => {
+    if (user?.id) {
+      console.log('NotificationsScreen: signed-in user id=', user.id);
+      fetchNotifications();
     }
-  ]);
+  }, [user?.id]);
+
+  // Debug: log notification count when notifications update
+  useEffect(() => {
+    console.log('NotificationsScreen: notifications.length=', notifications.length);
+  }, [notifications.length]);
 
   const scrollY = useRef(new Animated.Value(0)).current;
   const scrollViewRef = useRef(null);
@@ -161,29 +105,10 @@ export default function NotificationsScreen({ navigation }) {
 
   const notificationSections = groupNotificationsByTime();
 
-  const unreadCount = notifications.filter(n => !n.isRead).length;
+  
 
-  const handleMarkAsRead = (notificationId) => {
-    setNotifications(prev => 
-      prev.map(notification => 
-        notification.id === notificationId 
-          ? { ...notification, isRead: true }
-          : notification
-      )
-    );
-  };
-
-  const handleDeleteNotification = (notificationId) => {
-    setNotifications(prev => 
-      prev.filter(notification => notification.id !== notificationId)
-    );
-  };
-
-  const handleMarkAllAsRead = () => {
-    setNotifications(prev => 
-      prev.map(notification => ({ ...notification, isRead: true }))
-    );
-  };
+  // useNotifications hook provides fetchNotifications/mark handlers and state
+  // destructured above
 
   const getNotificationIcon = (type) => {
     switch(type) {
@@ -218,13 +143,15 @@ export default function NotificationsScreen({ navigation }) {
     { useNativeDriver: false }
   );
 
-  const renderNotificationItem = ({ item }) => (
+  const renderNotificationItem = ({ item }) => {
+    console.log('Rendering notification item:', item.id, 'isRead=', item.isRead);
+    return (
     <TouchableOpacity 
       style={[
         styles.notificationCard,
         !item.isRead && styles.unreadNotification
       ]}
-      onPress={() => handleMarkAsRead(item.id)}
+      onPress={() => markAsRead(item.id)}
       activeOpacity={0.7}
     >
       {/* Avatar with Unread Indicator */}
@@ -264,7 +191,8 @@ export default function NotificationsScreen({ navigation }) {
         <Ionicons name="ellipsis-vertical" size={16} color="rgba(255, 255, 255, 0.6)" />
       </TouchableOpacity>
     </TouchableOpacity>
-  );
+    );
+  };
 
   const renderSectionHeader = ({ section }) => (
     <View style={styles.sectionHeader}>
@@ -316,7 +244,7 @@ export default function NotificationsScreen({ navigation }) {
           <View style={styles.stickySectionContent}>
             <TouchableOpacity 
               style={styles.markAllButton}
-              onPress={handleMarkAllAsRead}
+              onPress={markAllAsRead}
               activeOpacity={0.7}
             >
               <Ionicons name="checkmark-done-outline" size={16} color={colors.white} />
@@ -338,6 +266,29 @@ export default function NotificationsScreen({ navigation }) {
         onScroll={handleScroll}
         scrollEventThrottle={16}
       >
+        {/* Loading / Error / Empty states */}
+        {loading && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.white} />
+            <Text style={styles.loadingText}>Loading notifications...</Text>
+          </View>
+        )}
+
+        {error && !loading && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorTitle}>Unable to load notifications</Text>
+            <Text style={styles.errorMessage}>{error.message || String(error)}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={fetchNotifications}>
+              <Text style={styles.retryText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {!loading && !error && notifications.length === 0 && (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>You're all caught up — no notifications.</Text>
+          </View>
+        )}
         {/* Notifications List with Today/Earlier Sections */}
         <SectionList
           sections={notificationSections}
@@ -348,6 +299,36 @@ export default function NotificationsScreen({ navigation }) {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.sectionListContent}
         />
+
+        {/* Debug Controls: Refresh and raw JSON toggle */}
+        <View style={{ paddingHorizontal: 20, marginTop: 12 }}>
+          <View style={{ flexDirection: 'row', gap: 12 }}>
+            <TouchableOpacity
+              style={[styles.markAllButton, { flex: 1 }]}
+              onPress={() => {
+                console.log('Debug: manual refresh requested');
+                fetchNotifications();
+              }}
+            >
+              <Text style={styles.markAllText}>Refresh</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.markAllButton, { flex: 1 }]}
+              onPress={() => setShowRaw(v => !v)}
+            >
+              <Text style={styles.markAllText}>{showRaw ? 'Hide Raw' : 'Show Raw'}</Text>
+            </TouchableOpacity>
+          </View>
+
+          {showRaw && (
+            <ScrollView style={{ maxHeight: 260, marginTop: 12, backgroundColor: 'rgba(0,0,0,0.2)', padding: 12, borderRadius: 8 }}>
+              <Text style={{ color: 'white', fontFamily: fonts.normal, fontSize: 12 }}>
+                {JSON.stringify(notifications, null, 2)}
+              </Text>
+            </ScrollView>
+          )}
+        </View>
 
         {/* Bottom Spacer */}
         <View style={styles.bottomSpacer} />
@@ -579,4 +560,50 @@ const styles = StyleSheet.create({
   bottomSpacer: {
     height: 20,
   },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+  },
+  loadingText: {
+    marginTop: 12,
+    color: 'rgba(255,255,255,0.8)',
+    fontFamily: fonts.medium,
+  },
+  errorContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  errorTitle: {
+    color: colors.white,
+    fontFamily: fonts.bold,
+    marginBottom: 8,
+  },
+  errorMessage: {
+    color: 'rgba(255,255,255,0.8)',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  retryButton: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)'
+  },
+  retryText: {
+    color: colors.white,
+    fontFamily: fonts.medium,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+  },
+  emptyText: {
+    color: 'rgba(255,255,255,0.7)',
+    fontFamily: fonts.medium,
+  }
 });
