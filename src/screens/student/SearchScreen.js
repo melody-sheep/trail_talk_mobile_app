@@ -1,5 +1,5 @@
 // src/screens/student/SearchScreen.js
-import React from 'react';
+import React, { useState, useContext } from 'react';
 import {
   View,
   Text,
@@ -10,67 +10,20 @@ import {
   TouchableOpacity,
   Image,
   ScrollView,
-  FlatList,
-  ActivityIndicator,
-  RefreshControl,
-  Animated
+  FlatList
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../../styles/colors';
 import { fonts } from '../../styles/fonts';
-import { useSearch } from '../../hooks/useSearch';
+import { UserContext } from '../../contexts/UserContext';
 
 export default function SearchScreen({ navigation }) {
-  const {
-    searchQuery,
-    setSearchQuery,
-    searchResults,
-    suggestedAccounts,
-    communityResults,
-    suggestedCommunities,
-    isLoading,
-    error,
-    activeCategory,
-    setActiveCategory,
-    followUser,
-    unfollowUser,
-    clearSearch,
-    loadSuggestedContent
-  } = useSearch();
+  // State variables
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeCategory, setActiveCategory] = useState('all');
+  const { user } = useContext(UserContext);
 
-
-  const [refreshing, setRefreshing] = React.useState(false);
-  const [hiddenUsers, setHiddenUsers] = React.useState(new Set());
-  
-  const scrollY = React.useRef(new Animated.Value(0)).current;
-  const scrollViewRef = React.useRef(null);
-
-  // Animation values for header
-  const headerHeight = scrollY.interpolate({
-    inputRange: [0, 120],
-    outputRange: [160, 80],
-    extrapolate: 'clamp',
-  });
-
-  const headerTitleOpacity = scrollY.interpolate({
-    inputRange: [0, 80],
-    outputRange: [1, 0],
-    extrapolate: 'clamp',
-  });
-
-  const collapsedTitleOpacity = scrollY.interpolate({
-    inputRange: [0, 80, 120],
-    outputRange: [0, 0, 1],
-    extrapolate: 'clamp',
-  });
-
-  const searchSectionTranslateY = scrollY.interpolate({
-    inputRange: [0, 140],
-    outputRange: [0, -60],
-    extrapolate: 'clamp',
-  });
-
-  // Categories including Communities
+  // Categories for filtering
   const categories = [
     { id: 'all', label: 'All' },
     { id: 'students', label: 'Students' },
@@ -78,26 +31,70 @@ export default function SearchScreen({ navigation }) {
     { id: 'communities', label: 'Communities' }
   ];
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    setHiddenUsers(new Set()); // Clear hidden users on refresh
-    await loadSuggestedContent();
-    setRefreshing(false);
+  // Mock data for suggested accounts - Replace with real database fetch later
+  const suggestedAccounts = [
+    {
+      id: '1',
+      name: 'Alex Johnson',
+      username: 'alexj',
+      role: 'student',
+      avatar: require('../../../assets/profile_page_icons/default_profile_icon.png')
+    },
+    {
+      id: '2',
+      name: 'Dr. Sarah Wilson',
+      username: 'drwilson',
+      role: 'faculty',
+      avatar: require('../../../assets/profile_page_icons/default_profile_icon.png')
+    },
+    {
+      id: '3',
+      name: 'Mike Chen',
+      username: 'mikec',
+      role: 'student',
+      avatar: require('../../../assets/profile_page_icons/default_profile_icon.png')
+    },
+    {
+      id: '4',
+      name: 'Prof. James Brown',
+      username: 'profjbrown',
+      role: 'faculty',
+      avatar: require('../../../assets/profile_page_icons/default_profile_icon.png')
+    },
+    {
+      id: '5',
+      name: 'Campus Coding Club',
+      username: 'coding_club',
+      role: 'community',
+      avatar: require('../../../assets/profile_page_icons/default_profile_icon.png')
+    }
+  ];
+
+  // Filter suggested accounts based on active category and search query
+  const filteredAccounts = suggestedAccounts.filter(account => {
+    // Check category match
+    const categoryMatch =
+      activeCategory === 'all' ||
+      (activeCategory === 'students' && account.role === 'student') ||
+      (activeCategory === 'faculty' && account.role === 'faculty') ||
+      (activeCategory === 'communities' && account.role === 'community');
+
+    // Check search match
+    const searchMatch =
+      account.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      account.username.toLowerCase().includes(searchQuery.toLowerCase());
+
+    // Include account only if it matches category and search query
+    return categoryMatch && (searchQuery.trim() === '' || searchMatch);
+  });
+
+  // Handle search button (optional if you want explicit submit)
+  const handleSearch = () => {
+    console.log('Searching for:', searchQuery);
+    // Backend search integration can go here
   };
 
-  // Filter out hidden users from results
-  const filteredSearchResults = searchResults.filter(user => !hiddenUsers.has(user.id));
-  const filteredSuggestedAccounts = suggestedAccounts.filter(user => !hiddenUsers.has(user.id));
-
-  const handleDeleteUser = (userId) => {
-    setHiddenUsers(prev => new Set(prev).add(userId));
-  };
-
-  const handleScroll = Animated.event(
-    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-    { useNativeDriver: false }
-  );
-
+  // Render a single category chip
   const renderCategoryChip = ({ item }) => (
     <TouchableOpacity
       style={[
@@ -107,182 +104,96 @@ export default function SearchScreen({ navigation }) {
       onPress={() => setActiveCategory(item.id)}
       activeOpacity={0.7}
     >
-      <Text style={[
-        styles.categoryChipText,
-        activeCategory === item.id && styles.categoryChipTextSelected
-      ]}>
+      <Text
+        style={[
+          styles.categoryChipText,
+          activeCategory === item.id && styles.categoryChipTextSelected
+        ]}
+      >
         {item.label}
       </Text>
     </TouchableOpacity>
   );
 
-  const renderUserCard = ({ item }) => (
-    <View style={styles.card}>
-      <View style={styles.cardHeader}>
-        <View style={styles.userIdentity}>
-          <View style={styles.avatarContainer}>
-            <Image
-              source={item.avatarUrl ? { uri: item.avatarUrl } : require('../../../assets/profile_page_icons/default_profile_icon.png')}
-              style={styles.avatar}
-            />
-            {!item.avatarUrl && (
-              <View style={[
-                styles.initialsBadge,
-                item.user_type === 'student' ? styles.studentBadge : styles.facultyBadge
-              ]}>
-                <Text style={styles.initialsText}>{item.initials}</Text>
-              </View>
-            )}
-          </View>
-          <View style={styles.userMainInfo}>
-            <Text style={styles.userName}>{item.displayName}</Text>
-            <View style={[
+  // Render a single account card
+  const renderAccountCard = ({ item }) => (
+    <TouchableOpacity style={styles.accountCard} activeOpacity={0.7}>
+      <View style={styles.accountInfo}>
+        <Image source={item.avatar} style={styles.avatar} />
+        <View style={styles.accountDetails}>
+          <Text style={styles.accountName}>{item.name}</Text>
+          <Text style={styles.accountUsername}>@{item.username}</Text>
+          <View
+            style={[
               styles.roleBadge,
-              item.user_type === 'student' ? styles.studentRoleBadge : styles.facultyRoleBadge
-            ]}>
-              <Text style={styles.roleText}>
-                {item.user_type === 'student' ? 'Student' : 'Faculty'}
-              </Text>
-            </View>
-          </View>
-        </View>
-        
-        <View style={styles.userStats}>
-          <View style={styles.statRow}>
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>{item.postCount || 0}</Text>
-              <Text style={styles.statLabel}>Posts</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>{item.followersCount || 0}</Text>
-              <Text style={styles.statLabel}>Followers</Text>
-            </View>
+              item.role === 'student' && styles.studentBadge,
+              item.role === 'faculty' && styles.facultyBadge,
+              item.role === 'community' && styles.communityBadge
+            ]}
+          >
+            <Text style={styles.roleText}>
+              {item.role === 'student'
+                ? 'Student'
+                : item.role === 'faculty'
+                ? 'Faculty'
+                : 'Community'}
+            </Text>
           </View>
         </View>
       </View>
-
-      <View style={styles.cardActions}>
-        <TouchableOpacity 
-          style={[
-            styles.followButton,
-            item.isFollowing && styles.followingButton
-          ]}
-          onPress={() => item.isFollowing ? unfollowUser(item.id) : followUser(item.id)}
-        >
-          <Text style={[
-            styles.followButtonText,
-            item.isFollowing && styles.followingButtonText
-          ]}>
-            {item.isFollowing ? '✓ Following' : '+ Follow'}
-          </Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={styles.deleteButton}
-          onPress={() => handleDeleteUser(item.id)}
-        >
-          <Text style={styles.deleteButtonText}>Remove</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+      <TouchableOpacity style={styles.followButton} activeOpacity={0.7}>
+        <Text style={styles.followButtonText}>Follow</Text>
+      </TouchableOpacity>
+    </TouchableOpacity>
   );
-
-  const renderCommunityCard = ({ item }) => (
-    <View style={styles.card}>
-      <View style={styles.cardHeader}>
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.userName, { fontSize: 16 }]}>{item.name}</Text>
-          <Text style={[styles.roleText, { color: 'rgba(255,255,255,0.7)', marginTop: 6 }]} numberOfLines={2}>{item.description || 'No description'}</Text>
-        </View>
-        <View style={{ alignItems: 'flex-end' }}>
-          <Text style={styles.statNumber}>{item.member_count || 0}</Text>
-          <Text style={styles.statLabel}>Members</Text>
-        </View>
-      </View>
-      <View style={styles.cardActions}>
-        <TouchableOpacity
-          style={[styles.followButton, { backgroundColor: '#4ECDC4' }]}
-          onPress={() => navigation.navigate('CommunityDetail', { communityId: item.id })}
-        >
-          <Text style={[styles.followButtonText, { color: colors.white }]}>View Community</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-
-  const hasSearchResults = filteredSearchResults.length > 0;
-  const hasSuggestedContent = filteredSuggestedAccounts.length > 0;
-  const showSuggestedContent = !searchQuery.trim() && !hasSearchResults;
-
-  // community data selection
-  const communityData = activeCategory === 'communities'
-    ? (searchQuery.trim() ? (typeof communityResults !== 'undefined' ? communityResults : []) : (typeof suggestedCommunities !== 'undefined' ? suggestedCommunities : []))
-    : [];
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.homeBackground} />
-      
-      {/* Animated Header Background */}
-      <Animated.View style={[styles.headerContainer, { height: headerHeight }]}>
-        <ImageBackground 
-          source={require('../../../assets/create_post_screen_icons/createpost_header_bg.png')}
-          style={styles.headerBackground}
-          resizeMode="cover"
-        >
-          <Animated.View style={[styles.headerContent, { opacity: headerTitleOpacity }]}>
-            <Text style={styles.headerTitle}>Discover People</Text>
-            <Text style={styles.headerSubtitle}>Connect with students and faculty</Text>
-          </Animated.View>
+      {/* Status Bar */}
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={colors.homeBackground}
+      />
 
-          <Animated.View style={[styles.collapsedHeaderContent, { opacity: collapsedTitleOpacity }]}>
-            <Text style={styles.collapsedHeaderTitle}>Search</Text>
-          </Animated.View>
-        </ImageBackground>
-      </Animated.View>
+      {/* Header Background */}
+      <ImageBackground
+        source={require('../../../assets/create_post_screen_icons/createpost_header_bg.png')}
+        style={styles.headerBackground}
+        resizeMode="cover"
+      >
+        <View style={styles.headerContent}>
+          <Text style={styles.headerTitle}>Search</Text>
+        </View>
+      </ImageBackground>
 
-      {/* Sticky Search & Categories Section */}
-      <Animated.View style={[styles.stickySection, { transform: [{ translateY: searchSectionTranslateY }] }]}>
-        {/* Search Field */}
+      <ScrollView
+        style={styles.container}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {/* Search Input */}
         <View style={styles.searchContainer}>
           <View style={styles.searchInputWrapper}>
-            <Image 
+            <Image
               source={require('../../../assets/bottom_navigation_icons/search_icon_fill.png')}
               style={styles.searchIcon}
+              resizeMode="contain"
             />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search people..."
+              placeholder="Search for people, posts, or communities..."
               placeholderTextColor="rgba(255, 255, 255, 0.5)"
               value={searchQuery}
-              onChangeText={setSearchQuery}
+              onChangeText={setSearchQuery} // live search
+              onSubmitEditing={handleSearch} // optional
               returnKeyType="search"
             />
-            <View style={styles.searchRightContent}>
-              {searchQuery ? (
-                <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
-                  <Text style={styles.clearButtonText}>✕</Text>
-                </TouchableOpacity>
-              ) : (
-                isLoading && (
-                  <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="small" color={colors.white} />
-                  </View>
-                )
-              )}
-            </View>
           </View>
         </View>
 
-        {/* Error Message */}
-        {error && (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        )}
-
-        {/* Category Chips */}
+        {/* Category Chips Section */}
         <View style={styles.categoriesSection}>
+          <Text style={styles.sectionTitle}>Browse Categories</Text>
           <FlatList
             data={categories}
             renderItem={renderCategoryChip}
@@ -292,190 +203,80 @@ export default function SearchScreen({ navigation }) {
             contentContainerStyle={styles.categoriesList}
           />
         </View>
-      </Animated.View>
 
-      {/* Scrollable Content Section */}
-      <ScrollView 
-        ref={scrollViewRef}
-        style={styles.container}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={colors.white}
-            colors={[colors.white]}
-          />
-        }
-      >
-        {/* Search Results */}
-        {hasSearchResults && (
-          <View style={styles.resultsHeader}>
-            <Text style={styles.resultsTitle}>
-              {filteredSearchResults.length} {filteredSearchResults.length === 1 ? 'person' : 'people'} found
+        {/* Suggested Accounts Section */}
+        <View style={styles.accountsSection}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Suggested Accounts</Text>
+            <Text style={styles.sectionSubtitle}>
+              {activeCategory === 'all' && 'Students & Faculty'}
+              {activeCategory === 'students' && 'Student Profiles'}
+              {activeCategory === 'faculty' && 'Faculty Profiles'}
+              {activeCategory === 'communities' && 'Campus Communities'}
             </Text>
           </View>
-        )}
 
-          {activeCategory === 'communities' ? (
-            <FlatList
-              data={communityData}
-              renderItem={renderCommunityCard}
-              keyExtractor={(item) => item.id}
-              scrollEnabled={false}
-              showsVerticalScrollIndicator={false}
-              ListEmptyComponent={
-                !isLoading && searchQuery ? (
-                  <View style={styles.emptyState}>
-                    <Image 
-                      source={require('../../../assets/bottom_navigation_icons/search_icon_fill.png')}
-                      style={styles.emptyStateIcon}
-                    />
-                    <Text style={styles.emptyStateTitle}>No communities found</Text>
-                    <Text style={styles.emptyStateText}>
-                      No results for "{searchQuery}"
-                    </Text>
-                  </View>
-                ) : !searchQuery && (!communityData || communityData.length === 0) && !isLoading ? (
-                  <View style={styles.welcomeState}>
-                    <Image 
-                      source={require('../../../assets/bottom_navigation_icons/search_icon_fill.png')}
-                      style={styles.welcomeIcon}
-                    />
-                    <Text style={styles.welcomeTitle}>Explore Communities</Text>
-                    <Text style={styles.welcomeText}>
-                      Browse or search communities by name or category
-                    </Text>
-                  </View>
-                ) : null
-              }
-            />
+          {/* Render accounts or placeholder */}
+          {filteredAccounts.length === 0 ? (
+            <View style={styles.placeholder}>
+              <Text style={styles.placeholderText}>
+                {searchQuery.trim() === ''
+                  ? 'Type something to search...'
+                  : 'No results found.'}
+              </Text>
+            </View>
           ) : (
             <FlatList
-              data={showSuggestedContent ? filteredSuggestedAccounts : filteredSearchResults}
-              renderItem={renderUserCard}
+              data={filteredAccounts}
+              renderItem={renderAccountCard}
               keyExtractor={(item) => item.id}
               scrollEnabled={false}
               showsVerticalScrollIndicator={false}
-              ListEmptyComponent={
-                !isLoading && searchQuery ? (
-                  <View style={styles.emptyState}>
-                    <Image 
-                      source={require('../../../assets/bottom_navigation_icons/search_icon_fill.png')}
-                      style={styles.emptyStateIcon}
-                    />
-                    <Text style={styles.emptyStateTitle}>No results found</Text>
-                    <Text style={styles.emptyStateText}>
-                      No results for "{searchQuery}"
-                    </Text>
-                  </View>
-                ) : !searchQuery && !hasSuggestedContent && !isLoading ? (
-                  <View style={styles.welcomeState}>
-                    <Image 
-                      source={require('../../../assets/bottom_navigation_icons/search_icon_fill.png')}
-                      style={styles.welcomeIcon}
-                    />
-                    <Text style={styles.welcomeTitle}>Find Students & Faculty</Text>
-                    <Text style={styles.welcomeText}>
-                      Search by name or student ID to connect with others
-                    </Text>
-                  </View>
-                ) : null
-              }
             />
           )}
+        </View>
 
+        {/* Bottom Spacer */}
         <View style={styles.bottomSpacer} />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
+// Styles
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.homeBackground,
-  },
-  headerContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 10,
-    overflow: 'hidden',
+    backgroundColor: colors.homeBackground
   },
   headerBackground: {
     width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
+    height: 140,
+    justifyContent: 'center'
   },
   headerContent: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    paddingHorizontal: 20,
+    paddingTop: 10
   },
   headerTitle: {
     fontSize: 28,
-    fontFamily: fonts.bold,
+    fontFamily: fonts.medium,
     color: colors.white,
     textAlign: 'center',
-    letterSpacing: 0.5,
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    fontFamily: fonts.normal,
-    color: 'rgba(255, 255, 255, 0.8)',
-    textAlign: 'center',
-    marginTop: 8,
-  },
-  collapsedHeaderContent: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 12,
-  },
-  collapsedHeaderTitle: {
-    fontSize: 20,
-    fontFamily: fonts.bold,
-    color: colors.white,
-  },
-  stickySection: {
-    position: 'absolute',
-    top: 160,
-    left: 0,
-    right: 0,
-    zIndex: 20,
-    backgroundColor: colors.homeBackground,
-    paddingTop: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    letterSpacing: 1.5
   },
   container: {
     flex: 1,
-    backgroundColor: colors.homeBackground,
-    marginTop: 160,
+    backgroundColor: colors.homeBackground
   },
   scrollContent: {
     flexGrow: 1,
-    paddingTop: 140,
-    paddingBottom: 30,
+    paddingBottom: 20
   },
   searchContainer: {
     paddingHorizontal: 20,
-    marginBottom: 16,
+    marginTop: 20,
+    marginBottom: 10
   },
   searchInputWrapper: {
     flexDirection: 'row',
@@ -483,292 +284,167 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
     borderRadius: 16,
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 12,
     borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: 'rgba(255, 255, 255, 0.2)'
   },
   searchIcon: {
     width: 20,
     height: 20,
     marginRight: 12,
-    tintColor: 'rgba(255, 255, 255, 0.6)',
+    tintColor: 'rgba(255, 255, 255, 0.6)'
   },
   searchInput: {
     flex: 1,
     fontSize: 16,
     fontFamily: fonts.normal,
     color: colors.white,
-    padding: 0,
-  },
-  searchRightContent: {
-    width: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  clearButton: {
-    padding: 2,
-  },
-  clearButtonText: {
-    color: 'rgba(255, 255, 255, 0.6)',
-    fontSize: 14,
-    fontFamily: fonts.medium,
-  },
-  loadingContainer: {
-    padding: 2,
+    padding: 0
   },
   categoriesSection: {
-    paddingHorizontal: 20,
-    paddingBottom: 16,
+    marginTop: 10,
+    marginBottom: 20
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontFamily: fonts.medium,
+    color: colors.white,
+    marginBottom: 12,
+    paddingHorizontal: 20
   },
   categoriesList: {
-    gap: 8,
+    paddingHorizontal: 20
   },
   categoryChip: {
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderWidth: 1.5,
     borderColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    minWidth: 100,
+    borderRadius: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    marginRight: 12,
+    minWidth: 80,
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   categoryChipSelected: {
     backgroundColor: colors.white,
-    borderColor: colors.white,
+    borderColor: colors.white
   },
   categoryChipText: {
     fontSize: 14,
     fontFamily: fonts.medium,
     color: 'rgba(255, 255, 255, 0.9)',
-    textAlign: 'center',
+    textAlign: 'center'
   },
   categoryChipTextSelected: {
     color: colors.homeBackground,
-    fontFamily: fonts.semiBold,
+    fontFamily: fonts.semiBold
   },
-  // Card Styles
-  card: {
+  accountsSection: {
+    marginTop: 10
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+    paddingHorizontal: 20
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    fontFamily: fonts.normal,
+    color: 'rgba(255, 255, 255, 0.6)'
+  },
+  accountCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     marginHorizontal: 20,
     marginBottom: 12,
     padding: 16,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: 'rgba(255, 255, 255, 0.1)'
   },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  userIdentity: {
+  accountInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
-  },
-  avatarContainer: {
-    position: 'relative',
-    marginRight: 12,
+    flex: 1
   },
   avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    marginRight: 12
   },
-  initialsBadge: {
-    position: 'absolute',
-    bottom: -2,
-    right: -2,
-    borderRadius: 12,
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: colors.homeBackground,
+  accountDetails: {
+    flex: 1
   },
-  studentBadge: {
-    backgroundColor: 'rgba(76, 175, 80, 0.9)',
-  },
-  facultyBadge: {
-    backgroundColor: 'rgba(33, 150, 243, 0.9)',
-  },
-  initialsText: {
-    fontSize: 10,
-    fontFamily: fonts.bold,
-    color: colors.white,
-  },
-  userMainInfo: {
-    flex: 1,
-  },
-  userName: {
+  accountName: {
     fontSize: 16,
-    fontFamily: fonts.bold,
+    fontFamily: fonts.medium,
     color: colors.white,
-    marginBottom: 6,
+    marginBottom: 2
+  },
+  accountUsername: {
+    fontSize: 14,
+    fontFamily: fonts.normal,
+    color: 'rgba(255, 255, 255, 0.6)',
+    marginBottom: 6
   },
   roleBadge: {
     alignSelf: 'flex-start',
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 10,
+    borderRadius: 8
   },
-  studentRoleBadge: {
-    backgroundColor: 'rgba(76, 175, 80, 0.15)',
+  studentBadge: {
+    backgroundColor: 'rgba(76, 175, 80, 0.2)',
     borderWidth: 1,
-    borderColor: 'rgba(76, 175, 80, 0.4)',
+    borderColor: 'rgba(76, 175, 80, 0.5)'
   },
-  facultyRoleBadge: {
-    backgroundColor: 'rgba(33, 150, 243, 0.15)',
+  facultyBadge: {
+    backgroundColor: 'rgba(33, 150, 243, 0.2)',
     borderWidth: 1,
-    borderColor: 'rgba(33, 150, 243, 0.4)',
+    borderColor: 'rgba(33, 150, 243, 0.5)'
+  },
+  communityBadge: {
+    backgroundColor: 'rgba(156, 39, 176, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(156, 39, 176, 0.5)'
   },
   roleText: {
-    fontSize: 11,
+    fontSize: 12,
     fontFamily: fonts.medium,
-    color: colors.white,
-  },
-  userStats: {
-    alignItems: 'flex-end',
-  },
-  statRow: {
-    flexDirection: 'row',
-    gap: 12,
-    alignItems: 'center',
-  },
-  statItem: {
-    alignItems: 'center',
-  },
-  statNumber: {
-    fontSize: 14,
-    fontFamily: fonts.bold,
-    color: colors.white,
-  },
-  statLabel: {
-    fontSize: 10,
-    fontFamily: fonts.normal,
-    color: 'rgba(255, 255, 255, 0.5)',
-    marginTop: 1,
-  },
-  cardActions: {
-    flexDirection: 'row',
-    gap: 10,
+    color: colors.white
   },
   followButton: {
-    flex: 1,
-    backgroundColor: 'rgba(58, 140, 130, 0.8)',
-    paddingVertical: 10,
-    borderRadius: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(133, 255, 229, 0.8)',
-    alignItems: 'center',
-  },
-  followingButton: {
-    backgroundColor: 'rgba(76, 175, 80, 0.2)',
-    borderColor: 'rgba(76, 175, 80, 0.5)',
+    borderColor: 'rgba(255, 255, 255, 0.2)'
   },
   followButtonText: {
-    fontSize: 13,
+    fontSize: 14,
     fontFamily: fonts.medium,
-    color: colors.white,
+    color: colors.white
   },
-  followingButtonText: {
-    color: '#4CAF50',
-  },
-  deleteButton: {
-    backgroundColor: 'rgba(244, 67, 54, 0.1)',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(244, 67, 54, 0.3)',
-    alignItems: 'center',
+  placeholder: {
+    paddingVertical: 40,
     justifyContent: 'center',
-    minWidth: 70,
+    alignItems: 'center'
   },
-  deleteButtonText: {
-    fontSize: 13,
+  placeholderText: {
+    fontSize: 16,
     fontFamily: fonts.medium,
-    color: '#f44336',
-  },
-  // Results Header
-  resultsHeader: {
-    paddingHorizontal: 20,
-    marginBottom: 16,
-  },
-  resultsTitle: {
-    fontSize: 18,
-    fontFamily: fonts.bold,
-    color: colors.white,
-  },
-  // Empty States
-  emptyState: {
-    padding: 30,
-    alignItems: 'center',
-    marginTop: 30,
-  },
-  emptyStateIcon: {
-    width: 60,
-    height: 60,
-    tintColor: 'rgba(255, 255, 255, 0.3)',
-    marginBottom: 15,
-  },
-  emptyStateTitle: {
-    fontSize: 18,
-    fontFamily: fonts.medium,
-    color: colors.white,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  emptyStateText: {
-    fontSize: 14,
-    fontFamily: fonts.normal,
     color: 'rgba(255, 255, 255, 0.6)',
-    textAlign: 'center',
-  },
-  // Welcome State
-  welcomeState: {
-    padding: 30,
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  welcomeIcon: {
-    width: 60,
-    height: 60,
-    tintColor: 'rgba(255, 255, 255, 0.3)',
-    marginBottom: 15,
-  },
-  welcomeTitle: {
-    fontSize: 20,
-    fontFamily: fonts.bold,
-    color: colors.white,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  welcomeText: {
-    fontSize: 14,
-    fontFamily: fonts.normal,
-    color: 'rgba(255, 255, 255, 0.6)',
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  errorContainer: {
-    backgroundColor: 'rgba(244, 67, 54, 0.1)',
-    marginHorizontal: 20,
-    marginBottom: 12,
-    padding: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(244, 67, 54, 0.3)',
-  },
-  errorText: {
-    fontSize: 13,
-    fontFamily: fonts.normal,
-    color: '#f44336',
-    textAlign: 'center',
+    textAlign: 'center'
   },
   bottomSpacer: {
-    height: 30,
-  },
+    height: 20
+  }
 });
