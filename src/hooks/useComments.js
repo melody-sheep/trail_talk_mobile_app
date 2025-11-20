@@ -19,8 +19,10 @@ const useComments = (postId, userId) => {
         .order('created_at', { ascending: true });
       if (error) throw error;
       setComments(data || []);
-      // Check if current user has commented
-      setHasCommented(!!data?.find(c => c.user_id === userId));
+      // IMMEDIATELY check if current user has commented
+      const userHasCommented = !!data?.find(c => c.user_id === userId);
+      setHasCommented(userHasCommented);
+      console.log('User has commented:', userHasCommented, 'for post:', postId);
     } catch (err) {
       setError(err.message || 'Failed to fetch comments');
     } finally {
@@ -48,12 +50,15 @@ const useComments = (postId, userId) => {
         .single();
       if (error) throw error;
       
+      // IMMEDIATELY set hasCommented to true
+      setHasCommented(true);
+      console.log('Comment added - setting hasCommented to TRUE');
+
       // Try to update post comment count (may be blocked by RLS); it's optional
       await updatePostCommentCount(1);
 
-      // Refresh local comments list and mark that the current user has commented
+      // Refresh local comments list
       await fetchComments();
-      setHasCommented(true);
 
       return { success: true, data };
     } catch (err) {
@@ -81,13 +86,6 @@ const useComments = (postId, userId) => {
 
       // Refresh and update hasCommented status
       await fetchComments();
-      if (userId) {
-        setHasCommented(prev => {
-          // if user still has other comments, keep true
-          const stillHas = comments.some(c => c.user_id === userId && c.id !== commentId);
-          return stillHas;
-        });
-      }
 
       return { success: true };
     } catch (err) {
@@ -126,7 +124,7 @@ const useComments = (postId, userId) => {
     }
   };
 
-  // REAL-TIME SUBSCRIPTION FOR COMMENTS
+  // REAL-TIME SUBSCRIPTION FOR COMMENTS - IMPROVED
   useEffect(() => {
     if (!postId) return;
 
@@ -145,26 +143,25 @@ const useComments = (postId, userId) => {
           filter: `post_id=eq.${postId}`
         },
         (payload) => {
-          console.log('Real-time comment update:', payload);
+          console.log('Real-time comment update:', payload.eventType, 'by user:', payload.new?.user_id);
           
-          // Refresh comments when any change happens
-          fetchComments();
-          
-          // Update hasCommented status
+          // Update hasCommented status immediately based on the event
           if (userId) {
-            setHasCommented(prev => {
-              if (payload.eventType === 'INSERT' && payload.new.user_id === userId) {
-                return true;
-              } else if (payload.eventType === 'DELETE' && payload.old.user_id === userId) {
-                // Check if user still has other comments
-                const stillHasComment = comments.some(c => 
-                  c.id !== payload.old.id && c.user_id === userId
-                );
-                return stillHasComment;
-              }
-              return prev;
-            });
+            if (payload.eventType === 'INSERT' && payload.new.user_id === userId) {
+              setHasCommented(true);
+              console.log('Real-time: User commented - setting hasCommented to TRUE');
+            } else if (payload.eventType === 'DELETE' && payload.old.user_id === userId) {
+              // Check if user still has other comments
+              const stillHasComment = comments.some(c => 
+                c.id !== payload.old.id && c.user_id === userId
+              );
+              setHasCommented(stillHasComment);
+              console.log('Real-time: User comment deleted - hasCommented:', stillHasComment);
+            }
           }
+          
+          // Refresh comments list
+          fetchComments();
         }
       )
       .subscribe();

@@ -12,22 +12,23 @@ const PostCard = ({ post, userRole = 'student', onInteraction, onCommentUpdate }
   const [isLiked, setIsLiked] = useState(false);
   const [isReposted, setIsReposted] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
-  const [likesCount, setLikesCount] = useState(post.likes_count || 0);
-  const [commentsCount, setCommentsCount] = useState(post.comments_count || 0);
-  const [repostsCount, setRepostsCount] = useState(post.reposts_count || 0);
-  const [bookmarksCount, setBookmarksCount] = useState(post.bookmarks_count || 0);
+  const [likesCount, setLikesCount] = useState(post?.likes_count || 0);
+  const [commentsCount, setCommentsCount] = useState(post?.comments_count || 0);
+  const [repostsCount, setRepostsCount] = useState(post?.reposts_count || 0);
+  const [bookmarksCount, setBookmarksCount] = useState(post?.bookmarks_count || 0);
   const [authorAvatar, setAuthorAvatar] = useState(null);
+  const [authorRole, setAuthorRole] = useState(null);
   const navigation = useNavigation();
   
-  // Track if user has commented and provide fetch to refresh status
-  const { hasCommented, fetchComments } = useComments(post.id, user?.id);
+  // Track if user has commented
+  const { hasCommented, fetchComments } = useComments(post?.id, user?.id);
 
-  // REAL-TIME COMMENT COUNT UPDATES
+  // REAL-TIME COMMENT COUNT UPDATES - IMPROVED
   useEffect(() => {
-    setCommentsCount(post.comments_count || 0);
-  }, [post.comments_count]);
+    setCommentsCount(post?.comments_count || 0);
+  }, [post?.comments_count]);
 
-  // REAL-TIME SUBSCRIPTION FOR POST UPDATES (including comment counts)
+  // REAL-TIME SUBSCRIPTION FOR POST UPDATES
   useEffect(() => {
     if (!post?.id) return;
 
@@ -42,7 +43,7 @@ const PostCard = ({ post, userRole = 'student', onInteraction, onCommentUpdate }
           filter: `id=eq.${post.id}`
         },
         (payload) => {
-          console.log('Real-time post update:', payload);
+          console.log('Real-time post update - comments_count:', payload.new.comments_count);
           // Update local state with new counts
           if (payload.new.comments_count !== undefined) {
             setCommentsCount(payload.new.comments_count);
@@ -68,17 +69,20 @@ const PostCard = ({ post, userRole = 'student', onInteraction, onCommentUpdate }
   // Refresh comment status when component mounts or user changes
   useEffect(() => {
     if (user && post?.id) {
+      console.log('Refreshing comments for user:', user.id, 'post:', post.id);
       fetchComments();
     }
   }, [user, post?.id]);
 
   // Check user's interaction status and fetch author profile when component mounts
   useEffect(() => {
-    if (user) {
+    if (user && post?.id) {
       checkUserInteractions();
     }
-    fetchAuthorProfile();
-  }, [user, post.id, post.author_id]);
+    if (post?.author_id) {
+      fetchAuthorProfile();
+    }
+  }, [user, post?.id, post?.author_id]);
 
   // Fetch authoritative interaction counts for this post on mount/update
   useEffect(() => {
@@ -109,7 +113,7 @@ const PostCard = ({ post, userRole = 'student', onInteraction, onCommentUpdate }
     fetchCounts();
   }, [post?.id]);
 
-  // Keep local counts in sync when the parent `post` prop is updated (e.g. after feed refetch)
+  // Keep local counts in sync when the parent `post` prop is updated
   useEffect(() => {
     if (!post) return;
     setLikesCount(post.likes_count || 0);
@@ -118,12 +122,15 @@ const PostCard = ({ post, userRole = 'student', onInteraction, onCommentUpdate }
     setBookmarksCount(post.bookmarks_count || 0);
   }, [post?.likes_count, post?.comments_count, post?.reposts_count, post?.bookmarks_count]);
 
-  // Fetch author profile to get avatar
+  // Fetch author profile to get avatar AND role - UPDATED
   const fetchAuthorProfile = async () => {
     try {
-      // If post has author data with avatar_url, use it
-      if (post.author?.avatar_url) {
-        setAuthorAvatar(post.author.avatar_url);
+      // If post has author data with role, use it
+      if (post.author?.user_type) {
+        setAuthorRole(post.author.user_type);
+        if (post.author.avatar_url) {
+          setAuthorAvatar(post.author.avatar_url);
+        }
         return;
       }
 
@@ -131,26 +138,57 @@ const PostCard = ({ post, userRole = 'student', onInteraction, onCommentUpdate }
       if (post.author_id) {
         const { data: profileData, error } = await supabase
           .from('profiles')
-          .select('avatar_url, display_name, username')
+          .select('avatar_url, display_name, username, user_type')
           .eq('id', post.author_id)
           .single();
 
-        if (!error && profileData?.avatar_url) {
-          setAuthorAvatar(profileData.avatar_url);
+        if (!error && profileData) {
+          setAuthorRole(profileData.user_type || 'student'); // Default to student if null
+          if (profileData.avatar_url) {
+            setAuthorAvatar(profileData.avatar_url);
+          }
+        } else {
+          // Set default role if profile not found
+          setAuthorRole('student');
         }
       }
     } catch (error) {
       console.log('Error fetching author profile:', error);
+      setAuthorRole('student'); // Default fallback
     }
   };
 
-  // In your checkUserInteractions function, add error handling:
+  // Get role icon based on AUTHOR'S role, not current viewer's role - UPDATED
+  const getRoleIcon = () => {
+    // Use the actual author's role from the database
+    const role = authorRole || post.author?.user_type || 'student';
+    
+    if (role === 'faculty') {
+      return require('../../assets/post_card_icons/faculty_icon.png');
+    } else {
+      return require('../../assets/post_card_icons/student_icon.png');
+    }
+  };
+
+  // Get role text based on AUTHOR'S role, not current viewer's role - UPDATED
+  const getRoleText = () => {
+    // Use the actual author's role from the database
+    const role = authorRole || post.author?.user_type || 'student';
+    
+    if (role === 'faculty') {
+      return 'Faculty';
+    } else {
+      return 'Student';
+    }
+  };
+
+  // Check user interactions
   const checkUserInteractions = async () => {
-    if (!user) return;
+    if (!user || !post?.id) return;
     
     try {
       // Check if user liked this post
-      const { data: likeData, error: likeError } = await supabase
+      const { data: likeData } = await supabase
         .from('post_likes')
         .select('id')
         .eq('post_id', post.id)
@@ -184,61 +222,33 @@ const PostCard = ({ post, userRole = 'student', onInteraction, onCommentUpdate }
     }
   };
 
-  // UPDATE POST COUNTS IN DATABASE - IMPROVED VERSION
-  const updatePostCounts = async (field, change) => {
-    try {
-      // Get current count directly from database
-      const { data: currentPost } = await supabase
-        .from('posts')
-        .select(field)
-        .eq('id', post.id)
-        .single();
-
-      if (currentPost) {
-        const currentCount = currentPost[field] || 0;
-        const newCount = Math.max(0, currentCount + change);
-        
-        console.log(`Updating ${field}: ${currentCount} -> ${newCount}`);
-        
-        const { error } = await supabase
-          .from('posts')
-          .update({ [field]: newCount })
-          .eq('id', post.id);
-
-        if (!error) {
-          console.log(`Successfully updated ${field} to ${newCount}`);
-          // Update local state immediately
-          switch(field) {
-            case 'likes_count':
-              setLikesCount(newCount);
-              break;
-            case 'comments_count':
-              setCommentsCount(newCount);
-              break;
-            case 'reposts_count':
-              setRepostsCount(newCount);
-              break;
-            case 'bookmarks_count':
-              setBookmarksCount(newCount);
-              break;
-          }
-          
-          // Notify parent component about the interaction
-          if (onInteraction) {
-            onInteraction(post.id, field, newCount);
-          }
-        } else {
-          console.log(`Error updating ${field}:`, error);
+  // COMMENT FUNCTIONALITY
+  const handleCommentPress = () => {
+    if (!user) {
+      Alert.alert('Sign In Required', 'Please sign in to comment');
+      return;
+    }
+    if (!post?.id) return;
+    
+    navigation.navigate('CommentScreen', {
+      post,
+      user,
+      onCommentAdded: () => {
+        console.log('Comment added callback triggered');
+        // Force refresh the comments status
+        fetchComments();
+        // Update comment count
+        setCommentsCount(prev => prev + 1);
+        if (onCommentUpdate) {
+          onCommentUpdate(post.id); // Notify parent to refresh
         }
       }
-    } catch (error) {
-      console.log('Error updating post counts:', error);
-    }
+    });
   };
 
   // LIKE FUNCTIONALITY
   const handleLikePress = async () => {
-    if (!user) {
+    if (!user || !post?.id) {
       Alert.alert('Sign In Required', 'Please sign in to like posts');
       return;
     }
@@ -254,15 +264,8 @@ const PostCard = ({ post, userRole = 'student', onInteraction, onCommentUpdate }
 
         if (!error) {
           setIsLiked(false);
-          // Fetch authoritative likes count from DB
-          try {
-            const { count } = await supabase.from('post_likes').select('*', { head: true, count: 'exact' }).eq('post_id', post.id);
-            const newCount = Number(count) || 0;
-            setLikesCount(newCount);
-            if (onInteraction) onInteraction(post.id, 'likes_count', newCount);
-          } catch (e) {
-            console.log('Failed to refresh likes count:', e);
-          }
+          setLikesCount(prev => Math.max(0, prev - 1));
+          if (onInteraction) onInteraction(post.id, 'likes_count', likesCount - 1);
         }
       } else {
         // Like the post
@@ -272,14 +275,8 @@ const PostCard = ({ post, userRole = 'student', onInteraction, onCommentUpdate }
 
         if (!error) {
           setIsLiked(true);
-          try {
-            const { count } = await supabase.from('post_likes').select('*', { head: true, count: 'exact' }).eq('post_id', post.id);
-            const newCount = Number(count) || 0;
-            setLikesCount(newCount);
-            if (onInteraction) onInteraction(post.id, 'likes_count', newCount);
-          } catch (e) {
-            console.log('Failed to refresh likes count:', e);
-          }
+          setLikesCount(prev => prev + 1);
+          if (onInteraction) onInteraction(post.id, 'likes_count', likesCount + 1);
         }
       }
     } catch (error) {
@@ -289,7 +286,7 @@ const PostCard = ({ post, userRole = 'student', onInteraction, onCommentUpdate }
 
   // REPOST FUNCTIONALITY
   const handleRepostPress = async () => {
-    if (!user) {
+    if (!user || !post?.id) {
       Alert.alert('Sign In Required', 'Please sign in to repost');
       return;
     }
@@ -305,14 +302,8 @@ const PostCard = ({ post, userRole = 'student', onInteraction, onCommentUpdate }
 
         if (!error) {
           setIsReposted(false);
-          try {
-            const { count } = await supabase.from('reposts').select('*', { head: true, count: 'exact' }).eq('post_id', post.id);
-            const newCount = Number(count) || 0;
-            setRepostsCount(newCount);
-            if (onInteraction) onInteraction(post.id, 'reposts_count', newCount);
-          } catch (e) {
-            console.log('Failed to refresh reposts count:', e);
-          }
+          setRepostsCount(prev => Math.max(0, prev - 1));
+          if (onInteraction) onInteraction(post.id, 'reposts_count', repostsCount - 1);
         }
       } else {
         // Add repost
@@ -322,14 +313,8 @@ const PostCard = ({ post, userRole = 'student', onInteraction, onCommentUpdate }
 
         if (!error) {
           setIsReposted(true);
-          try {
-            const { count } = await supabase.from('reposts').select('*', { head: true, count: 'exact' }).eq('post_id', post.id);
-            const newCount = Number(count) || 0;
-            setRepostsCount(newCount);
-            if (onInteraction) onInteraction(post.id, 'reposts_count', newCount);
-          } catch (e) {
-            console.log('Failed to refresh reposts count:', e);
-          }
+          setRepostsCount(prev => prev + 1);
+          if (onInteraction) onInteraction(post.id, 'reposts_count', repostsCount + 1);
         }
       }
     } catch (error) {
@@ -339,7 +324,7 @@ const PostCard = ({ post, userRole = 'student', onInteraction, onCommentUpdate }
 
   // BOOKMARK FUNCTIONALITY
   const handleBookmarkPress = async () => {
-    if (!user) {
+    if (!user || !post?.id) {
       Alert.alert('Sign In Required', 'Please sign in to bookmark posts');
       return;
     }
@@ -355,14 +340,8 @@ const PostCard = ({ post, userRole = 'student', onInteraction, onCommentUpdate }
 
         if (!error) {
           setIsBookmarked(false);
-          try {
-            const { count } = await supabase.from('bookmarks').select('*', { head: true, count: 'exact' }).eq('post_id', post.id);
-            const newCount = Number(count) || 0;
-            setBookmarksCount(newCount);
-            if (onInteraction) onInteraction(post.id, 'bookmarks_count', newCount);
-          } catch (e) {
-            console.log('Failed to refresh bookmarks count:', e);
-          }
+          setBookmarksCount(prev => Math.max(0, prev - 1));
+          if (onInteraction) onInteraction(post.id, 'bookmarks_count', bookmarksCount - 1);
         }
       } else {
         // Add bookmark
@@ -372,38 +351,13 @@ const PostCard = ({ post, userRole = 'student', onInteraction, onCommentUpdate }
 
         if (!error) {
           setIsBookmarked(true);
-          try {
-            const { count } = await supabase.from('bookmarks').select('*', { head: true, count: 'exact' }).eq('post_id', post.id);
-            const newCount = Number(count) || 0;
-            setBookmarksCount(newCount);
-            if (onInteraction) onInteraction(post.id, 'bookmarks_count', newCount);
-          } catch (e) {
-            console.log('Failed to refresh bookmarks count:', e);
-          }
+          setBookmarksCount(prev => prev + 1);
+          if (onInteraction) onInteraction(post.id, 'bookmarks_count', bookmarksCount + 1);
         }
       }
     } catch (error) {
       console.log('Error toggling bookmark:', error);
     }
-  };
-
-  // COMMENT FUNCTIONALITY - UPDATED WITH REAL-TIME
-  const handleCommentPress = () => {
-    if (!user) {
-      Alert.alert('Sign In Required', 'Please sign in to comment');
-      return;
-    }
-    navigation.navigate('CommentScreen', {
-      post,
-      user,
-      onCommentAdded: () => {
-        // This callback will trigger when comment is added
-        fetchComments(); // Refresh comment status
-        if (onCommentUpdate) {
-          onCommentUpdate(post.id); // Notify parent to refresh
-        }
-      }
-    });
   };
 
   // Get icon source based on interaction state
@@ -440,19 +394,18 @@ const PostCard = ({ post, userRole = 'student', onInteraction, onCommentUpdate }
   const getBookmarkTextColor = () => 
     isBookmarked ? '#FFCC00' : 'rgba(255, 255, 255, 0.8)';
 
-  // Get display name for the post - UPDATED TO SHOW FULL NAME OR INITIALS
+  // Get display name for the post - UPDATED WITH NULL CHECKS
   const getDisplayName = () => {
+    if (!post) return 'Anonymous';
+    
     // If post was created anonymously, show concise 'Anonymous' label
     if (post?.is_anonymous) return 'Anonymous';
-    // Use author_initials from the post (now contains either full name or initials)
+    
+    // Use author_initials from the post
     if (post.author_initials) {
-      // Check if it's a full name (more than 3 characters) or just initials
-      if (post.author_initials.length > 3) {
-        return post.author_initials; // Return full name
-      } else {
-        return post.author_initials; // Return initials (3 characters or less)
-      }
+      return post.author_initials;
     }
+    
     // Fallback to author data if available
     if (post.author?.display_name) {
       return post.author.display_name;
@@ -463,8 +416,12 @@ const PostCard = ({ post, userRole = 'student', onInteraction, onCommentUpdate }
     return 'USR'; // Final fallback
   };
 
-  // Get profile image source - NEW FUNCTION
+  // Get profile image source
   const getProfileImageSource = () => {
+    if (!post) {
+      return require('../../assets/post_card_icons/anon_profile_icon.png');
+    }
+    
     // Respect anonymous posts: always show default anonymous avatar
     if (post?.is_anonymous) {
       return require('../../assets/post_card_icons/anon_profile_icon.png');
@@ -476,6 +433,11 @@ const PostCard = ({ post, userRole = 'student', onInteraction, onCommentUpdate }
 
     return require('../../assets/post_card_icons/anon_profile_icon.png');
   };
+
+  // Don't render if post is null/undefined
+  if (!post) {
+    return null;
+  }
 
   return (
     <View style={styles.container}>
@@ -502,11 +464,11 @@ const PostCard = ({ post, userRole = 'student', onInteraction, onCommentUpdate }
                 {!post?.is_anonymous ? (
                   <View style={styles.roleTimeContainer}>
                     <Image 
-                      source={require('../../assets/post_card_icons/student_icon.png')} 
+                      source={getRoleIcon()}
                       style={styles.roleIcon}
                       resizeMode="contain"
                     />
-                    <Text style={styles.roleText}>{userRole === 'student' ? 'Student' : 'Faculty'}</Text>
+                    <Text style={styles.roleText}>{getRoleText()}</Text>
                     
                     <View style={styles.dot} />
                     <Text style={styles.timeText}>{formatTime(post.created_at)}</Text>
@@ -532,12 +494,12 @@ const PostCard = ({ post, userRole = 'student', onInteraction, onCommentUpdate }
               style={styles.categoryIcon}
               resizeMode="contain"
             />
-            <Text style={styles.categoryText}>{post.category}</Text>
+            <Text style={styles.categoryText}>{post.category || 'General'}</Text>
           </View>
 
           {/* Content Box */}
           <View style={styles.contentBox}>
-            <Text style={styles.contentText}>{post.content}</Text>
+            <Text style={styles.contentText}>{post.content || ''}</Text>
           </View>
 
           {/* Footer Actions */}
@@ -614,6 +576,8 @@ const PostCard = ({ post, userRole = 'student', onInteraction, onCommentUpdate }
 
 // Add the missing formatTime function
 const formatTime = (timestamp) => {
+  if (!timestamp) return 'Just now';
+  
   const now = new Date();
   const postTime = new Date(timestamp);
   const diffInHours = (now - postTime) / (1000 * 60 * 60);

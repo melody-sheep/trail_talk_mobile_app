@@ -15,8 +15,9 @@ import FacultyCreatePostScreen from '../screens/faculty/CreatePostScreen';
 import StudentProfileScreen from '../screens/student/ProfileScreen';
 import FacultyProfileScreen from '../screens/faculty/ProfileScreen';
 
-// Import the new EditProfileScreen
+// Import BOTH EditProfileScreens - ADD THIS LINE
 import EditProfileScreen from '../screens/student/EditProfileScreen';
+import FacultyEditProfileScreen from '../screens/faculty/EditProfileScreen'; // ADD THIS
 
 // Import SearchScreen
 import StudentSearchScreen from '../screens/student/SearchScreen';
@@ -157,10 +158,18 @@ export default function AppNavigator() {
         }}
       />
       
-      {/* EDIT PROFILE SCREEN - STUDENT ONLY (for now) */}
+      {/* EDIT PROFILE SCREENS - BOTH STUDENT AND FACULTY */}
       <Stack.Screen 
         name="EditProfile" 
         component={EditProfileScreen}
+        options={{
+          animation: 'slide_from_right',
+        }}
+      />
+      {/* ADD THIS NEW SCREEN FOR FACULTY */}
+      <Stack.Screen 
+        name="FacultyEditProfile" 
+        component={FacultyEditProfileScreen}
         options={{
           animation: 'slide_from_right',
         }}

@@ -1,5 +1,5 @@
 // src/screens/student/NotificationsScreen.js
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,118 +9,157 @@ import {
   TouchableOpacity,
   Image,
   ScrollView,
-  FlatList
+  FlatList,
+  SectionList,
+  Animated
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../styles/colors';
 import { fonts } from '../../styles/fonts';
 import { UserContext } from '../../contexts/UserContext';
 
 export default function NotificationsScreen({ navigation }) {
-  const [activeFilter, setActiveFilter] = useState('all');
+  const { user } = useContext(UserContext);
+  
   const [notifications, setNotifications] = useState([
     {
       id: '1',
       type: 'like',
-      title: 'Alex Johnson liked your post',
-      description: 'Your post about campus events received a like',
+      description: 'Liked your post about campus events',
       time: '2 mins ago',
+      timestamp: new Date(),
       isRead: false,
-      userAvatar: require('../../../assets/profile_page_icons/default_profile_icon.png'),
-      postPreview: 'Looking forward to the campus festival this weekend! 🎉',
-      icon: '❤️'
+      displayName: 'Alex Johnson',
+      initials: 'AJ',
     },
     {
       id: '2',
       type: 'comment',
-      title: 'Sarah Chen commented on your post',
-      description: 'Left a comment on your academic post',
+      description: 'Commented on your academic post',
       time: '15 mins ago',
+      timestamp: new Date(Date.now() - 15 * 60 * 1000),
       isRead: false,
-      userAvatar: require('../../../assets/profile_page_icons/default_profile_icon.png'),
-      postPreview: 'Great insights! I totally agree with your points about...',
-      icon: '💬'
+      displayName: 'Sarah Chen',
+      initials: 'SC',
     },
     {
       id: '3',
       type: 'follow',
-      title: 'Mike Rodriguez started following you',
-      description: 'New follower from Computer Science department',
+      description: 'Started following you',
       time: '1 hour ago',
+      timestamp: new Date(Date.now() - 60 * 60 * 1000),
       isRead: true,
-      userAvatar: require('../../../assets/profile_page_icons/default_profile_icon.png'),
-      actionText: 'Follow back',
-      icon: '👤'
+      displayName: 'Mike Rodriguez',
+      initials: 'MR',
     },
     {
       id: '4',
       type: 'community',
-      title: 'New member joined your community',
-      description: 'Emily Davis joined Computer Science Club',
+      description: 'Joined your Computer Science Club',
       time: '3 hours ago',
+      timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000),
       isRead: true,
-      userAvatar: require('../../../assets/profile_page_icons/default_profile_icon.png'),
-      communityName: 'Computer Science Club',
-      icon: '👥'
+      displayName: 'Emily Davis',
+      initials: 'ED',
     },
     {
       id: '5',
       type: 'system',
-      title: 'Campus Announcement',
       description: 'Library will close early tomorrow for maintenance',
       time: '5 hours ago',
+      timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000),
       isRead: true,
-      isImportant: true,
-      icon: '📢'
+      displayName: 'Campus Admin',
+      initials: 'CA',
     },
     {
       id: '6',
       type: 'mention',
-      title: 'You were mentioned in a post',
-      description: 'Dr. Wilson mentioned you in a faculty announcement',
+      description: 'Mentioned you in a faculty announcement',
       time: '1 day ago',
+      timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000),
       isRead: true,
-      userAvatar: require('../../../assets/profile_page_icons/default_profile_icon.png'),
-      postPreview: 'Special thanks to @you for the excellent project work...',
-      icon: '📍'
+      displayName: 'Dr. Wilson',
+      initials: 'DW',
     },
     {
       id: '7',
       type: 'repost',
-      title: 'Your post was reposted',
-      description: 'Campus News reposted your event announcement',
+      description: 'Reposted your event announcement',
       time: '1 day ago',
+      timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000),
       isRead: true,
-      userAvatar: require('../../../assets/profile_page_icons/default_profile_icon.png'),
-      icon: '🔄'
+      displayName: 'Campus News',
+      initials: 'CN',
     },
     {
       id: '8',
       type: 'achievement',
-      title: 'New Achievement Unlocked!',
       description: 'You earned the "Active Contributor" badge',
       time: '2 days ago',
+      timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
       isRead: true,
-      icon: '🏆'
+      displayName: 'System',
+      initials: 'SYS',
     }
   ]);
 
-  const { user } = useContext(UserContext);
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const scrollViewRef = useRef(null);
 
-  const filters = [
-    { id: 'all', label: 'All' },
-    { id: 'unread', label: 'Unread' },
-    { id: 'mentions', label: 'Mentions' },
-    { id: 'likes', label: 'Likes' },
-    { id: 'comments', label: 'Comments' },
-    { id: 'community', label: 'Community' }
-  ];
-
-  const filteredNotifications = notifications.filter(notification => {
-    if (activeFilter === 'all') return true;
-    if (activeFilter === 'unread') return !notification.isRead;
-    return notification.type === activeFilter;
+  // Animation values for header background
+  const headerHeight = scrollY.interpolate({
+    inputRange: [0, 100],
+    outputRange: [160, 100],
+    extrapolate: 'clamp',
   });
+
+  const headerTitleOpacity = scrollY.interpolate({
+    inputRange: [0, 60],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
+
+  const collapsedTitleOpacity = scrollY.interpolate({
+    inputRange: [0, 60, 100],
+    outputRange: [0, 0, 1],
+    extrapolate: 'clamp',
+  });
+
+  // Sticky section behavior
+  const stickySectionTranslateY = scrollY.interpolate({
+    inputRange: [0, 60, 100],
+    outputRange: [0, 0, -40], // Sticks until header collapses, then moves up
+    extrapolate: 'clamp',
+  });
+
+  // Group notifications by Today and Earlier
+  const groupNotificationsByTime = () => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    const todayNotifications = notifications.filter(notification => 
+      new Date(notification.timestamp) >= today
+    );
+
+    const earlierNotifications = notifications.filter(notification => 
+      new Date(notification.timestamp) < today
+    );
+
+    return [
+      {
+        title: 'Today',
+        data: todayNotifications
+      },
+      {
+        title: 'Earlier',
+        data: earlierNotifications
+      }
+    ];
+  };
+
+  const notificationSections = groupNotificationsByTime();
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
@@ -134,10 +173,30 @@ export default function NotificationsScreen({ navigation }) {
     );
   };
 
+  const handleDeleteNotification = (notificationId) => {
+    setNotifications(prev => 
+      prev.filter(notification => notification.id !== notificationId)
+    );
+  };
+
   const handleMarkAllAsRead = () => {
     setNotifications(prev => 
       prev.map(notification => ({ ...notification, isRead: true }))
     );
+  };
+
+  const getNotificationIcon = (type) => {
+    switch(type) {
+      case 'like': return 'heart';
+      case 'comment': return 'chatbubble';
+      case 'follow': return 'person-add';
+      case 'community': return 'people';
+      case 'system': return 'megaphone';
+      case 'mention': return 'at';
+      case 'repost': return 'repeat';
+      case 'achievement': return 'trophy';
+      default: return 'notifications';
+    }
   };
 
   const getNotificationColor = (type) => {
@@ -154,171 +213,141 @@ export default function NotificationsScreen({ navigation }) {
     }
   };
 
-  const renderFilterChip = ({ item }) => (
-    <TouchableOpacity
-      style={[
-        styles.filterChip,
-        activeFilter === item.id && styles.filterChipSelected
-      ]}
-      onPress={() => setActiveFilter(item.id)}
-      activeOpacity={0.7}
-    >
-      <Text style={[
-        styles.filterChipText,
-        activeFilter === item.id && styles.filterChipTextSelected
-      ]}>
-        {item.label}
-      </Text>
-    </TouchableOpacity>
+  const handleScroll = Animated.event(
+    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+    { useNativeDriver: false }
   );
 
-  const renderNotificationCard = ({ item }) => (
+  const renderNotificationItem = ({ item }) => (
     <TouchableOpacity 
       style={[
         styles.notificationCard,
-        !item.isRead && styles.unreadNotification,
-        item.isImportant && styles.importantNotification
+        !item.isRead && styles.unreadNotification
       ]}
       onPress={() => handleMarkAsRead(item.id)}
       activeOpacity={0.7}
     >
-      {/* Notification Indicator */}
-      {!item.isRead && <View style={styles.unreadIndicator} />}
-      
-      <View style={styles.notificationContent}>
-        {/* Icon and Main Content */}
-        <View style={styles.notificationHeader}>
-          <View style={[styles.notificationIcon, { backgroundColor: getNotificationColor(item.type) }]}>
-            <Text style={styles.iconText}>{item.icon}</Text>
-          </View>
-          
-          <View style={styles.notificationText}>
-            <Text style={styles.notificationTitle}>{item.title}</Text>
-            <Text style={styles.notificationDescription}>{item.description}</Text>
-            <Text style={styles.notificationTime}>{item.time}</Text>
-            
-            {/* Post Preview or Additional Info */}
-            {item.postPreview && (
-              <View style={styles.previewContainer}>
-                <Text style={styles.previewText}>"{item.postPreview}"</Text>
-              </View>
-            )}
-            
-            {item.communityName && (
-              <View style={styles.communityBadge}>
-                <Text style={styles.communityText}>{item.communityName}</Text>
-              </View>
-            )}
+      {/* Avatar with Unread Indicator */}
+      <View style={styles.avatarContainer}>
+        <View style={[styles.avatarPlaceholder, { backgroundColor: getNotificationColor(item.type) }]}>
+          <Text style={styles.avatarInitials}>{item.initials}</Text>
+          {/* Notification Icon */}
+          <View style={styles.notificationIcon}>
+            <Ionicons 
+              name={getNotificationIcon(item.type)} 
+              size={12} 
+              color={colors.white} 
+            />
           </View>
         </View>
-
-        {/* User Avatar (if applicable) */}
-        {item.userAvatar && (
-          <Image source={item.userAvatar} style={styles.userAvatar} />
-        )}
-
-        {/* Action Button (if applicable) */}
-        {item.actionText && (
-          <TouchableOpacity style={styles.actionButton}>
-            <Text style={styles.actionButtonText}>{item.actionText}</Text>
-          </TouchableOpacity>
-        )}
+        {/* Unread Indicator - Top Left */}
+        {!item.isRead && <View style={styles.unreadIndicator} />}
       </View>
+
+      {/* Content Section */}
+      <View style={styles.contentSection}>
+        {/* Header Row: Display Name & Timestamp */}
+        <View style={styles.headerRow}>
+          <Text style={styles.displayName}>{item.displayName}</Text>
+          <Text style={styles.timestamp}>{item.time}</Text>
+        </View>
+        
+        {/* Simple Description */}
+        <Text style={styles.notificationDescription}>{item.description}</Text>
+      </View>
+
+      {/* Kebab Menu */}
+      <TouchableOpacity 
+        style={styles.kebabButton}
+        onPress={() => handleDeleteNotification(item.id)}
+      >
+        <Ionicons name="ellipsis-vertical" size={16} color="rgba(255, 255, 255, 0.6)" />
+      </TouchableOpacity>
     </TouchableOpacity>
+  );
+
+  const renderSectionHeader = ({ section }) => (
+    <View style={styles.sectionHeader}>
+      <Text style={styles.sectionTitle}>{section.title}</Text>
+      <View style={styles.sectionLine} />
+    </View>
   );
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <StatusBar barStyle="light-content" backgroundColor={colors.homeBackground} />
       
-      {/* Header Background */}
-      <ImageBackground 
-        source={require('../../../assets/create_post_screen_icons/createpost_header_bg.png')}
-        style={styles.headerBackground}
-        resizeMode="cover"
-      >
-        <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Notifications</Text>
-          {unreadCount > 0 && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{unreadCount}</Text>
-            </View>
-          )}
-        </View>
-      </ImageBackground>
+      {/* MAIN HEADER BACKGROUND */}
+      <Animated.View style={[styles.headerContainer, { height: headerHeight }]}>
+        <ImageBackground 
+          source={require('../../../assets/create_post_screen_icons/createpost_header_bg.png')}
+          style={styles.headerBackground}
+          resizeMode="cover"
+        >
+          {/* Expanded Header Content */}
+          <Animated.View style={[styles.headerContent, { opacity: headerTitleOpacity }]}>
+            <Text style={styles.headerTitle}>Notifications</Text>
+            <Text style={styles.headerSubtitle}>Stay updated with campus activities</Text>
+          </Animated.View>
 
+          {/* Collapsed Header Content */}
+          <Animated.View style={[styles.collapsedHeaderContent, { opacity: collapsedTitleOpacity }]}>
+            <Text style={styles.collapsedHeaderTitle}>Notifications</Text>
+            {unreadCount > 0 && (
+              <View style={styles.collapsedBadge}>
+                <Text style={styles.collapsedBadgeText}>{unreadCount}</Text>
+              </View>
+            )}
+          </Animated.View>
+        </ImageBackground>
+      </Animated.View>
+
+      {/* STICKY MARK ALL AS READ SECTION - BELOW HEADER */}
+      {unreadCount > 0 && (
+        <Animated.View 
+          style={[
+            styles.stickySection,
+            { 
+              transform: [{ translateY: stickySectionTranslateY }],
+              top: 160 // Position below the header
+            }
+          ]}
+        >
+          <View style={styles.stickySectionContent}>
+            <TouchableOpacity 
+              style={styles.markAllButton}
+              onPress={handleMarkAllAsRead}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="checkmark-done-outline" size={16} color={colors.white} />
+              <Text style={styles.markAllText}>Mark all as read</Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+      )}
+
+      {/* SCROLL CONTENT */}
       <ScrollView 
-        style={styles.container}
+        ref={scrollViewRef}
+        style={[
+          styles.container,
+          { marginTop: unreadCount > 0 ? 210 : 160 } // Adjust based on sticky section
+        ]}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
       >
-        {/* Quick Actions */}
-        <View style={styles.actionsSection}>
-          <TouchableOpacity 
-            style={styles.actionButtonLarge}
-            onPress={handleMarkAllAsRead}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.actionButtonLargeText}>Mark All as Read</Text>
-          </TouchableOpacity>
-          
-          <View style={styles.statsContainer}>
-            <Text style={styles.statsText}>
-              {unreadCount} unread • {notifications.length} total
-            </Text>
-          </View>
-        </View>
-
-        {/* Filter Chips */}
-        <View style={styles.filtersSection}>
-          <Text style={styles.sectionTitle}>Filter Notifications</Text>
-          <FlatList
-            data={filters}
-            renderItem={renderFilterChip}
-            keyExtractor={(item) => item.id}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filtersList}
-          />
-        </View>
-
-        {/* Notifications List */}
-        <View style={styles.notificationsSection}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>
-              {activeFilter === 'all' && 'All Notifications'}
-              {activeFilter === 'unread' && 'Unread Notifications'}
-              {activeFilter === 'mentions' && 'Mentions'}
-              {activeFilter === 'likes' && 'Likes'}
-              {activeFilter === 'comments' && 'Comments'}
-              {activeFilter === 'community' && 'Community'}
-            </Text>
-            <Text style={styles.sectionSubtitle}>
-              {filteredNotifications.length} notifications
-            </Text>
-          </View>
-          
-          {filteredNotifications.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyIcon}>🔔</Text>
-              <Text style={styles.emptyTitle}>No notifications</Text>
-              <Text style={styles.emptyDescription}>
-                {activeFilter === 'unread' 
-                  ? 'You\'re all caught up! No unread notifications.'
-                  : 'No notifications match your current filter.'
-                }
-              </Text>
-            </View>
-          ) : (
-            <FlatList
-              data={filteredNotifications}
-              renderItem={renderNotificationCard}
-              keyExtractor={(item) => item.id}
-              scrollEnabled={false}
-              showsVerticalScrollIndicator={false}
-            />
-          )}
-        </View>
+        {/* Notifications List with Today/Earlier Sections */}
+        <SectionList
+          sections={notificationSections}
+          keyExtractor={(item) => item.id}
+          renderItem={renderNotificationItem}
+          renderSectionHeader={renderSectionHeader}
+          scrollEnabled={false}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.sectionListContent}
+        />
 
         {/* Bottom Spacer */}
         <View style={styles.bottomSpacer} />
@@ -332,39 +361,103 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.homeBackground,
   },
+  // MAIN HEADER BACKGROUND
+  headerContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    overflow: 'hidden',
+  },
   headerBackground: {
     width: '100%',
-    height: 140,
+    height: '100%',
     justifyContent: 'center',
+    alignItems: 'center',
   },
   headerContent: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
     alignItems: 'center',
-    flexDirection: 'row',
     justifyContent: 'center',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   headerTitle: {
     fontSize: 28,
-    fontFamily: fonts.medium,
+    fontFamily: fonts.bold,
     color: colors.white,
     textAlign: 'center',
-    letterSpacing: 1.5,
+    letterSpacing: 0.5,
   },
-  badge: {
+  headerSubtitle: {
+    fontSize: 16,
+    fontFamily: fonts.normal,
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  collapsedHeaderContent: {
+    position: 'absolute',
+    top: 10,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 12,
+  },
+  collapsedHeaderTitle: {
+    fontSize: 20,
+    fontFamily: fonts.bold,
+    color: colors.white,
+  },
+  collapsedBadge: {
     backgroundColor: '#FF6B6B',
-    borderRadius: 12,
+    borderRadius: 10,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    marginLeft: 8,
-    minWidth: 24,
+    minWidth: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  badgeText: {
+  collapsedBadgeText: {
     fontSize: 12,
     fontFamily: fonts.bold,
     color: colors.white,
+  },
+  // STICKY SECTION - SEPARATE FROM HEADER
+  stickySection: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    zIndex: 15,
+    backgroundColor: colors.homeBackground,
+  },
+  stickySectionContent: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  markAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  markAllText: {
+    fontSize: 14,
+    fontFamily: fonts.medium,
+    color: colors.white,
+    marginLeft: 8,
   },
   container: {
     flex: 1,
@@ -372,92 +465,32 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 20,
+    paddingBottom: 30,
   },
-  actionsSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    marginTop: 20,
-    marginBottom: 15,
-  },
-  actionButtonLarge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  actionButtonLargeText: {
-    fontSize: 14,
-    fontFamily: fonts.medium,
-    color: colors.white,
-  },
-  statsContainer: {
-    alignItems: 'flex-end',
-  },
-  statsText: {
-    fontSize: 12,
-    fontFamily: fonts.normal,
-    color: 'rgba(255, 255, 255, 0.6)',
-  },
-  filtersSection: {
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontFamily: fonts.medium,
-    color: colors.white,
-    marginBottom: 12,
-    paddingHorizontal: 20,
-  },
-  filtersList: {
-    paddingHorizontal: 20,
-  },
-  filterChip: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 16,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    marginRight: 12,
-    minWidth: 80,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  filterChipSelected: {
-    backgroundColor: colors.white,
-    borderColor: colors.white,
-  },
-  filterChipText: {
-    fontSize: 14,
-    fontFamily: fonts.medium,
-    color: 'rgba(255, 255, 255, 0.9)',
-    textAlign: 'center',
-  },
-  filterChipTextSelected: {
-    color: colors.homeBackground,
-    fontFamily: fonts.semiBold,
-  },
-  notificationsSection: {
-    marginTop: 10,
+  sectionListContent: {
+    paddingBottom: 10,
   },
   sectionHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    marginTop: 10,
     marginBottom: 15,
     paddingHorizontal: 20,
   },
-  sectionSubtitle: {
-    fontSize: 14,
-    fontFamily: fonts.normal,
-    color: 'rgba(255, 255, 255, 0.6)',
+  sectionTitle: {
+    fontSize: 18,
+    fontFamily: fonts.bold,
+    color: colors.white,
+    marginRight: 12,
+  },
+  sectionLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
   notificationCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     marginHorizontal: 20,
     marginBottom: 12,
@@ -465,139 +498,83 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
-    position: 'relative',
   },
   unreadNotification: {
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
     borderColor: 'rgba(255, 255, 255, 0.2)',
   },
-  importantNotification: {
-    borderColor: '#FFD166',
-    backgroundColor: 'rgba(255, 209, 102, 0.1)',
+  avatarContainer: {
+    position: 'relative',
+    marginRight: 12,
+  },
+  avatarPlaceholder: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  avatarInitials: {
+    fontSize: 16,
+    fontFamily: fonts.bold,
+    color: colors.white,
+  },
+  notificationIcon: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    borderWidth: 1.5,
+    borderColor: colors.homeBackground,
   },
   unreadIndicator: {
     position: 'absolute',
-    left: 8,
-    top: '50%',
-    transform: [{ translateY: -4 }],
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    top: -2,
+    left: -2,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
     backgroundColor: '#FF6B6B',
+    borderWidth: 2,
+    borderColor: colors.homeBackground,
   },
-  notificationContent: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-  },
-  notificationHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+  contentSection: {
     flex: 1,
-  },
-  notificationIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
     marginRight: 12,
   },
-  iconText: {
-    fontSize: 18,
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 4,
   },
-  notificationText: {
+  displayName: {
+    fontSize: 15,
+    fontFamily: fonts.semiBold,
+    color: colors.white,
     flex: 1,
   },
-  notificationTitle: {
-    fontSize: 16,
-    fontFamily: fonts.medium,
-    color: colors.white,
-    marginBottom: 4,
+  timestamp: {
+    fontSize: 12,
+    fontFamily: fonts.normal,
+    color: 'rgba(255, 255, 255, 0.5)',
+    marginLeft: 8,
   },
   notificationDescription: {
     fontSize: 14,
     fontFamily: fonts.normal,
-    color: 'rgba(255, 255, 255, 0.7)',
-    marginBottom: 6,
+    color: 'rgba(255, 255, 255, 0.8)',
     lineHeight: 18,
   },
-  notificationTime: {
-    fontSize: 12,
-    fontFamily: fonts.normal,
-    color: 'rgba(255, 255, 255, 0.5)',
-    marginBottom: 8,
-  },
-  previewContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    padding: 10,
-    borderRadius: 8,
-    marginTop: 6,
-    borderLeftWidth: 3,
-    borderLeftColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  previewText: {
-    fontSize: 13,
-    fontFamily: fonts.normal,
-    color: 'rgba(255, 255, 255, 0.6)',
-    fontStyle: 'italic',
-    lineHeight: 16,
-  },
-  communityBadge: {
+  kebabButton: {
+    padding: 4,
     alignSelf: 'flex-start',
-    backgroundColor: 'rgba(150, 206, 180, 0.2)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    marginTop: 6,
-  },
-  communityText: {
-    fontSize: 12,
-    fontFamily: fonts.medium,
-    color: '#96CEB4',
-  },
-  userAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginLeft: 12,
-  },
-  actionButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    marginLeft: 12,
-    alignSelf: 'center',
-  },
-  actionButtonText: {
-    fontSize: 12,
-    fontFamily: fonts.medium,
-    color: colors.white,
-  },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-    paddingHorizontal: 40,
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: 16,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontFamily: fonts.medium,
-    color: colors.white,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  emptyDescription: {
-    fontSize: 14,
-    fontFamily: fonts.normal,
-    color: 'rgba(255, 255, 255, 0.6)',
-    textAlign: 'center',
-    lineHeight: 20,
   },
   bottomSpacer: {
     height: 20,

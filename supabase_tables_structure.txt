@@ -16,6 +16,10 @@ Results:
     "table_type": "BASE TABLE"
   },
   {
+    "table_name": "comments",
+    "table_type": "BASE TABLE"
+  },
+  {
     "table_name": "communities",
     "table_type": "BASE TABLE"
   },
@@ -24,7 +28,15 @@ Results:
     "table_type": "BASE TABLE"
   },
   {
+    "table_name": "community_post_bookmarks",
+    "table_type": "BASE TABLE"
+  },
+  {
     "table_name": "community_post_likes",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "community_post_reposts",
     "table_type": "BASE TABLE"
   },
   {
@@ -111,6 +123,70 @@ Results:
     "is_nullable": "YES",
     "column_default": "timezone('utc'::text, now())",
     "ordinal_position": 4
+  },
+  {
+    "table_name": "comments",
+    "column_name": "id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "column_default": "gen_random_uuid()",
+    "ordinal_position": 1
+  },
+  {
+    "table_name": "comments",
+    "column_name": "post_id",
+    "data_type": "uuid",
+    "is_nullable": "YES",
+    "column_default": null,
+    "ordinal_position": 2
+  },
+  {
+    "table_name": "comments",
+    "column_name": "user_id",
+    "data_type": "uuid",
+    "is_nullable": "YES",
+    "column_default": null,
+    "ordinal_position": 3
+  },
+  {
+    "table_name": "comments",
+    "column_name": "content",
+    "data_type": "text",
+    "is_nullable": "NO",
+    "column_default": null,
+    "ordinal_position": 4
+  },
+  {
+    "table_name": "comments",
+    "column_name": "is_anonymous",
+    "data_type": "boolean",
+    "is_nullable": "YES",
+    "column_default": "false",
+    "ordinal_position": 5
+  },
+  {
+    "table_name": "comments",
+    "column_name": "anonymous_name",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "column_default": "'Anonymous User'::text",
+    "ordinal_position": 6
+  },
+  {
+    "table_name": "comments",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "YES",
+    "column_default": "now()",
+    "ordinal_position": 7
+  },
+  {
+    "table_name": "comments",
+    "column_name": "updated_at",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "YES",
+    "column_default": "now()",
+    "ordinal_position": 8
   },
   {
     "table_name": "communities",
@@ -265,6 +341,38 @@ Results:
     "ordinal_position": 5
   },
   {
+    "table_name": "community_post_bookmarks",
+    "column_name": "id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "column_default": "gen_random_uuid()",
+    "ordinal_position": 1
+  },
+  {
+    "table_name": "community_post_bookmarks",
+    "column_name": "post_id",
+    "data_type": "uuid",
+    "is_nullable": "YES",
+    "column_default": null,
+    "ordinal_position": 2
+  },
+  {
+    "table_name": "community_post_bookmarks",
+    "column_name": "user_id",
+    "data_type": "uuid",
+    "is_nullable": "YES",
+    "column_default": null,
+    "ordinal_position": 3
+  },
+  {
+    "table_name": "community_post_bookmarks",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "YES",
+    "column_default": "now()",
+    "ordinal_position": 4
+  },
+  {
     "table_name": "community_post_likes",
     "column_name": "id",
     "data_type": "uuid",
@@ -290,6 +398,38 @@ Results:
   },
   {
     "table_name": "community_post_likes",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "YES",
+    "column_default": "now()",
+    "ordinal_position": 4
+  },
+  {
+    "table_name": "community_post_reposts",
+    "column_name": "id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "column_default": "gen_random_uuid()",
+    "ordinal_position": 1
+  },
+  {
+    "table_name": "community_post_reposts",
+    "column_name": "post_id",
+    "data_type": "uuid",
+    "is_nullable": "YES",
+    "column_default": null,
+    "ordinal_position": 2
+  },
+  {
+    "table_name": "community_post_reposts",
+    "column_name": "user_id",
+    "data_type": "uuid",
+    "is_nullable": "YES",
+    "column_default": null,
+    "ordinal_position": 3
+  },
+  {
+    "table_name": "community_post_reposts",
     "column_name": "created_at",
     "data_type": "timestamp with time zone",
     "is_nullable": "YES",
@@ -338,15 +478,15 @@ Results:
   },
   {
     "table_name": "community_posts",
-    "column_name": "like_count",
-    "data_type": "integer",
+    "column_name": "category",
+    "data_type": "text",
     "is_nullable": "YES",
-    "column_default": "0",
+    "column_default": "'Discussion'::text",
     "ordinal_position": 6
   },
   {
     "table_name": "community_posts",
-    "column_name": "comment_count",
+    "column_name": "like_count",
     "data_type": "integer",
     "is_nullable": "YES",
     "column_default": "0",
@@ -354,11 +494,35 @@ Results:
   },
   {
     "table_name": "community_posts",
+    "column_name": "comment_count",
+    "data_type": "integer",
+    "is_nullable": "YES",
+    "column_default": "0",
+    "ordinal_position": 8
+  },
+  {
+    "table_name": "community_posts",
+    "column_name": "repost_count",
+    "data_type": "integer",
+    "is_nullable": "YES",
+    "column_default": "0",
+    "ordinal_position": 9
+  },
+  {
+    "table_name": "community_posts",
+    "column_name": "bookmark_count",
+    "data_type": "integer",
+    "is_nullable": "YES",
+    "column_default": "0",
+    "ordinal_position": 10
+  },
+  {
+    "table_name": "community_posts",
     "column_name": "created_at",
     "data_type": "timestamp with time zone",
     "is_nullable": "YES",
     "column_default": "now()",
-    "ordinal_position": 8
+    "ordinal_position": 11
   },
   {
     "table_name": "community_posts",
@@ -366,7 +530,7 @@ Results:
     "data_type": "timestamp with time zone",
     "is_nullable": "YES",
     "column_default": "now()",
-    "ordinal_position": 9
+    "ordinal_position": 12
   },
   {
     "table_name": "faculty",
@@ -727,78 +891,6 @@ Results:
     "is_nullable": "YES",
     "column_default": null,
     "ordinal_position": 3
-  },
-  {
-    "table_name": "reposts",
-    "column_name": "created_at",
-    "data_type": "timestamp with time zone",
-    "is_nullable": "YES",
-    "column_default": "timezone('utc'::text, now())",
-    "ordinal_position": 4
-  },
-  {
-    "table_name": "students",
-    "column_name": "id",
-    "data_type": "uuid",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 1
-  },
-  {
-    "table_name": "students",
-    "column_name": "role",
-    "data_type": "text",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 2
-  },
-  {
-    "table_name": "students",
-    "column_name": "student_id",
-    "data_type": "text",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 3
-  },
-  {
-    "table_name": "students",
-    "column_name": "school_email",
-    "data_type": "text",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 4
-  },
-  {
-    "table_name": "students",
-    "column_name": "age",
-    "data_type": "integer",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 5
-  },
-  {
-    "table_name": "students",
-    "column_name": "created_at",
-    "data_type": "timestamp with time zone",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 6
-  },
-  {
-    "table_name": "students",
-    "column_name": "updated_at",
-    "data_type": "timestamp with time zone",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 7
-  },
-  {
-    "table_name": "students",
-    "column_name": "user_type",
-    "data_type": "text",
-    "is_nullable": "YES",
-    "column_default": null,
-    "ordinal_position": 8
   }
 ]
 
@@ -826,15 +918,15 @@ Results:
 [
   {
     "table_name": "communities",
-    "row_count": 3
+    "row_count": 2
   },
   {
     "table_name": "community_members",
-    "row_count": 1
+    "row_count": 2
   },
   {
     "table_name": "community_posts",
-    "row_count": 0
+    "row_count": 2
   },
   {
     "table_name": "community_post_likes",
@@ -846,11 +938,11 @@ Results:
   },
   {
     "table_name": "posts",
-    "row_count": 9
+    "row_count": 4
   },
   {
     "table_name": "bookmarks",
-    "row_count": 4
+    "row_count": 5
   }
 ]
 
@@ -867,6 +959,13 @@ Results:
 
 <!-- PASTE JSON RESULTS FOR RLS_POLICIES HERE -->
 [
+  {
+    "schemaname": "public",
+    "tablename": "bookmarks",
+    "policyname": "Allow select bookmarks",
+    "roles": "{public}",
+    "cmd": "SELECT"
+  },
   {
     "schemaname": "public",
     "tablename": "bookmarks",
@@ -890,80 +989,143 @@ Results:
   },
   {
     "schemaname": "public",
-    "tablename": "communities",
-    "policyname": "Anyone can view public communities",
+    "tablename": "comments",
+    "policyname": "Anyone can view comments",
     "roles": "{public}",
     "cmd": "SELECT"
   },
   {
     "schemaname": "public",
-    "tablename": "communities",
-    "policyname": "Community admins can update their communities",
+    "tablename": "comments",
+    "policyname": "Users can create comments",
+    "roles": "{public}",
+    "cmd": "INSERT"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "comments",
+    "policyname": "Users can delete own comments",
+    "roles": "{public}",
+    "cmd": "DELETE"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "comments",
+    "policyname": "Users can update own comments",
     "roles": "{public}",
     "cmd": "UPDATE"
   },
   {
     "schemaname": "public",
     "tablename": "communities",
-    "policyname": "Community members can view private communities",
+    "policyname": "Enable delete for users based on user_id",
+    "roles": "{public}",
+    "cmd": "DELETE"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "communities",
+    "policyname": "Enable insert for authenticated users",
+    "roles": "{public}",
+    "cmd": "INSERT"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "communities",
+    "policyname": "Enable read access for all users",
     "roles": "{public}",
     "cmd": "SELECT"
   },
   {
     "schemaname": "public",
     "tablename": "communities",
-    "policyname": "Users can create communities",
+    "policyname": "Enable update for users based on user_id",
     "roles": "{public}",
-    "cmd": "INSERT"
+    "cmd": "UPDATE"
   },
   {
     "schemaname": "public",
     "tablename": "community_members",
-    "policyname": "Anyone can view community members",
+    "policyname": "Enable all for authenticated users",
+    "roles": "{public}",
+    "cmd": "ALL"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "community_members",
+    "policyname": "Enable read access for all users",
     "roles": "{public}",
     "cmd": "SELECT"
   },
   {
     "schemaname": "public",
-    "tablename": "community_members",
-    "policyname": "Users can join public communities",
+    "tablename": "community_post_bookmarks",
+    "policyname": "Enable all for authenticated users",
     "roles": "{public}",
-    "cmd": "INSERT"
+    "cmd": "ALL"
   },
   {
     "schemaname": "public",
-    "tablename": "community_members",
-    "policyname": "Users can leave communities",
+    "tablename": "community_post_bookmarks",
+    "policyname": "Enable read access for all users",
+    "roles": "{public}",
+    "cmd": "SELECT"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "community_post_likes",
+    "policyname": "Enable all for authenticated users",
+    "roles": "{public}",
+    "cmd": "ALL"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "community_post_likes",
+    "policyname": "Enable read access for all users",
+    "roles": "{public}",
+    "cmd": "SELECT"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "community_post_reposts",
+    "policyname": "Enable all for authenticated users",
+    "roles": "{public}",
+    "cmd": "ALL"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "community_post_reposts",
+    "policyname": "Enable read access for all users",
+    "roles": "{public}",
+    "cmd": "SELECT"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "community_posts",
+    "policyname": "Enable delete for authors",
     "roles": "{public}",
     "cmd": "DELETE"
   },
   {
     "schemaname": "public",
-    "tablename": "community_post_likes",
-    "policyname": "Community members can like posts",
-    "roles": "{public}",
-    "cmd": "INSERT"
-  },
-  {
-    "schemaname": "public",
-    "tablename": "community_post_likes",
-    "policyname": "Community members can view likes",
-    "roles": "{public}",
-    "cmd": "SELECT"
-  },
-  {
-    "schemaname": "public",
     "tablename": "community_posts",
-    "policyname": "Community members can create posts",
+    "policyname": "Enable insert for authenticated users",
     "roles": "{public}",
     "cmd": "INSERT"
   },
   {
     "schemaname": "public",
     "tablename": "community_posts",
-    "policyname": "Community members can view posts",
+    "policyname": "Enable read access for all users",
     "roles": "{public}",
     "cmd": "SELECT"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "community_posts",
+    "policyname": "Enable update for authors",
+    "roles": "{public}",
+    "cmd": "UPDATE"
   },
   {
     "schemaname": "public",
@@ -1079,12 +1241,20 @@ Results:
 <!-- PASTE JSON RESULTS FOR COMMUNITY_MEMBERSHIPS HERE -->
 [
   {
-    "community_name": "community 1 try",
-    "community_id": "f5d96551-88a2-4423-9ab6-d43c1f91926f",
+    "community_name": "comp6",
+    "community_id": "7292fa85-fab5-41a2-bbe6-216fe89175df",
     "member_name": "Dream",
     "user_id": "2194f59d-51c0-49e6-becd-386ba40be14f",
-    "role": "member",
+    "role": "admin",
     "community_creator_id": "2194f59d-51c0-49e6-becd-386ba40be14f"
+  },
+  {
+    "community_name": "IT STUDENTS",
+    "community_id": "3c804f18-88aa-45a9-af8e-a8211def2acc",
+    "member_name": "Alt",
+    "user_id": "47493b0c-aa3b-4f1a-a2b5-b93fca3d81cb",
+    "role": "admin",
+    "community_creator_id": "47493b0c-aa3b-4f1a-a2b5-b93fca3d81cb"
   }
 ]
 
@@ -1300,6 +1470,42 @@ Results:
   },
   {
     "table_name": "community_post_likes",
+    "column_name": "user_id",
+    "foreign_table_name": "profiles",
+    "foreign_column_name": "id"
+  },
+  {
+    "table_name": "community_post_reposts",
+    "column_name": "post_id",
+    "foreign_table_name": "community_posts",
+    "foreign_column_name": "id"
+  },
+  {
+    "table_name": "community_post_reposts",
+    "column_name": "user_id",
+    "foreign_table_name": "profiles",
+    "foreign_column_name": "id"
+  },
+  {
+    "table_name": "community_post_bookmarks",
+    "column_name": "post_id",
+    "foreign_table_name": "community_posts",
+    "foreign_column_name": "id"
+  },
+  {
+    "table_name": "community_post_bookmarks",
+    "column_name": "user_id",
+    "foreign_table_name": "profiles",
+    "foreign_column_name": "id"
+  },
+  {
+    "table_name": "comments",
+    "column_name": "post_id",
+    "foreign_table_name": "posts",
+    "foreign_column_name": "id"
+  },
+  {
+    "table_name": "comments",
     "column_name": "user_id",
     "foreign_table_name": "profiles",
     "foreign_column_name": "id"

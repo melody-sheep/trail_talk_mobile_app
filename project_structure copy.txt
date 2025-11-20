@@ -177,5 +177,4 @@ MessagesScreen.js (faculty) — still not started (high priority if messaging is
 CommunityMembersScreen.js — member management UI pending.
 Small visual polish: if you want even tighter spacing on very narrow devices I can further tweak icon sizes/margins or collapse counts into a compact control.
 
----November 18, 2025---
-
+---November 20, 2025---
