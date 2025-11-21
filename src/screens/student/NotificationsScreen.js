@@ -1,5 +1,5 @@
 // src/screens/student/NotificationsScreen.js
-import React, { useState, useContext, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useContext, useRef, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { UserContext } from '../../contexts/UserContext';
 import {
@@ -9,12 +9,11 @@ import {
   StatusBar,
   ImageBackground,
   TouchableOpacity,
-  Image,
   ScrollView,
-  FlatList,
   SectionList,
   Animated,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,7 +23,6 @@ import useNotifications from '../../hooks/useNotifications';
 
 export default function NotificationsScreen({ navigation }) {
   const { user } = useContext(UserContext);
-  const [showRaw, setShowRaw] = useState(false);
   
   const {
     notifications,
@@ -36,7 +34,7 @@ export default function NotificationsScreen({ navigation }) {
     markAllAsRead
   } = useNotifications(user?.id);
 
-  // Ensure we fetch when the signed-in user becomes available (avoid race conditions)
+  // Ensure we fetch when the signed-in user becomes available
   useEffect(() => {
     if (user?.id) {
       console.log('NotificationsScreen: signed-in user id=', user.id);
@@ -44,13 +42,7 @@ export default function NotificationsScreen({ navigation }) {
     }
   }, [user?.id]);
 
-  // Debug: log notification count when notifications update
-  useEffect(() => {
-    console.log('NotificationsScreen: notifications.length=', notifications.length);
-  }, [notifications.length]);
-
   const scrollY = useRef(new Animated.Value(0)).current;
-  const scrollViewRef = useRef(null);
 
   // Animation values for header background
   const headerHeight = scrollY.interpolate({
@@ -74,22 +66,22 @@ export default function NotificationsScreen({ navigation }) {
   // Sticky section behavior
   const stickySectionTranslateY = scrollY.interpolate({
     inputRange: [0, 60, 100],
-    outputRange: [0, 0, -40], // Sticks until header collapses, then moves up
+    outputRange: [0, 0, -40],
     extrapolate: 'clamp',
   });
 
-  // Group notifications by Today and Earlier
+  // Group notifications by Today and Earlier with limits
   const groupNotificationsByTime = () => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-    const todayNotifications = notifications.filter(notification => 
-      new Date(notification.timestamp) >= today
-    );
+    const todayNotifications = notifications
+      .filter(notification => new Date(notification.timestamp) >= today)
+      .slice(0, 5); // Limit to 5 today notifications
 
-    const earlierNotifications = notifications.filter(notification => 
-      new Date(notification.timestamp) < today
-    );
+    const earlierNotifications = notifications
+      .filter(notification => new Date(notification.timestamp) < today)
+      .slice(0, 7); // Limit to 7 earlier notifications
 
     return [
       {
@@ -105,37 +97,76 @@ export default function NotificationsScreen({ navigation }) {
 
   const notificationSections = groupNotificationsByTime();
 
-  
-
-  // useNotifications hook provides fetchNotifications/mark handlers and state
-  // destructured above
-
   const getNotificationIcon = (type) => {
     switch(type) {
-      case 'like': return 'heart';
+      case 'like': 
+      case 'post_like': return 'heart';
       case 'comment': return 'chatbubble';
       case 'follow': return 'person-add';
-      case 'community': return 'people';
+      case 'community': 
+      case 'community_post': return 'people';
       case 'system': return 'megaphone';
       case 'mention': return 'at';
       case 'repost': return 'repeat';
       case 'achievement': return 'trophy';
+      case 'bookmark': return 'bookmark';
+      case 'post_created': return 'create';
       default: return 'notifications';
     }
   };
 
   const getNotificationColor = (type) => {
     switch(type) {
-      case 'like': return '#FF6B6B';
+      case 'like': 
+      case 'post_like': return '#FF6B6B';
       case 'comment': return '#4ECDC4';
       case 'follow': return '#45B7D1';
-      case 'community': return '#96CEB4';
+      case 'community': 
+      case 'community_post': return '#96CEB4';
       case 'system': return '#FFD166';
       case 'mention': return '#A882DD';
       case 'repost': return '#6A8EAE';
       case 'achievement': return '#FF9F1C';
+      case 'bookmark': return '#118AB2';
+      case 'post_created': return '#06D6A0';
       default: return '#8A8A8A';
     }
+  };
+
+  const handleDeleteNotification = async (notificationId) => {
+    Alert.alert(
+      'Delete Notification',
+      'Are you sure you want to delete this notification?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { error } = await supabase
+                .from('notifications')
+                .delete()
+                .eq('id', notificationId);
+              
+              if (error) {
+                console.error('Error deleting notification:', error);
+                Alert.alert('Error', 'Failed to delete notification');
+              } else {
+                // Refresh the list after deletion
+                fetchNotifications();
+              }
+            } catch (err) {
+              console.error('Error deleting notification:', err);
+              Alert.alert('Error', 'Failed to delete notification');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleScroll = Animated.event(
@@ -143,9 +174,7 @@ export default function NotificationsScreen({ navigation }) {
     { useNativeDriver: false }
   );
 
-  const renderNotificationItem = ({ item }) => {
-    console.log('Rendering notification item:', item.id, 'isRead=', item.isRead);
-    return (
+  const renderNotificationItem = ({ item }) => (
     <TouchableOpacity 
       style={[
         styles.notificationCard,
@@ -157,15 +186,11 @@ export default function NotificationsScreen({ navigation }) {
       {/* Avatar with Unread Indicator */}
       <View style={styles.avatarContainer}>
         <View style={[styles.avatarPlaceholder, { backgroundColor: getNotificationColor(item.type) }]}>
-          <Text style={styles.avatarInitials}>{item.initials}</Text>
-          {/* Notification Icon */}
-          <View style={styles.notificationIcon}>
-            <Ionicons 
-              name={getNotificationIcon(item.type)} 
-              size={12} 
-              color={colors.white} 
-            />
-          </View>
+          <Ionicons 
+            name={getNotificationIcon(item.type)} 
+            size={20} 
+            color={colors.white} 
+          />
         </View>
         {/* Unread Indicator - Top Left */}
         {!item.isRead && <View style={styles.unreadIndicator} />}
@@ -173,14 +198,8 @@ export default function NotificationsScreen({ navigation }) {
 
       {/* Content Section */}
       <View style={styles.contentSection}>
-        {/* Header Row: Display Name & Timestamp */}
-        <View style={styles.headerRow}>
-          <Text style={styles.displayName}>{item.displayName}</Text>
-          <Text style={styles.timestamp}>{item.time}</Text>
-        </View>
-        
-        {/* Simple Description */}
         <Text style={styles.notificationDescription}>{item.description}</Text>
+        <Text style={styles.timestamp}>{item.time}</Text>
       </View>
 
       {/* Kebab Menu */}
@@ -191,12 +210,12 @@ export default function NotificationsScreen({ navigation }) {
         <Ionicons name="ellipsis-vertical" size={16} color="rgba(255, 255, 255, 0.6)" />
       </TouchableOpacity>
     </TouchableOpacity>
-    );
-  };
+  );
 
   const renderSectionHeader = ({ section }) => (
     <View style={styles.sectionHeader}>
       <Text style={styles.sectionTitle}>{section.title}</Text>
+      <Text style={styles.sectionCount}>({section.data.length})</Text>
       <View style={styles.sectionLine} />
     </View>
   );
@@ -237,7 +256,7 @@ export default function NotificationsScreen({ navigation }) {
             styles.stickySection,
             { 
               transform: [{ translateY: stickySectionTranslateY }],
-              top: 160 // Position below the header
+              top: 160
             }
           ]}
         >
@@ -256,10 +275,9 @@ export default function NotificationsScreen({ navigation }) {
 
       {/* SCROLL CONTENT */}
       <ScrollView 
-        ref={scrollViewRef}
         style={[
           styles.container,
-          { marginTop: unreadCount > 0 ? 210 : 160 } // Adjust based on sticky section
+          { marginTop: unreadCount > 0 ? 210 : 160 }
         ]}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
@@ -286,48 +304,36 @@ export default function NotificationsScreen({ navigation }) {
 
         {!loading && !error && notifications.length === 0 && (
           <View style={styles.emptyContainer}>
+            <Ionicons name="notifications-off-outline" size={64} color="rgba(255,255,255,0.3)" />
             <Text style={styles.emptyText}>You're all caught up — no notifications.</Text>
           </View>
         )}
+
         {/* Notifications List with Today/Earlier Sections */}
-        <SectionList
-          sections={notificationSections}
-          keyExtractor={(item) => item.id}
-          renderItem={renderNotificationItem}
-          renderSectionHeader={renderSectionHeader}
-          scrollEnabled={false}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.sectionListContent}
-        />
+        {!loading && !error && notifications.length > 0 && (
+          <SectionList
+            sections={notificationSections}
+            keyExtractor={(item) => item.id}
+            renderItem={renderNotificationItem}
+            renderSectionHeader={renderSectionHeader}
+            scrollEnabled={false}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.sectionListContent}
+          />
+        )}
 
-        {/* Debug Controls: Refresh and raw JSON toggle */}
-        <View style={{ paddingHorizontal: 20, marginTop: 12 }}>
-          <View style={{ flexDirection: 'row', gap: 12 }}>
-            <TouchableOpacity
-              style={[styles.markAllButton, { flex: 1 }]}
-              onPress={() => {
-                console.log('Debug: manual refresh requested');
-                fetchNotifications();
-              }}
-            >
-              <Text style={styles.markAllText}>Refresh</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.markAllButton, { flex: 1 }]}
-              onPress={() => setShowRaw(v => !v)}
-            >
-              <Text style={styles.markAllText}>{showRaw ? 'Hide Raw' : 'Show Raw'}</Text>
-            </TouchableOpacity>
-          </View>
-
-          {showRaw && (
-            <ScrollView style={{ maxHeight: 260, marginTop: 12, backgroundColor: 'rgba(0,0,0,0.2)', padding: 12, borderRadius: 8 }}>
-              <Text style={{ color: 'white', fontFamily: fonts.normal, fontSize: 12 }}>
-                {JSON.stringify(notifications, null, 2)}
-              </Text>
-            </ScrollView>
-          )}
+        {/* Simple Refresh Button */}
+        <View style={{ paddingHorizontal: 20, marginTop: 20 }}>
+          <TouchableOpacity
+            style={[styles.refreshButton, loading && styles.refreshButtonDisabled]}
+            onPress={fetchNotifications}
+            disabled={loading}
+          >
+            <Ionicons name="refresh" size={16} color={colors.white} />
+            <Text style={styles.refreshText}>
+              {loading ? 'Refreshing...' : 'Refresh'}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Bottom Spacer */}
@@ -337,12 +343,13 @@ export default function NotificationsScreen({ navigation }) {
   );
 }
 
+
+
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.homeBackground,
   },
-  // MAIN HEADER BACKGROUND
   headerContainer: {
     position: 'absolute',
     top: 0,
@@ -350,6 +357,26 @@ const styles = StyleSheet.create({
     right: 0,
     zIndex: 10,
     overflow: 'hidden',
+  },
+    refreshButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  refreshButtonDisabled: {
+    opacity: 0.5,
+  },
+  refreshText: {
+    fontSize: 14,
+    fontFamily: fonts.medium,
+    color: colors.white,
+    marginLeft: 8,
   },
   headerBackground: {
     width: '100%',
@@ -409,7 +436,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bold,
     color: colors.white,
   },
-  // STICKY SECTION - SEPARATE FROM HEADER
   stickySection: {
     position: 'absolute',
     left: 0,
@@ -440,6 +466,23 @@ const styles = StyleSheet.create({
     color: colors.white,
     marginLeft: 8,
   },
+  refreshButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  refreshText: {
+    fontSize: 14,
+    fontFamily: fonts.medium,
+    color: colors.white,
+    marginLeft: 8,
+  },
   container: {
     flex: 1,
     backgroundColor: colors.homeBackground,
@@ -454,7 +497,7 @@ const styles = StyleSheet.create({
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 20,
     marginBottom: 15,
     paddingHorizontal: 20,
   },
@@ -462,16 +505,22 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontFamily: fonts.bold,
     color: colors.white,
-    marginRight: 12,
+    marginRight: 8,
+  },
+  sectionCount: {
+    fontSize: 14,
+    fontFamily: fonts.medium,
+    color: 'rgba(255, 255, 255, 0.6)',
   },
   sectionLine: {
     flex: 1,
     height: 1,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    marginLeft: 12,
   },
   notificationCard: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     marginHorizontal: 20,
     marginBottom: 12,
@@ -494,25 +543,6 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    position: 'relative',
-  },
-  avatarInitials: {
-    fontSize: 16,
-    fontFamily: fonts.bold,
-    color: colors.white,
-  },
-  notificationIcon: {
-    position: 'absolute',
-    bottom: -2,
-    right: -2,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    borderWidth: 1.5,
-    borderColor: colors.homeBackground,
   },
   unreadIndicator: {
     position: 'absolute',
@@ -529,33 +559,20 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 12,
   },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 4,
-  },
-  displayName: {
-    fontSize: 15,
-    fontFamily: fonts.semiBold,
+  notificationDescription: {
+    fontSize: 14,
+    fontFamily: fonts.medium,
     color: colors.white,
-    flex: 1,
+    lineHeight: 18,
+    marginBottom: 4,
   },
   timestamp: {
     fontSize: 12,
     fontFamily: fonts.normal,
     color: 'rgba(255, 255, 255, 0.5)',
-    marginLeft: 8,
-  },
-  notificationDescription: {
-    fontSize: 14,
-    fontFamily: fonts.normal,
-    color: 'rgba(255, 255, 255, 0.8)',
-    lineHeight: 18,
   },
   kebabButton: {
     padding: 4,
-    alignSelf: 'flex-start',
   },
   bottomSpacer: {
     height: 20,
@@ -605,5 +622,11 @@ const styles = StyleSheet.create({
   emptyText: {
     color: 'rgba(255,255,255,0.7)',
     fontFamily: fonts.medium,
+    marginTop: 12,
+    textAlign: 'center',
   }
 });
+
+
+
+
