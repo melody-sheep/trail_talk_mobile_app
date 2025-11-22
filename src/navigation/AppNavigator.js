@@ -41,6 +41,9 @@ import FacultyNotificationsScreen from '../screens/faculty/NotificationsScreen';
 import StudentMessagesScreen from '../screens/student/MessagesScreen';
 import FacultyMessagesScreen from '../screens/faculty/MessagesScreen';
 
+// Import ChatScreen
+import ChatScreen from '../screens/student/ChatScreen';
+
 // Import Community Screens - STUDENT
 import StudentCreateCommunityScreen from '../screens/student/CreateCommunityScreen';
 import StudentCommunityDetailScreen from '../screens/student/CommunityDetailScreen';
@@ -56,6 +59,8 @@ import FacultyCommunityFeedScreen from '../screens/faculty/CommunityFeedScreen';
 import CommentScreen from '../screens/student/CommentScreen';
 
 import BottomNavigation from '../components/BottomNavigation';
+import { colors } from '../styles/colors';
+import { fonts } from '../styles/fonts';
 
 const Stack = createNativeStackNavigator();
 const StudentTab = createBottomTabNavigator();
@@ -148,6 +153,23 @@ export default function AppNavigator() {
         component={CommentScreen}
         options={{
           animation: 'slide_from_right',
+        }}
+      />
+      
+      {/* CHAT SCREEN */}
+      <Stack.Screen 
+        name="Chat" 
+        component={ChatScreen}
+        options={{
+          animation: 'slide_from_right',
+          headerShown: true,
+          headerStyle: {
+            backgroundColor: colors.homeBackground,
+          },
+          headerTintColor: colors.white,
+          headerTitleStyle: {
+            fontFamily: fonts.semiBold,
+          },
         }}
       />
       

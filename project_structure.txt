@@ -133,9 +133,10 @@ TRAILTALK - Campus Social Platform
     │   │   │   - ✅ Professional community info card
     │   │   │   - ✅ Pull-to-refresh functionality
     │   │   │   - Real-time updates now working (hook + onPostCreated + forced refresh fallbacks) ✅
-    │   │   │   - Uses PostCard/CommunityPostCard UI consistently so interaction buttons show correctly ✅
+    │   │   │   - Uses PostCard/CommunityPostCard UI consistently so interaction buttons show correctly ✅ 
     │   │   ├── CommunityMembersScreen.js ⏳ **READY FOR DEVELOPMENT**
     │   │   └── ViewProfileScreen.js ✅ **UPDATED**: Added birthday, join date, and properly positioned follow button matching ProfileScreen pattern
+    │   │   ├── ChatScreen.js ⏳ **READY FOR DEVELOPMENT**
     │   └── 📁 faculty/
     │       ├── FacultyHomeScreen.js ✅ COMPLETE
     │       ├── SearchScreen.js ✅ **UPDATED**: Enhanced search functionality with improved UI

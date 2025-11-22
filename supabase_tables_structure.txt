@@ -163,8 +163,13 @@
 | public     | community_posts          | Enable insert for authenticated users    | {public} | INSERT | PERMISSIVE |
 | public     | community_posts          | Enable read access for all users         | {public} | SELECT | PERMISSIVE |
 | public     | community_posts          | Enable update for authors                | {public} | UPDATE | PERMISSIVE |
-| public     | followers                | Users can manage their follows           | {public} | ALL    | PERMISSIVE |
-| public     | followers                | Users can view followers                 | {public} | SELECT | PERMISSIVE |
+| public     | followers                | Anyone can view followers                | {public} | SELECT | PERMISSIVE |
+| public     | follows                  | Anyone can view follows                  | {public} | SELECT | PERMISSIVE |
+| public     | follows                  | Users can delete their own follows       | {public} | DELETE | PERMISSIVE |
+| public     | follows                  | Users can insert their own follows       | {public} | INSERT | PERMISSIVE |
+
+| public     | followers                | Users can delete their own follows       | {public} | DELETE | PERMISSIVE |
+| public     | followers                | Users can insert their own follows       | {public} | INSERT | PERMISSIVE |
 | public     | notifications            | Users can insert notifications           | {public} | INSERT | PERMISSIVE |
 | public     | notifications            | Users can update own notifications       | {public} | UPDATE | PERMISSIVE |
 | public     | notifications            | Users can view own notifications         | {public} | SELECT | PERMISSIVE |
@@ -867,24 +872,7 @@
 | students                 | timestamp with time zone | 2     |
 | students                 | uuid                     | 1     |
 
-SELECT
-    c.table_name,
-    c.column_name,
-    c.data_type
-FROM information_schema.columns c
-WHERE c.table_schema = 'public'
-    AND c.column_name IN ('user_id', 'author_id', 'post_id', 'community_id')
-    AND NOT EXISTS (
-        SELECT 1 
-        FROM information_schema.table_constraints tc
-        JOIN information_schema.key_column_usage kcu 
-            ON tc.constraint_name = kcu.constraint_name
-        WHERE tc.table_schema = 'public'
-            AND tc.constraint_type = 'FOREIGN KEY'
-            AND kcu.table_name = c.table_name
-            AND kcu.column_name = c.column_name
-    )
-ORDER BY c.table_name, c.column_name;
+
 
 | metric             | value |
 | ------------------ | ----- |
@@ -895,4 +883,24 @@ ORDER BY c.table_name, c.column_name;
 | Database Functions | 15    |
 
 
+| table_name                |
+| ------------------------- |
+| conversation_participants |
+| conversations             |
+| messages                  |
+
+| tablename                 | policyname                                       | cmd    |
+| ------------------------- | ------------------------------------------------ | ------ |
+| conversation_participants | Users can join conversations                     | INSERT |
+| conversation_participants | Users can view their conversation participants   | SELECT |
+| conversations             | Users can create conversations                   | INSERT |
+| conversations             | Users can update own conversations               | UPDATE |
+| conversations             | Users can view conversations they participate in | SELECT |
+| messages                  | Users can send messages to their conversations   | INSERT |
+| messages                  | Users can view messages in their conversations   | SELECT |
+
+| routine_name                     | routine_type |
+| -------------------------------- | ------------ |
+| get_or_create_conversation       | FUNCTION     |
+| update_conversation_last_message | FUNCTION     |
 
