@@ -7,7 +7,7 @@ import { fonts } from '../../styles/fonts';
 import { supabase } from '../../lib/supabase';
 import PostCard from '../../components/PostCard';
 import { UserContext } from '../../contexts/UserContext';
-import { followUser, unfollowUser, getFollowCounts } from '../../utils/followingUtils';
+import { followUser, unfollowUser, getFollowCounts, checkIsFollowing } from '../../lib/supabase'; // Updated import
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -47,21 +47,20 @@ export default function ViewProfileScreen({ route, navigation }) {
       if (data) {
         setProfileData(data);
         
-        // Format birthday if exists - CHANGED TO MM/DD/YYYY
+        // Format birthday if exists
         if (data.birthday) {
           const birthDate = new Date(data.birthday);
-          // MM/DD/YYYY format for ViewProfileScreen
           const formattedBirthday = birthDate.toLocaleDateString('en-US', {
             month: '2-digit',
             day: '2-digit',
             year: 'numeric'
           });
-          setBirthday(formattedBirthday); // This will show like "07/18/2004"
+          setBirthday(formattedBirthday);
         } else {
           setBirthday('Not set');
         }
 
-        // Format join date (keep the original format for join date)
+        // Format join date
         if (data.created_at) {
           const joinDate = new Date(data.created_at);
           setJoinDate(joinDate.toLocaleDateString('en-US', {
@@ -102,14 +101,18 @@ export default function ViewProfileScreen({ route, navigation }) {
       const counts = await getFollowCounts(viewedUserId);
       setFollowersCount(counts.followers || 0);
       setFollowingCount(counts.following || 0);
-    } catch (e) { console.log('Error fetching follow counts', e); }
+    } catch (e) { 
+      console.log('Error fetching follow counts', e);
+      setFollowersCount(0);
+      setFollowingCount(0);
+    }
   };
 
   const checkFollowingStatus = async () => {
     if (!currentUser) return;
     try {
-      const { data, error } = await supabase.from('follows').select('*').eq('follower_user_id', currentUser.id).eq('following_user_id', viewedUserId).single();
-      setIsFollowing(!!data);
+      const following = await checkIsFollowing(currentUser.id, viewedUserId);
+      setIsFollowing(following);
     } catch (e) {
       setIsFollowing(false);
       console.log('Error checking following status', e);
@@ -120,13 +123,21 @@ export default function ViewProfileScreen({ route, navigation }) {
     if (!currentUser) return;
     try {
       if (isFollowing) {
-        await unfollowUser(currentUser.id, viewedUserId);
-        setIsFollowing(false);
-        setFollowersCount(c => Math.max(0, c - 1));
+        const { error } = await unfollowUser(currentUser.id, viewedUserId);
+        if (!error) {
+          setIsFollowing(false);
+          setFollowersCount(c => Math.max(0, c - 1));
+        } else {
+          console.log('Unfollow error:', error);
+        }
       } else {
-        await followUser(currentUser.id, viewedUserId);
-        setIsFollowing(true);
-        setFollowersCount(c => c + 1);
+        const { error } = await followUser(currentUser.id, viewedUserId);
+        if (!error) {
+          setIsFollowing(true);
+          setFollowersCount(c => c + 1);
+        } else {
+          console.log('Follow error:', error);
+        }
       }
     } catch (e) {
       console.log('Error toggling follow', e);
@@ -173,12 +184,23 @@ export default function ViewProfileScreen({ route, navigation }) {
             <Image source={ profileData?.avatar_url ? { uri: profileData.avatar_url } : require('../../../assets/profile_page_icons/default_profile_icon.png') } style={styles.profileImage} />
           </View>
 
-          {/* Follow Button positioned where Edit Profile button is in ProfileScreen */}
-          <View style={styles.followButtonRow}>
-            <TouchableOpacity style={[styles.followButton, { paddingHorizontal: 20 }]} onPress={onFollowPress}>
-              <Text style={styles.followButtonText}>{isFollowing ? 'Unfollow' : 'Follow'}</Text>
-            </TouchableOpacity>
-          </View>
+          {/* Follow Button */}
+          {currentUser && currentUser.id !== viewedUserId && (
+            <View style={styles.followButtonRow}>
+              <TouchableOpacity 
+                style={[
+                  styles.followButton, 
+                  { paddingHorizontal: 20 },
+                  isFollowing ? styles.unfollowButton : styles.followButtonStyle
+                ]} 
+                onPress={onFollowPress}
+              >
+                <Text style={styles.followButtonText}>
+                  {isFollowing ? 'Unfollow' : 'Follow'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           <View style={styles.nameRow}>
             <Text style={styles.userName}>{profileData?.display_name || profileData?.username || 'User'}</Text>
@@ -319,19 +341,25 @@ const styles = StyleSheet.create({
     borderWidth: 4, 
     borderColor: colors.homeBackground 
   },
-  // Follow Button positioned where Edit Profile button is in ProfileScreen
+  // Follow Button Styles
   followButtonRow: {
     marginTop: 10,
     paddingHorizontal: 20,
     alignItems: 'flex-end',
   },
   followButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 18,
     borderWidth: 1,
+  },
+  followButtonStyle: {
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
     borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  unfollowButton: {
+    backgroundColor: 'rgba(244, 67, 54, 0.15)',
+    borderColor: 'rgba(244, 67, 54, 0.3)',
   },
   followButtonText: {
     fontSize: 12,

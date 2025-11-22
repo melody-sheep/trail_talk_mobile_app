@@ -8,6 +8,7 @@ import { fonts } from '../../styles/fonts';
 import { UserContext } from '../../contexts/UserContext';
 import { supabase } from '../../lib/supabase';
 import PostCard from '../../components/PostCard';
+import { getFollowCounts } from '../../lib/supabase'; // Import the function
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -129,24 +130,15 @@ export default function FacultyProfileScreen({ navigation }) {
         }
       }
 
-      // Fetch followers count
-      const { count: followersCount, error: followersError } = await supabase
-        .from('follows')
-        .select('*', { count: 'exact', head: true })
-        .eq('following_user_id', user.id);
-
-      if (!followersError) {
-        setFollowersCount(followersCount || 0);
-      }
-
-      // Fetch following count
-      const { count: followingCount, error: followingError } = await supabase
-        .from('follows')
-        .select('*', { count: 'exact', head: true })
-        .eq('follower_user_id', user.id);
-
-      if (!followingError) {
-        setFollowingCount(followingCount || 0);
+      // Fetch follow counts using the follows table
+      try {
+        const counts = await getFollowCounts(user.id);
+        setFollowersCount(counts.followers || 0);
+        setFollowingCount(counts.following || 0);
+      } catch (followError) {
+        console.log('Error fetching follow counts:', followError);
+        // Fallback to individual queries
+        await fetchFollowCountsFallback();
       }
 
       // Fetch post count
@@ -173,6 +165,33 @@ export default function FacultyProfileScreen({ navigation }) {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Fallback function if getFollowCounts fails
+  const fetchFollowCountsFallback = async () => {
+    try {
+      // Get followers count (people who follow this user)
+      const { count: followersCount, error: followersError } = await supabase
+        .from('follows')
+        .select('*', { count: 'exact', head: true })
+        .eq('following_user_id', user.id);
+
+      if (!followersError) {
+        setFollowersCount(followersCount || 0);
+      }
+
+      // Get following count (people this user follows)
+      const { count: followingCount, error: followingError } = await supabase
+        .from('follows')
+        .select('*', { count: 'exact', head: true })
+        .eq('follower_user_id', user.id);
+
+      if (!followingError) {
+        setFollowingCount(followingCount || 0);
+      }
+    } catch (error) {
+      console.log('Error in fetchFollowCountsFallback:', error);
     }
   };
 

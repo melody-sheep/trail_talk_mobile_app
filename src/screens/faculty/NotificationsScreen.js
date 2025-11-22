@@ -1,5 +1,7 @@
-// src/screens/faculty/NotificationsScreen.js
-import React, { useState, useContext } from 'react';
+// src/screens/student/NotificationsScreen.js
+import React, { useState, useContext, useRef, useEffect } from 'react';
+import { supabase } from '../../lib/supabase';
+import { UserContext } from '../../contexts/UserContext';
 import {
   View,
   Text,
@@ -7,313 +9,331 @@ import {
   StatusBar,
   ImageBackground,
   TouchableOpacity,
-  Image,
   ScrollView,
-  FlatList
+  SectionList,
+  Animated,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../styles/colors';
 import { fonts } from '../../styles/fonts';
-import { UserContext } from '../../contexts/UserContext';
+import useNotifications from '../../hooks/useNotifications';
 
-export default function FacultyNotificationsScreen({ navigation }) {
-  const [activeFilter, setActiveFilter] = useState('all');
-  const [notifications, setNotifications] = useState([
-    {
-      id: '1',
-      type: 'student_post',
-      title: 'New post from Computer Science class',
-      description: 'Student posted about the upcoming project deadline',
-      time: '15 mins ago',
-      isRead: false,
-      userAvatar: require('../../../assets/profile_page_icons/default_profile_icon.png'),
-      postPreview: 'Working on the final project - any tips for the database design?',
-      icon: '📚'
-    },
-    {
-      id: '2',
-      type: 'department',
-      title: 'Department Meeting Reminder',
-      description: 'Monthly faculty meeting scheduled for tomorrow',
-      time: '1 hour ago',
-      isRead: false,
-      icon: '🏛️'
-    },
-    {
-      id: '3',
-      type: 'research',
-      title: 'Research Collaboration Request',
-      description: 'Dr. Chen wants to collaborate on AI research project',
-      time: '3 hours ago',
-      isRead: true,
-      userAvatar: require('../../../assets/profile_page_icons/default_profile_icon.png'),
-      actionText: 'View Request',
-      icon: '🔬'
-    },
-    {
-      id: '4',
-      type: 'system',
-      title: 'Grade Submission Deadline',
-      description: 'Final grades due by Friday 5:00 PM',
-      time: '5 hours ago',
-      isRead: true,
-      isImportant: true,
-      icon: '📝'
-    },
-    {
-      id: '5',
-      type: 'faculty_community',
-      title: 'New discussion in Faculty Forum',
-      description: 'Curriculum development topic gaining attention',
-      time: '1 day ago',
-      isRead: true,
-      communityName: 'Faculty Development',
-      icon: '👥'
-    },
-    {
-      id: '6',
-      type: 'student_question',
-      title: 'Student question in your post',
-      description: 'Emily Davis asked about the assignment requirements',
-      time: '1 day ago',
-      isRead: true,
-      userAvatar: require('../../../assets/profile_page_icons/default_profile_icon.png'),
-      postPreview: 'Could you clarify the submission format for the research paper?',
-      icon: '❓'
-    },
-    {
-      id: '7',
-      type: 'announcement',
-      title: 'Campus-wide Announcement',
-      description: 'New library resources available for faculty',
-      time: '2 days ago',
-      isRead: true,
-      icon: '📢'
-    },
-    {
-      id: '8',
-      type: 'professional',
-      title: 'Professional Development Opportunity',
-      description: 'Teaching excellence workshop next month',
-      time: '3 days ago',
-      isRead: true,
-      icon: '💼'
-    }
-  ]);
-
+export default function NotificationsScreen({ navigation }) {
   const { user } = useContext(UserContext);
+  
+  const {
+    notifications,
+    loading,
+    error,
+    unreadCount,
+    fetchNotifications,
+    markAsRead,
+    markAllAsRead
+  } = useNotifications(user?.id);
 
-  const filters = [
-    { id: 'all', label: 'All' },
-    { id: 'unread', label: 'Unread' },
-    { id: 'department', label: 'Department' },
-    { id: 'research', label: 'Research' },
-    { id: 'students', label: 'Students' },
-    { id: 'system', label: 'System' }
-  ];
+  // Ensure we fetch when the signed-in user becomes available
+  useEffect(() => {
+    if (user?.id) {
+      console.log('NotificationsScreen: signed-in user id=', user.id);
+      fetchNotifications();
+    }
+  }, [user?.id]);
 
-  const filteredNotifications = notifications.filter(notification => {
-    if (activeFilter === 'all') return true;
-    if (activeFilter === 'unread') return !notification.isRead;
-    return notification.type === activeFilter;
+  const scrollY = useRef(new Animated.Value(0)).current;
+
+  // Animation values for header background
+  const headerHeight = scrollY.interpolate({
+    inputRange: [0, 100],
+    outputRange: [160, 100],
+    extrapolate: 'clamp',
   });
 
-  const unreadCount = notifications.filter(n => !n.isRead).length;
+  const headerTitleOpacity = scrollY.interpolate({
+    inputRange: [0, 60],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
 
-  const handleMarkAsRead = (notificationId) => {
-    setNotifications(prev => 
-      prev.map(notification => 
-        notification.id === notificationId 
-          ? { ...notification, isRead: true }
-          : notification
-      )
-    );
+  const collapsedTitleOpacity = scrollY.interpolate({
+    inputRange: [0, 60, 100],
+    outputRange: [0, 0, 1],
+    extrapolate: 'clamp',
+  });
+
+  // Sticky section behavior
+  const stickySectionTranslateY = scrollY.interpolate({
+    inputRange: [0, 60, 100],
+    outputRange: [0, 0, -40],
+    extrapolate: 'clamp',
+  });
+
+  // Group notifications by Today and Earlier with limits
+  const groupNotificationsByTime = () => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    const todayNotifications = notifications
+      .filter(notification => new Date(notification.timestamp) >= today)
+      .slice(0, 5); // Limit to 5 today notifications
+
+    const earlierNotifications = notifications
+      .filter(notification => new Date(notification.timestamp) < today)
+      .slice(0, 7); // Limit to 7 earlier notifications
+
+    return [
+      {
+        title: 'Today',
+        data: todayNotifications
+      },
+      {
+        title: 'Earlier',
+        data: earlierNotifications
+      }
+    ];
   };
 
-  const handleMarkAllAsRead = () => {
-    setNotifications(prev => 
-      prev.map(notification => ({ ...notification, isRead: true }))
-    );
+  const notificationSections = groupNotificationsByTime();
+
+  const getNotificationIcon = (type) => {
+    switch(type) {
+      case 'like': 
+      case 'post_like': return 'heart';
+      case 'comment': return 'chatbubble';
+      case 'follow': return 'person-add';
+      case 'community': 
+      case 'community_post': return 'people';
+      case 'system': return 'megaphone';
+      case 'mention': return 'at';
+      case 'repost': return 'repeat';
+      case 'achievement': return 'trophy';
+      case 'bookmark': return 'bookmark';
+      case 'post_created': return 'create';
+      default: return 'notifications';
+    }
   };
 
   const getNotificationColor = (type) => {
     switch(type) {
-      case 'student_post': return '#4ECDC4';
-      case 'department': return '#45B7D1';
-      case 'research': return '#96CEB4';
+      case 'like': 
+      case 'post_like': return '#FF6B6B';
+      case 'comment': return '#4ECDC4';
+      case 'follow': return '#45B7D1';
+      case 'community': 
+      case 'community_post': return '#96CEB4';
       case 'system': return '#FFD166';
-      case 'faculty_community': return '#A882DD';
-      case 'student_question': return '#6A8EAE';
-      case 'announcement': return '#FF9F1C';
-      case 'professional': return '#FF6B6B';
+      case 'mention': return '#A882DD';
+      case 'repost': return '#6A8EAE';
+      case 'achievement': return '#FF9F1C';
+      case 'bookmark': return '#118AB2';
+      case 'post_created': return '#06D6A0';
       default: return '#8A8A8A';
     }
   };
 
-  const renderFilterChip = ({ item }) => (
-    <TouchableOpacity
-      style={[
-        styles.filterChip,
-        activeFilter === item.id && styles.filterChipSelected
-      ]}
-      onPress={() => setActiveFilter(item.id)}
-      activeOpacity={0.7}
-    >
-      <Text style={[
-        styles.filterChipText,
-        activeFilter === item.id && styles.filterChipTextSelected
-      ]}>
-        {item.label}
-      </Text>
-    </TouchableOpacity>
+  const handleDeleteNotification = async (notificationId) => {
+    Alert.alert(
+      'Delete Notification',
+      'Are you sure you want to delete this notification?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { error } = await supabase
+                .from('notifications')
+                .delete()
+                .eq('id', notificationId);
+              
+              if (error) {
+                console.error('Error deleting notification:', error);
+                Alert.alert('Error', 'Failed to delete notification');
+              } else {
+                // Refresh the list after deletion
+                fetchNotifications();
+              }
+            } catch (err) {
+              console.error('Error deleting notification:', err);
+              Alert.alert('Error', 'Failed to delete notification');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleScroll = Animated.event(
+    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+    { useNativeDriver: false }
   );
 
-  const renderNotificationCard = ({ item }) => (
+  const renderNotificationItem = ({ item }) => (
     <TouchableOpacity 
       style={[
         styles.notificationCard,
-        !item.isRead && styles.unreadNotification,
-        item.isImportant && styles.importantNotification
+        !item.isRead && styles.unreadNotification
       ]}
-      onPress={() => handleMarkAsRead(item.id)}
+      onPress={() => markAsRead(item.id)}
       activeOpacity={0.7}
     >
-      {/* Notification Indicator */}
-      {!item.isRead && <View style={styles.unreadIndicator} />}
-      
-      <View style={styles.notificationContent}>
-        {/* Icon and Main Content */}
-        <View style={styles.notificationHeader}>
-          <View style={[styles.notificationIcon, { backgroundColor: getNotificationColor(item.type) }]}>
-            <Text style={styles.iconText}>{item.icon}</Text>
-          </View>
-          
-          <View style={styles.notificationText}>
-            <Text style={styles.notificationTitle}>{item.title}</Text>
-            <Text style={styles.notificationDescription}>{item.description}</Text>
-            <Text style={styles.notificationTime}>{item.time}</Text>
-            
-            {/* Post Preview or Additional Info */}
-            {item.postPreview && (
-              <View style={styles.previewContainer}>
-                <Text style={styles.previewText}>"{item.postPreview}"</Text>
-              </View>
-            )}
-            
-            {item.communityName && (
-              <View style={styles.communityBadge}>
-                <Text style={styles.communityText}>{item.communityName}</Text>
-              </View>
-            )}
-          </View>
+      {/* Avatar with Unread Indicator */}
+      <View style={styles.avatarContainer}>
+        <View style={[styles.avatarPlaceholder, { backgroundColor: getNotificationColor(item.type) }]}>
+          <Ionicons 
+            name={getNotificationIcon(item.type)} 
+            size={20} 
+            color={colors.white} 
+          />
         </View>
-
-        {/* User Avatar (if applicable) */}
-        {item.userAvatar && (
-          <Image source={item.userAvatar} style={styles.userAvatar} />
-        )}
-
-        {/* Action Button (if applicable) */}
-        {item.actionText && (
-          <TouchableOpacity style={styles.actionButton}>
-            <Text style={styles.actionButtonText}>{item.actionText}</Text>
-          </TouchableOpacity>
-        )}
+        {/* Unread Indicator - Top Left */}
+        {!item.isRead && <View style={styles.unreadIndicator} />}
       </View>
+
+      {/* Content Section */}
+      <View style={styles.contentSection}>
+        <Text style={styles.notificationDescription}>{item.description}</Text>
+        <Text style={styles.timestamp}>{item.time}</Text>
+      </View>
+
+      {/* Kebab Menu */}
+      <TouchableOpacity 
+        style={styles.kebabButton}
+        onPress={() => handleDeleteNotification(item.id)}
+      >
+        <Ionicons name="ellipsis-vertical" size={16} color="rgba(255, 255, 255, 0.6)" />
+      </TouchableOpacity>
     </TouchableOpacity>
+  );
+
+  const renderSectionHeader = ({ section }) => (
+    <View style={styles.sectionHeader}>
+      <Text style={styles.sectionTitle}>{section.title}</Text>
+      <Text style={styles.sectionCount}>({section.data.length})</Text>
+      <View style={styles.sectionLine} />
+    </View>
   );
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <StatusBar barStyle="light-content" backgroundColor={colors.homeBackground} />
       
-      {/* Header Background */}
-      <ImageBackground 
-        source={require('../../../assets/create_post_screen_icons/createpost_header_bg.png')}
-        style={styles.headerBackground}
-        resizeMode="cover"
-      >
-        <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Faculty Notifications</Text>
-          {unreadCount > 0 && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{unreadCount}</Text>
-            </View>
-          )}
-        </View>
-      </ImageBackground>
+      {/* MAIN HEADER BACKGROUND */}
+      <Animated.View style={[styles.headerContainer, { height: headerHeight }]}>
+        <ImageBackground 
+          source={require('../../../assets/create_post_screen_icons/createpost_header_bg.png')}
+          style={styles.headerBackground}
+          resizeMode="cover"
+        >
+          {/* Expanded Header Content */}
+          <Animated.View style={[styles.headerContent, { opacity: headerTitleOpacity }]}>
+            <Text style={styles.headerTitle}>Notifications</Text>
+            <Text style={styles.headerSubtitle}>Stay updated with campus activities</Text>
+          </Animated.View>
 
+          {/* Collapsed Header Content */}
+          <Animated.View style={[styles.collapsedHeaderContent, { opacity: collapsedTitleOpacity }]}>
+            <Text style={styles.collapsedHeaderTitle}>Notifications</Text>
+            {unreadCount > 0 && (
+              <View style={styles.collapsedBadge}>
+                <Text style={styles.collapsedBadgeText}>{unreadCount}</Text>
+              </View>
+            )}
+          </Animated.View>
+        </ImageBackground>
+      </Animated.View>
+
+      {/* STICKY MARK ALL AS READ SECTION - BELOW HEADER */}
+      {unreadCount > 0 && (
+        <Animated.View 
+          style={[
+            styles.stickySection,
+            { 
+              transform: [{ translateY: stickySectionTranslateY }],
+              top: 160
+            }
+          ]}
+        >
+          <View style={styles.stickySectionContent}>
+            <TouchableOpacity 
+              style={styles.markAllButton}
+              onPress={markAllAsRead}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="checkmark-done-outline" size={16} color={colors.white} />
+              <Text style={styles.markAllText}>Mark all as read</Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+      )}
+
+      {/* SCROLL CONTENT */}
       <ScrollView 
-        style={styles.container}
+        style={[
+          styles.container,
+          { marginTop: unreadCount > 0 ? 210 : 160 }
+        ]}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
       >
-        {/* Quick Actions */}
-        <View style={styles.actionsSection}>
-          <TouchableOpacity 
-            style={styles.actionButtonLarge}
-            onPress={handleMarkAllAsRead}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.actionButtonLargeText}>Mark All as Read</Text>
-          </TouchableOpacity>
-          
-          <View style={styles.statsContainer}>
-            <Text style={styles.statsText}>
-              {unreadCount} unread • {notifications.length} total
-            </Text>
+        {/* Loading / Error / Empty states */}
+        {loading && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.white} />
+            <Text style={styles.loadingText}>Loading notifications...</Text>
           </View>
-        </View>
+        )}
 
-        {/* Filter Chips */}
-        <View style={styles.filtersSection}>
-          <Text style={styles.sectionTitle}>Filter Notifications</Text>
-          <FlatList
-            data={filters}
-            renderItem={renderFilterChip}
+        {error && !loading && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorTitle}>Unable to load notifications</Text>
+            <Text style={styles.errorMessage}>{error.message || String(error)}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={fetchNotifications}>
+              <Text style={styles.retryText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {!loading && !error && notifications.length === 0 && (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="notifications-off-outline" size={64} color="rgba(255,255,255,0.3)" />
+            <Text style={styles.emptyText}>You're all caught up — no notifications.</Text>
+          </View>
+        )}
+
+        {/* Notifications List with Today/Earlier Sections */}
+        {!loading && !error && notifications.length > 0 && (
+          <SectionList
+            sections={notificationSections}
             keyExtractor={(item) => item.id}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filtersList}
+            renderItem={renderNotificationItem}
+            renderSectionHeader={renderSectionHeader}
+            scrollEnabled={false}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.sectionListContent}
           />
-        </View>
+        )}
 
-        {/* Notifications List */}
-        <View style={styles.notificationsSection}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>
-              {activeFilter === 'all' && 'All Faculty Notifications'}
-              {activeFilter === 'unread' && 'Unread Notifications'}
-              {activeFilter === 'department' && 'Department Updates'}
-              {activeFilter === 'research' && 'Research Opportunities'}
-              {activeFilter === 'students' && 'Student Interactions'}
-              {activeFilter === 'system' && 'System Alerts'}
+        {/* Simple Refresh Button */}
+        <View style={{ paddingHorizontal: 20, marginTop: 20 }}>
+          <TouchableOpacity
+            style={[styles.refreshButton, loading && styles.refreshButtonDisabled]}
+            onPress={fetchNotifications}
+            disabled={loading}
+          >
+            <Ionicons name="refresh" size={16} color={colors.white} />
+            <Text style={styles.refreshText}>
+              {loading ? 'Refreshing...' : 'Refresh'}
             </Text>
-            <Text style={styles.sectionSubtitle}>
-              {filteredNotifications.length} notifications
-            </Text>
-          </View>
-          
-          {filteredNotifications.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyIcon}>📋</Text>
-              <Text style={styles.emptyTitle}>No notifications</Text>
-              <Text style={styles.emptyDescription}>
-                {activeFilter === 'unread' 
-                  ? 'You\'re all caught up! No unread notifications.'
-                  : 'No notifications match your current filter.'
-                }
-              </Text>
-            </View>
-          ) : (
-            <FlatList
-              data={filteredNotifications}
-              renderItem={renderNotificationCard}
-              keyExtractor={(item) => item.id}
-              scrollEnabled={false}
-              showsVerticalScrollIndicator={false}
-            />
-          )}
+          </TouchableOpacity>
         </View>
 
         {/* Bottom Spacer */}
@@ -323,44 +343,145 @@ export default function FacultyNotificationsScreen({ navigation }) {
   );
 }
 
+
+
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.homeBackground,
   },
+  headerContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    overflow: 'hidden',
+  },
+    refreshButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  refreshButtonDisabled: {
+    opacity: 0.5,
+  },
+  refreshText: {
+    fontSize: 14,
+    fontFamily: fonts.medium,
+    color: colors.white,
+    marginLeft: 8,
+  },
   headerBackground: {
     width: '100%',
-    height: 140,
+    height: '100%',
     justifyContent: 'center',
+    alignItems: 'center',
   },
   headerContent: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
     alignItems: 'center',
-    flexDirection: 'row',
     justifyContent: 'center',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   headerTitle: {
     fontSize: 28,
-    fontFamily: fonts.medium,
+    fontFamily: fonts.bold,
     color: colors.white,
     textAlign: 'center',
-    letterSpacing: 1.5,
+    letterSpacing: 0.5,
   },
-  badge: {
+  headerSubtitle: {
+    fontSize: 16,
+    fontFamily: fonts.normal,
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  collapsedHeaderContent: {
+    position: 'absolute',
+    top: 10,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 12,
+  },
+  collapsedHeaderTitle: {
+    fontSize: 20,
+    fontFamily: fonts.bold,
+    color: colors.white,
+  },
+  collapsedBadge: {
     backgroundColor: '#FF6B6B',
-    borderRadius: 12,
+    borderRadius: 10,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    marginLeft: 8,
-    minWidth: 24,
+    minWidth: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  badgeText: {
+  collapsedBadgeText: {
     fontSize: 12,
     fontFamily: fonts.bold,
     color: colors.white,
+  },
+  stickySection: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    zIndex: 15,
+    backgroundColor: colors.homeBackground,
+  },
+  stickySectionContent: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  markAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  markAllText: {
+    fontSize: 14,
+    fontFamily: fonts.medium,
+    color: colors.white,
+    marginLeft: 8,
+  },
+  refreshButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  refreshText: {
+    fontSize: 14,
+    fontFamily: fonts.medium,
+    color: colors.white,
+    marginLeft: 8,
   },
   container: {
     flex: 1,
@@ -368,92 +489,38 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 20,
+    paddingBottom: 30,
   },
-  actionsSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    marginTop: 20,
-    marginBottom: 15,
-  },
-  actionButtonLarge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  actionButtonLargeText: {
-    fontSize: 14,
-    fontFamily: fonts.medium,
-    color: colors.white,
-  },
-  statsContainer: {
-    alignItems: 'flex-end',
-  },
-  statsText: {
-    fontSize: 12,
-    fontFamily: fonts.normal,
-    color: 'rgba(255, 255, 255, 0.6)',
-  },
-  filtersSection: {
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontFamily: fonts.medium,
-    color: colors.white,
-    marginBottom: 12,
-    paddingHorizontal: 20,
-  },
-  filtersList: {
-    paddingHorizontal: 20,
-  },
-  filterChip: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 16,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    marginRight: 12,
-    minWidth: 80,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  filterChipSelected: {
-    backgroundColor: colors.white,
-    borderColor: colors.white,
-  },
-  filterChipText: {
-    fontSize: 14,
-    fontFamily: fonts.medium,
-    color: 'rgba(255, 255, 255, 0.9)',
-    textAlign: 'center',
-  },
-  filterChipTextSelected: {
-    color: colors.homeBackground,
-    fontFamily: fonts.semiBold,
-  },
-  notificationsSection: {
-    marginTop: 10,
+  sectionListContent: {
+    paddingBottom: 10,
   },
   sectionHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    marginTop: 20,
     marginBottom: 15,
     paddingHorizontal: 20,
   },
-  sectionSubtitle: {
+  sectionTitle: {
+    fontSize: 18,
+    fontFamily: fonts.bold,
+    color: colors.white,
+    marginRight: 8,
+  },
+  sectionCount: {
     fontSize: 14,
-    fontFamily: fonts.normal,
+    fontFamily: fonts.medium,
     color: 'rgba(255, 255, 255, 0.6)',
   },
+  sectionLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    marginLeft: 12,
+  },
   notificationCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     marginHorizontal: 20,
     marginBottom: 12,
@@ -461,141 +528,105 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
-    position: 'relative',
   },
   unreadNotification: {
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
     borderColor: 'rgba(255, 255, 255, 0.2)',
   },
-  importantNotification: {
-    borderColor: '#FFD166',
-    backgroundColor: 'rgba(255, 209, 102, 0.1)',
+  avatarContainer: {
+    position: 'relative',
+    marginRight: 12,
+  },
+  avatarPlaceholder: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   unreadIndicator: {
     position: 'absolute',
-    left: 8,
-    top: '50%',
-    transform: [{ translateY: -4 }],
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    top: -2,
+    left: -2,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
     backgroundColor: '#FF6B6B',
+    borderWidth: 2,
+    borderColor: colors.homeBackground,
   },
-  notificationContent: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-  },
-  notificationHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+  contentSection: {
     flex: 1,
-  },
-  notificationIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
     marginRight: 12,
-  },
-  iconText: {
-    fontSize: 18,
-  },
-  notificationText: {
-    flex: 1,
-  },
-  notificationTitle: {
-    fontSize: 16,
-    fontFamily: fonts.medium,
-    color: colors.white,
-    marginBottom: 4,
   },
   notificationDescription: {
     fontSize: 14,
-    fontFamily: fonts.normal,
-    color: 'rgba(255, 255, 255, 0.7)',
-    marginBottom: 6,
+    fontFamily: fonts.medium,
+    color: colors.white,
     lineHeight: 18,
+    marginBottom: 4,
   },
-  notificationTime: {
+  timestamp: {
     fontSize: 12,
     fontFamily: fonts.normal,
     color: 'rgba(255, 255, 255, 0.5)',
-    marginBottom: 8,
   },
-  previewContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    padding: 10,
-    borderRadius: 8,
-    marginTop: 6,
-    borderLeftWidth: 3,
-    borderLeftColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  previewText: {
-    fontSize: 13,
-    fontFamily: fonts.normal,
-    color: 'rgba(255, 255, 255, 0.6)',
-    fontStyle: 'italic',
-    lineHeight: 16,
-  },
-  communityBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(150, 206, 180, 0.2)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    marginTop: 6,
-  },
-  communityText: {
-    fontSize: 12,
-    fontFamily: fonts.medium,
-    color: '#96CEB4',
-  },
-  userAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginLeft: 12,
-  },
-  actionButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    marginLeft: 12,
-    alignSelf: 'center',
-  },
-  actionButtonText: {
-    fontSize: 12,
-    fontFamily: fonts.medium,
-    color: colors.white,
-  },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-    paddingHorizontal: 40,
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: 16,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontFamily: fonts.medium,
-    color: colors.white,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  emptyDescription: {
-    fontSize: 14,
-    fontFamily: fonts.normal,
-    color: 'rgba(255, 255, 255, 0.6)',
-    textAlign: 'center',
-    lineHeight: 20,
+  kebabButton: {
+    padding: 4,
   },
   bottomSpacer: {
     height: 20,
   },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+  },
+  loadingText: {
+    marginTop: 12,
+    color: 'rgba(255,255,255,0.8)',
+    fontFamily: fonts.medium,
+  },
+  errorContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  errorTitle: {
+    color: colors.white,
+    fontFamily: fonts.bold,
+    marginBottom: 8,
+  },
+  errorMessage: {
+    color: 'rgba(255,255,255,0.8)',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  retryButton: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)'
+  },
+  retryText: {
+    color: colors.white,
+    fontFamily: fonts.medium,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+  },
+  emptyText: {
+    color: 'rgba(255,255,255,0.7)',
+    fontFamily: fonts.medium,
+    marginTop: 12,
+    textAlign: 'center',
+  }
 });
+
+
+
+
