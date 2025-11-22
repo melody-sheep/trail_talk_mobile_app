@@ -134,7 +134,8 @@ TRAILTALK - Campus Social Platform
     │   │   │   - ✅ Pull-to-refresh functionality
     │   │   │   - Real-time updates now working (hook + onPostCreated + forced refresh fallbacks) ✅
     │   │   │   - Uses PostCard/CommunityPostCard UI consistently so interaction buttons show correctly ✅
-    │   │   └── CommunityMembersScreen.js ⏳ **READY FOR DEVELOPMENT**
+    │   │   ├── CommunityMembersScreen.js ⏳ **READY FOR DEVELOPMENT**
+    │   │   └── ViewProfileScreen.js ✅ **NEW: ADDED**
     │   └── 📁 faculty/
     │       ├── FacultyHomeScreen.js ✅ COMPLETE
     │       ├── SearchScreen.js ✅ **UI COMPLETE**
@@ -144,10 +145,11 @@ TRAILTALK - Campus Social Platform
     │       ├── MessagesScreen.js ⏳ **NOT STARTED** (Last remaining screen)
     │       ├── CreatePostScreen.js ✅ **BASIC UI**
     │       ├── ProfileScreen.js ✅ **BASIC UI**
-    │       ├── CreateCommunityScreen.js ⏳ **READY FOR DEVELOPMENT**
-    │       ├── CommunityDetailScreen.js ⏳ **READY FOR DEVELOPMENT**
-    │       ├── CommunityFeedScreen.js ⏳ **READY FOR DEVELOPMENT**
-    │       └── CommunityMembersScreen.js ⏳ **READY FOR DEVELOPMENT**
+    │       ├── CreateCommunityScreen.js ✅ **STABLE**
+    │       ├── CommunityDetailScreen.js ✅ **STABLE**
+    │       ├── CommunityFeedScreen.js ✅ **STABLE**
+    │       ├── CommunityMembersScreen.js ✅ **STABLE**
+    │       └── ViewProfileScreen.js ✅ **NEW: ADDED**
     ├── 📁 hooks/
     │   ├── usePost.js ✅ **STABLE**: Better error handling & real-time updates
     │   ├── useSearch.js ✅ **STABLE**: Complete search functionality with database integration
@@ -188,4 +190,4 @@ TRAILTALK - Campus Social Platform
 3. Develop remaining faculty screens (CreateCommunity, CommunityDetail, CommunityFeed, CommunityMembers)
 4. Enhance CommunityFeedScreen.js debugging
 
----November 21, 2025---
+---November 22, 2025---
