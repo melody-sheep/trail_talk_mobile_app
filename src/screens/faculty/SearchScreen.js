@@ -79,10 +79,10 @@ export default function SearchScreen({ navigation }) {
     extrapolate: 'clamp',
   });
 
-  // FIXED: Swapped student and faculty icons
+  // Category icons: swapped student and faculty per request
   const categories = [
-    { id: 'student', label: 'Student', icon: 'person-outline' },
-    { id: 'faculty', label: 'Faculty', icon: 'school-outline' },
+    { id: 'student', label: 'Student', icon: 'school-outline' },
+    { id: 'faculty', label: 'Faculty', icon: 'person-outline' },
     { id: 'communities', label: 'Communities', icon: 'people-outline' }
   ];
 
@@ -268,11 +268,12 @@ export default function SearchScreen({ navigation }) {
           <View style={styles.profileInfo}>
             <Text style={styles.profileName} numberOfLines={1}>{displayName}</Text>
             <View style={styles.roleBadge}>
-              <Ionicons 
-                name={userRole === 'faculty' ? 'school-outline' : 'person-outline'} 
-                size={12} 
-                color="rgba(255,255,255,0.7)" 
-              />
+                <Ionicons 
+                  // swapped icons: faculty shows person, student shows school
+                  name={userRole === 'faculty' ? 'person-outline' : 'school-outline'} 
+                  size={12} 
+                  color="rgba(255,255,255,0.7)" 
+                />
               <Text style={styles.roleText}>
                 {userRole === 'faculty' ? 'Faculty' : 'Student'}
               </Text>
@@ -371,10 +372,12 @@ export default function SearchScreen({ navigation }) {
 
   const combinedSections = [];
   if (activeCategory === 'communities') {
-    combinedSections.push({ title: 'Communities', data: communities });
+    // Include both communities and profile (people) results when Communities is active
+    combinedSections.push({ key: 'communities', title: 'Communities', data: communities });
+    combinedSections.push({ key: 'people', title: 'People', data: profiles });
   } else {
     const sectionTitle = activeCategory === 'faculty' ? 'Faculty Members' : 'Students';
-    combinedSections.push({ title: sectionTitle, data: profiles });
+    combinedSections.push({ key: 'people', title: sectionTitle, data: profiles });
   }
 
   const handleScroll = Animated.event(
@@ -478,7 +481,11 @@ export default function SearchScreen({ navigation }) {
         <SectionList
           sections={combinedSections}
           keyExtractor={(item) => item.id}
-          renderItem={activeCategory === 'communities' ? renderCommunity : renderProfile}
+          renderItem={({ item, section }) => {
+            // If this section is communities render community card, otherwise render profile
+            if (section && section.key === 'communities') return renderCommunity({ item });
+            return renderProfile({ item });
+          }}
           renderSectionHeader={({ section: s }) => (
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>{s.title}</Text>
@@ -609,7 +616,7 @@ const styles = StyleSheet.create({
     textAlignVertical: 'center',
   },
   categoriesSection: { 
-    paddingTop: 4,
+    paddingTop: 6,
   },
   categoriesList: {
     paddingHorizontal: 20,
@@ -643,7 +650,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.semiBold,
   },
   listContent: { 
-    paddingTop: 24,
+    paddingTop: 70,
     paddingBottom: 60,
     flexGrow: 1,
   },

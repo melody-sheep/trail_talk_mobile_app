@@ -15,6 +15,10 @@ export default function ViewProfileScreen({ route, navigation }) {
   const { user: currentUser } = useContext(UserContext);
   const viewedUserId = route?.params?.userId;
   const [activeTab, setActiveTab] = useState('Posts');
+  const tabs = ['Posts', 'Communities'];
+  const tabWidth = screenWidth / tabs.length;
+  const vectorWidth = 80;
+  const animation = useRef(new Animated.Value(0)).current;
   const [profileData, setProfileData] = useState(null);
   const [userPosts, setUserPosts] = useState([]);
   const [userCommunities, setUserCommunities] = useState([]);
@@ -23,6 +27,8 @@ export default function ViewProfileScreen({ route, navigation }) {
   const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [postsLoading, setPostsLoading] = useState(false);
+  const [birthday, setBirthday] = useState('Not set');
+  const [joinDate, setJoinDate] = useState('');
 
   useEffect(() => {
     if (viewedUserId) {
@@ -38,7 +44,33 @@ export default function ViewProfileScreen({ route, navigation }) {
     try {
       setLoading(true);
       const { data } = await supabase.from('profiles').select('*').eq('id', viewedUserId).single();
-      if (data) setProfileData(data);
+      if (data) {
+        setProfileData(data);
+        
+        // Format birthday if exists - CHANGED TO MM/DD/YYYY
+        if (data.birthday) {
+          const birthDate = new Date(data.birthday);
+          // MM/DD/YYYY format for ViewProfileScreen
+          const formattedBirthday = birthDate.toLocaleDateString('en-US', {
+            month: '2-digit',
+            day: '2-digit',
+            year: 'numeric'
+          });
+          setBirthday(formattedBirthday); // This will show like "07/18/2004"
+        } else {
+          setBirthday('Not set');
+        }
+
+        // Format join date (keep the original format for join date)
+        if (data.created_at) {
+          const joinDate = new Date(data.created_at);
+          setJoinDate(joinDate.toLocaleDateString('en-US', {
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric'
+          }));
+        }
+      }
     } catch (e) {
       console.log('Error fetching profile', e);
     } finally { setLoading(false); }
@@ -105,6 +137,20 @@ export default function ViewProfileScreen({ route, navigation }) {
     <PostCard post={item} userRole="student" />
   );
 
+  const handleTabPress = (tab, index) => {
+    setActiveTab(tab);
+    Animated.timing(animation, {
+      toValue: index,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const translateX = animation.interpolate({
+    inputRange: tabs.map((_, i) => i),
+    outputRange: tabs.map((_, index) => (tabWidth * index) + (tabWidth - vectorWidth) / 2),
+  });
+
   if (loading) return (
     <SafeAreaView style={styles.safeArea}><View style={styles.loadingContainer}><Text style={styles.loadingText}>Loading profile...</Text></View></SafeAreaView>
   );
@@ -127,30 +173,72 @@ export default function ViewProfileScreen({ route, navigation }) {
             <Image source={ profileData?.avatar_url ? { uri: profileData.avatar_url } : require('../../../assets/profile_page_icons/default_profile_icon.png') } style={styles.profileImage} />
           </View>
 
+          {/* Follow Button positioned where Edit Profile button is in ProfileScreen */}
+          <View style={styles.followButtonRow}>
+            <TouchableOpacity style={[styles.followButton, { paddingHorizontal: 20 }]} onPress={onFollowPress}>
+              <Text style={styles.followButtonText}>{isFollowing ? 'Unfollow' : 'Follow'}</Text>
+            </TouchableOpacity>
+          </View>
+
           <View style={styles.nameRow}>
             <Text style={styles.userName}>{profileData?.display_name || profileData?.username || 'User'}</Text>
-            <View style={styles.roleFrame}><Text style={styles.userRole}>{profileData?.role || 'User'}</Text></View>
+            <View style={styles.roleFrame}>
+              <Image 
+                source={
+                  profileData?.role === 'faculty' 
+                    ? require('../../../assets/post_card_icons/faculty_icon.png')
+                    : require('../../../assets/post_card_icons/student_icon.png')
+                }
+                style={styles.roleIcon}
+              />
+              <Text style={styles.userRole}>{profileData?.role || 'User'}</Text>
+            </View>
           </View>
 
+          {/* Birthday and Join Date Row */}
+          <View style={styles.infoRow}>
+            <View style={[styles.infoItem, styles.birthdayItem]}>
+              <Image 
+                source={require('../../../assets/profile_page_icons/birthday_icon.png')}
+                style={styles.infoIcon}
+              />
+              <Text style={styles.infoText}>{birthday}</Text>
+            </View>
+            
+            <View style={[styles.infoItem, styles.calendarItem]}>
+              <Image 
+                source={require('../../../assets/profile_page_icons/calendar_icon.png')}
+                style={styles.infoIcon}
+              />
+              <Text style={styles.infoText}>Joined {joinDate}</Text>
+            </View>
+          </View>
+
+          {/* Following and Followers Row */}
           <View style={styles.statsRow}>
-            <View style={styles.statItem}><Text style={styles.statNumber}>{followingCount}</Text><Text style={styles.statLabel}>Following</Text></View>
-            <View style={styles.statItem}><Text style={styles.statNumber}>{followersCount}</Text><Text style={styles.statLabel}>Followers</Text></View>
-          </View>
-
-          <View style={styles.editButtonRow}>
-            <TouchableOpacity style={[styles.editProfileButton, { paddingHorizontal: 20 }]} onPress={onFollowPress}>
-              <Text style={styles.editProfileText}>{isFollowing ? 'Unfollow' : 'Follow'}</Text>
-            </TouchableOpacity>
+            <View style={[styles.statItem, styles.followingItem]}>
+              <Text style={styles.statNumber}>{followingCount}</Text>
+              <Text style={styles.statLabel}>Following</Text>
+            </View>
+            
+            <View style={[styles.statItem, styles.followersItem]}>
+              <Text style={styles.statNumber}>{followersCount}</Text>
+              <Text style={styles.statLabel}>Followers</Text>
+            </View>
           </View>
         </View>
 
         <View style={styles.stickyTabsWrapper}>
           <View style={styles.tabsContainer}>
-            {['Posts','Communities'].map((tab, index) => (
-              <TouchableOpacity key={tab} style={styles.tab} onPress={() => setActiveTab(tab)}>
+            {tabs.map((tab, index) => (
+              <TouchableOpacity key={tab} style={styles.tab} onPress={() => handleTabPress(tab, index)}>
                 <Text style={[styles.tabText, activeTab === tab ? styles.tabTextActive : styles.tabTextInactive]}>{tab}</Text>
               </TouchableOpacity>
             ))}
+
+            <Animated.View style={[styles.horizontalVector, { transform: [{ translateX }] }]}> 
+              <Image source={require('../../../assets/profile_page_icons/horizontal_scroll_vector.png')} style={styles.vectorImage} />
+            </Animated.View>
           </View>
           <View style={styles.tabsBottomBorder} />
         </View>
@@ -165,7 +253,10 @@ export default function ViewProfileScreen({ route, navigation }) {
           {activeTab === 'Communities' && (
             <View style={{ padding: 20 }}>
               {userCommunities.length > 0 ? userCommunities.map(c => (
-                <View key={c.id} style={styles.communityRow}><Text style={styles.profileName}>{c.name}</Text><Text style={styles.communityMeta}>{c.member_count || 0} members</Text></View>
+                <View key={c.id} style={styles.communityRow}>
+                  <Text style={styles.communityName}>{c.name}</Text>
+                  <Text style={styles.communityMeta}>{c.member_count || 0} members</Text>
+                </View>
               )) : <Text style={{ color: 'rgba(255,255,255,0.6)' }}>Not a member of any communities</Text>}
             </View>
           )}
@@ -178,39 +269,251 @@ export default function ViewProfileScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.homeBackground },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 12, backgroundColor: colors.homeBackground },
-  backButton: { padding: 8 },
-  backIcon: { width: 20, height: 22, resizeMode: 'contain', tintColor: colors.white },
-  headerTitle: { fontSize: 18, fontFamily: fonts.semiBold, color: colors.white },
-  container: { flex: 1, backgroundColor: colors.homeBackground },
-  profileDetails: { marginBottom: 0 },
-  coverImage: { width: '100%', height: 140, resizeMode: 'cover' },
-  profileImageContainer: { position: 'absolute', top: 60, left: 20 },
-  profileImage: { width: 100, height: 100, borderRadius: 60, borderWidth: 4, borderColor: colors.homeBackground },
-  nameRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 22, marginTop: 50, marginBottom: 10 },
-  userName: { fontSize: 22, fontFamily: fonts.bold, color: colors.white },
-  roleFrame: { marginLeft: 10, backgroundColor: 'rgba(76,175,80,0.15)', paddingHorizontal: 8, paddingVertical: 6, borderRadius: 12 },
-  userRole: { fontSize: 12, fontFamily: fonts.medium, color: '#4CAF50' },
-  statsRow: { flexDirection: 'row', paddingHorizontal: 22, marginBottom: 10 },
-  statItem: { marginRight: 20 },
-  statNumber: { fontSize: 16, fontFamily: fonts.bold, color: colors.white },
-  statLabel: { fontSize: 12, fontFamily: fonts.normal, color: 'rgba(255,255,255,0.6)' },
-  editButtonRow: { marginTop: 8, paddingHorizontal: 22, alignItems: 'flex-end' },
-  editProfileButton: { backgroundColor: 'rgba(255,255,255,0.15)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 18 },
-  editProfileText: { fontSize: 14, fontFamily: fonts.medium, color: colors.white },
-  stickyTabsWrapper: { backgroundColor: colors.homeBackground, marginBottom: 1 },
-  tabsContainer: { flexDirection: 'row' },
-  tab: { flex: 1, alignItems: 'center', paddingVertical: 12 },
-  tabText: { fontSize: 16, fontFamily: fonts.semiBold },
-  tabTextActive: { color: colors.tabActive },
-  tabTextInactive: { color: colors.tabInactive },
-  tabsBottomBorder: { height: 0.5, backgroundColor: '#434343', width: '100%' },
-  postsContent: { backgroundColor: colors.homeBackground, minHeight: 200 },
-  loadingPostsContainer: { padding: 40, alignItems: 'center' },
-  noPostsContainer: { padding: 40, alignItems: 'center' },
-  noPostsText: { fontSize: 16, fontFamily: fonts.medium, color: colors.white },
-  communityRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 12 },
-  communityMeta: { fontSize: 12, color: 'rgba(255,255,255,0.6)' },
-  bottomSpacer: { height: 30 }
+  safeArea: { 
+    flex: 1, 
+    backgroundColor: colors.homeBackground 
+  },
+  header: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    paddingHorizontal: 20, 
+    paddingVertical: 12, 
+    backgroundColor: colors.homeBackground 
+  },
+  backButton: { 
+    padding: 8 
+  },
+  backIcon: { 
+    width: 20, 
+    height: 22, 
+    resizeMode: 'contain', 
+    tintColor: colors.white 
+  },
+  headerTitle: { 
+    fontSize: 18, 
+    fontFamily: fonts.semiBold, 
+    color: colors.white 
+  },
+  container: { 
+    flex: 1, 
+    backgroundColor: colors.homeBackground 
+  },
+  profileDetails: { 
+    marginBottom: 0 
+  },
+  coverImage: { 
+    width: '100%', 
+    height: 160, 
+    resizeMode: 'cover' 
+  },
+  profileImageContainer: { 
+    position: 'absolute', 
+    top: 70, 
+    left: 20 
+  },
+  profileImage: { 
+    width: 120, 
+    height: 120, 
+    borderRadius: 70, 
+    borderWidth: 4, 
+    borderColor: colors.homeBackground 
+  },
+  // Follow Button positioned where Edit Profile button is in ProfileScreen
+  followButtonRow: {
+    marginTop: 10,
+    paddingHorizontal: 20,
+    alignItems: 'flex-end',
+  },
+  followButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  followButtonText: {
+    fontSize: 12,
+    fontFamily: fonts.medium,
+    color: colors.white,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 22,
+    marginTop: 0,
+    marginBottom: 15,
+  },
+  userName: {
+    fontSize: 25,
+    fontFamily: fonts.bold,
+    color: colors.white,
+    marginRight: 12,
+  },
+  roleFrame: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(76, 175, 80, 0.15)',
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(76, 175, 80, 0.3)',
+  },
+  roleIcon: {
+    width: 12,
+    height: 12,
+    resizeMode: 'contain',
+    tintColor: '#4CAF50',
+    marginRight: 6,
+  },
+  userRole: {
+    fontSize: 12,
+    fontFamily: fonts.medium,
+    color: '#4CAF50',
+    textTransform: 'capitalize',
+  },
+  // Birthday and Join Date Row
+  infoRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 22,
+    marginBottom: 15,
+  },
+  infoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  birthdayItem: {
+    marginLeft: 0,
+    marginRight: 'auto',
+  },
+  calendarItem: {
+    marginLeft: 'auto',
+    marginRight: 10,
+  },
+  infoIcon: {
+    width: 16,
+    height: 16,
+    resizeMode: 'contain',
+    tintColor: 'rgba(255, 255, 255, 0.7)',
+    marginRight: 8,
+  },
+  infoText: {
+    fontSize: 14,
+    fontFamily: fonts.normal,
+    color: 'rgba(255, 255, 255, 0.8)',
+  },
+  // Following and Followers Row
+  statsRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 22,
+    marginBottom: 20,
+  },
+  statItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  followingItem: {
+    marginLeft: 0,
+    marginRight: 'auto',
+  },
+  followersItem: {
+    marginLeft: 'auto',
+    marginRight: 128,
+  },
+  statNumber: {
+    fontSize: 16,
+    fontFamily: fonts.bold,
+    color: colors.white,
+    marginRight: 4,
+  },
+  statLabel: {
+    fontSize: 14,
+    fontFamily: fonts.normal,
+    color: 'rgba(255, 255, 255, 0.7)',
+  },
+  stickyTabsWrapper: { 
+    backgroundColor: colors.homeBackground, 
+    marginBottom: 1 
+  },
+  tabsContainer: { 
+    flexDirection: 'row', 
+    position: 'relative' 
+  },
+  tab: { 
+    flex: 1, 
+    alignItems: 'center', 
+    paddingVertical: 12 
+  },
+  tabText: { 
+    fontSize: 16, 
+    fontFamily: fonts.semiBold 
+  },
+  tabTextActive: { 
+    color: colors.tabActive 
+  },
+  tabTextInactive: { 
+    color: colors.tabInactive 
+  },
+  tabsBottomBorder: { 
+    height: 0.5, 
+    backgroundColor: '#434343', 
+    width: '100%' 
+  },
+  postsContent: { 
+    backgroundColor: colors.homeBackground, 
+    minHeight: 200 
+  },
+  loadingPostsContainer: { 
+    padding: 40, 
+    alignItems: 'center' 
+  },
+  noPostsContainer: { 
+    padding: 40, 
+    alignItems: 'center' 
+  },
+  noPostsText: { 
+    fontSize: 16, 
+    fontFamily: fonts.medium, 
+    color: colors.white 
+  },
+  communityRow: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    paddingVertical: 12 
+  },
+  communityName: { 
+    fontSize: 16, 
+    fontFamily: fonts.medium, 
+    color: colors.white 
+  },
+  communityMeta: { 
+    fontSize: 12, 
+    color: 'rgba(255,255,255,0.6)' 
+  },
+  bottomSpacer: { 
+    height: 30 
+  },
+  horizontalVector: {
+    position: 'absolute',
+    bottom: 0,
+    alignItems: 'center',
+  },
+  vectorImage: {
+    width: 80,
+    height: 6,
+    resizeMode: 'contain',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.homeBackground,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: colors.white,
+    fontFamily: fonts.normal,
+  },
 });
