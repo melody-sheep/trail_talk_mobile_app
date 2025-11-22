@@ -14,6 +14,8 @@ import StudentCreatePostScreen from '../screens/student/CreatePostScreen';
 import FacultyCreatePostScreen from '../screens/faculty/CreatePostScreen';
 import StudentProfileScreen from '../screens/student/ProfileScreen';
 import FacultyProfileScreen from '../screens/faculty/ProfileScreen';
+import ViewProfileScreen from '../screens/student/ViewProfileScreen';
+import FacultyViewProfileScreen from '../screens/faculty/ViewProfileScreen';
 
 // Import BOTH EditProfileScreens
 import EditProfileScreen from '../screens/student/EditProfileScreen';
@@ -153,6 +155,20 @@ export default function AppNavigator() {
       <Stack.Screen 
         name="StudentProfile" 
         component={StudentProfileScreen}
+        options={{
+          animation: 'slide_from_right',
+        }}
+      />
+      <Stack.Screen 
+        name="ViewProfile" 
+        component={ViewProfileScreen}
+        options={{
+          animation: 'slide_from_right',
+        }}
+      />
+      <Stack.Screen 
+        name="FacultyViewProfile" 
+        component={FacultyViewProfileScreen}
         options={{
           animation: 'slide_from_right',
         }}

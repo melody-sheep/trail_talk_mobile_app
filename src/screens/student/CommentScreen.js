@@ -9,12 +9,12 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   Alert,
   TouchableWithoutFeedback,
   Keyboard,
   StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../../styles/colors';
 import { fonts } from '../../styles/fonts';
 import { UserContext } from '../../contexts/UserContext';

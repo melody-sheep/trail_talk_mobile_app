@@ -11,11 +11,11 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
   Image,
-  SafeAreaView,
   StatusBar,
   ScrollView
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase, testSupabaseConnection } from '../lib/supabase';
 import { colors } from '../styles/colors';
 import { fonts } from '../styles/fonts';

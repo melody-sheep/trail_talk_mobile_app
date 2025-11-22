@@ -893,3 +893,6 @@ ORDER BY c.table_name, c.column_name;
 | RLS Policies       | 42    |
 | Foreign Keys       | 29    |
 | Database Functions | 15    |
+
+
+

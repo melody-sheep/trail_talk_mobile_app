@@ -10,6 +10,8 @@ if (typeof global.self === 'undefined') {
   global.self = global;
 }
 
+// Note: previously suppressed SafeAreaView deprecation; imports fixed across the app.
+
 function FontLoader({ children }) {
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
