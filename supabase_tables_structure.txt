@@ -904,3 +904,46 @@
 | get_or_create_conversation       | FUNCTION     |
 | update_conversation_last_message | FUNCTION     |
 
+
+
+| column_name | data_type                | is_nullable | column_default    |
+| ----------- | ------------------------ | ----------- | ----------------- |
+| id          | uuid                     | NO          | gen_random_uuid() |
+| severity    | integer                  | YES         | 1                 |
+| created_by  | uuid                     | YES         | null              |
+| created_at  | timestamp with time zone | YES         | now()             |
+| word        | text                     | NO          | null              |
+| category    | text                     | YES         | null              |
+
+| column_name | data_type                | is_nullable | column_default    |
+| ----------- | ------------------------ | ----------- | ----------------- |
+| post_id     | uuid                     | YES         | null              |
+| reporter_id | uuid                     | YES         | null              |
+| created_at  | timestamp with time zone | YES         | now()             |
+| id          | uuid                     | NO          | gen_random_uuid() |
+| category    | text                     | NO          | null              |
+| description | text                     | YES         | null              |
+| status      | text                     | YES         | 'open'::text      |
+
+| column_name | data_type                | is_nullable | column_default    |
+| ----------- | ------------------------ | ----------- | ----------------- |
+| id          | uuid                     | NO          | gen_random_uuid() |
+| report_id   | uuid                     | YES         | null              |
+| faculty_id  | uuid                     | YES         | null              |
+| created_at  | timestamp with time zone | YES         | now()             |
+| action      | text                     | NO          | null              |
+| notes       | text                     | YES         | null              |
+
+| schemaname | tablename | indexname           | tablespace | indexdef                                                                 |
+| ---------- | --------- | ------------------- | ---------- | ------------------------------------------------------------------------ |
+| public     | reports   | reports_pkey        | null       | CREATE UNIQUE INDEX reports_pkey ON public.reports USING btree (id)      |
+| public     | reports   | idx_reports_post_id | null       | CREATE INDEX idx_reports_post_id ON public.reports USING btree (post_id) |
+| public     | reports   | idx_reports_status  | null       | CREATE INDEX idx_reports_status ON public.reports USING btree (status)   |
+
+| table_name     | column_name | foreign_table | foreign_column |
+| -------------- | ----------- | ------------- | -------------- |
+| report_actions | faculty_id  | profiles      | id             |
+| report_actions | report_id   | reports       | id             |
+| reports        | post_id     | posts         | id             |
+| reports        | reporter_id | profiles      | id             |
+

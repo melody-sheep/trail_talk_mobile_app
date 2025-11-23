@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Alert, Modal } from 'react-native';
 import { colors } from '../styles/colors';
 import { fonts } from '../styles/fonts';  
 import { supabase } from '../lib/supabase';
 import { useNavigation } from '@react-navigation/native';
 import useComments from '../hooks/useComments';
 import { UserContext } from '../contexts/UserContext';
+import ReportModal from './ReportModal';
+import { MaterialIcons } from '@expo/vector-icons';
 
-const PostCard = ({ post, userRole = 'student', onInteraction, onCommentUpdate }) => {
+const PostCard = ({ post, userRole = 'student', onInteraction, onCommentUpdate, onDelete }) => {
   const { user } = useContext(UserContext);
   const [isLiked, setIsLiked] = useState(false);
   const [isReposted, setIsReposted] = useState(false);
@@ -19,6 +21,8 @@ const PostCard = ({ post, userRole = 'student', onInteraction, onCommentUpdate }
   const [authorAvatar, setAuthorAvatar] = useState(null);
   const [authorRole, setAuthorRole] = useState(null);
   const navigation = useNavigation();
+  const [showOptionsModal, setShowOptionsModal] = useState(false);
+  const [reportModalVisible, setReportModalVisible] = useState(false);
   
   // Track if user has commented
   const { hasCommented, fetchComments } = useComments(post?.id, user?.id);
@@ -482,7 +486,7 @@ const PostCard = ({ post, userRole = 'student', onInteraction, onCommentUpdate }
               </View>
             </View>
             
-            <TouchableOpacity style={styles.kebabButton}>
+            <TouchableOpacity style={styles.kebabButton} onPress={() => setShowOptionsModal(true)}>
               <Text style={styles.kebabIcon}>⋮</Text>
             </TouchableOpacity>
           </View>
@@ -570,6 +574,90 @@ const PostCard = ({ post, userRole = 'student', onInteraction, onCommentUpdate }
           </View>
         </View>
       </View>
+      {/* Enhanced Options Modal */}
+      <Modal visible={showOptionsModal} transparent animationType="slide" onRequestClose={() => setShowOptionsModal(false)}>
+        <View style={styles.optionsBackdrop}>
+          <View style={styles.optionsSheet}>
+            <View style={styles.optionsHeader}>
+              <Text style={styles.optionsTitle}>Post Options</Text>
+            </View>
+            
+            <TouchableOpacity 
+              style={styles.optionItem} 
+              onPress={() => { 
+                setShowOptionsModal(false); 
+                setReportModalVisible(true); 
+              }}
+            >
+              <MaterialIcons name="flag" size={20} color="#FF3B30" />
+              <Text style={[styles.optionText, styles.reportOption]}>Report Post</Text>
+            </TouchableOpacity>
+
+            {/* Show Delete option only if current user is the post owner */}
+            {user && post?.author_id === user.id && (
+              <TouchableOpacity
+                style={styles.optionItem}
+                onPress={async () => {
+                  // confirm deletion
+                  Alert.alert(
+                    'Delete Post',
+                    'Are you sure you want to delete this post? This action cannot be undone.',
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      {
+                        text: 'Delete',
+                        style: 'destructive',
+                        onPress: async () => {
+                          try {
+                            setShowOptionsModal(false);
+                            const { error } = await supabase
+                              .from('posts')
+                              .delete()
+                              .eq('id', post.id);
+
+                            if (error) {
+                              console.log('Error deleting post:', error);
+                              Alert.alert('Error', 'Failed to delete post. Please try again.');
+                              return;
+                            }
+
+                            Alert.alert('Deleted', 'Post has been deleted.');
+                            // notify parent if provided
+                            if (onDelete) onDelete(post.id);
+                            if (onInteraction) onInteraction(post.id, 'deleted', true);
+                          } catch (err) {
+                            console.log('Delete post error:', err);
+                            Alert.alert('Error', 'Failed to delete post. Please try again.');
+                          }
+                        }
+                      }
+                    ]
+                  );
+                }}
+              >
+                <MaterialIcons name="delete" size={20} color="#FF4444" />
+                <Text style={[styles.optionText, { color: '#FF4444' }]}>Delete Post</Text>
+              </TouchableOpacity>
+            )}
+            
+            <View style={styles.optionsDivider} />
+            
+            <TouchableOpacity 
+              style={styles.optionItem} 
+              onPress={() => setShowOptionsModal(false)}
+            >
+              <Text style={styles.optionCancel}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <ReportModal
+        visible={reportModalVisible}
+        onClose={() => setReportModalVisible(false)}
+        postId={post?.id}
+        onSubmitted={() => console.log('Report submitted for post', post?.id)}
+      />
     </View>
   );
 };
@@ -739,6 +827,55 @@ const styles = StyleSheet.create({
     fontFamily: fonts.medium,
     minWidth: 20,
     textAlign: 'center',
+  },
+  optionsBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  optionsSheet: {
+    backgroundColor: '#2A2A2A',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 30,
+  },
+  optionsHeader: {
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
+  },
+  optionsTitle: {
+    color: colors.white,
+    fontFamily: fonts.semiBold,
+    fontSize: 18,
+    textAlign: 'center',
+  },
+  optionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+  },
+  optionText: {
+    color: colors.white,
+    fontFamily: fonts.medium,
+    fontSize: 16,
+    marginLeft: 12,
+  },
+  reportOption: {
+    color: '#FF3B30',
+  },
+  optionCancel: {
+    color: 'rgba(255,255,255,0.8)',
+    fontFamily: fonts.medium,
+    fontSize: 16,
+    textAlign: 'center',
+    width: '100%',
+  },
+  optionsDivider: {
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    marginVertical: 8,
   },
 });
 

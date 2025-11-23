@@ -54,6 +54,7 @@ import StudentCreateCommunityPostScreen from '../screens/student/CreateCommunity
 import FacultyCreateCommunityScreen from '../screens/faculty/CreateCommunityScreen';
 import FacultyCommunityDetailScreen from '../screens/faculty/CommunityDetailScreen';
 import FacultyCommunityFeedScreen from '../screens/faculty/CommunityFeedScreen';
+import ReportDashboardScreen from '../screens/faculty/ReportDashboardScreen';
 
 // Import Shared Screens
 import CommentScreen from '../screens/student/CommentScreen';
@@ -130,6 +131,9 @@ export default function AppNavigator() {
       
       {/* MAIN APP - FACULTY */}
       <Stack.Screen name="FacultyMain" component={FacultyTabNavigator} />
+
+      {/* Report Dashboard - Faculty only */}
+      <Stack.Screen name="ReportDashboard" component={ReportDashboardScreen} />
       
       {/* CREATE POST SCREENS */}
       <Stack.Screen 

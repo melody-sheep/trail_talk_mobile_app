@@ -19,6 +19,8 @@ import { colors } from '../../styles/colors';
 import { fonts } from '../../styles/fonts';
 import { supabase } from '../../lib/supabase';
 import { UserContext } from '../../contexts/UserContext';
+import useBannedWords from '../../hooks/useBannedWords';
+import { Modal } from 'react-native';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -33,6 +35,9 @@ const CreatePostScreen = ({ navigation }) => {
   const [postAnonymously, setPostAnonymously] = useState(true); // Default to true
   const [userProfileData, setUserProfileData] = useState(null);
   const { user, loading } = useContext(UserContext);
+  const { checkContent } = useBannedWords();
+  const [warningMatches, setWarningMatches] = useState([]);
+  const [showWarningModal, setShowWarningModal] = useState(false);
 
   const textInputRef = useRef(null);
   const scrollViewRef = useRef(null);
@@ -224,6 +229,14 @@ const CreatePostScreen = ({ navigation }) => {
   const handlePostPress = async () => {
     if (!selectedCategory || !message.trim()) return;
 
+    // Check for banned words
+    const matches = checkContent(message.trim());
+    if (matches && matches.length > 0) {
+      setWarningMatches(matches);
+      setShowWarningModal(true);
+      return;
+    }
+
     try {
       console.log('Submitting post to Supabase...');
       
@@ -263,6 +276,35 @@ const CreatePostScreen = ({ navigation }) => {
       
     } catch (error) {
       console.log('Error:', error);
+    }
+  };
+
+  const continueDespiteWarnings = async () => {
+    setShowWarningModal(false);
+    // proceed with original post flow
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return;
+      const displayName = await getDisplayNameForPost();
+      const { data, error } = await supabase
+        .from('posts')
+        .insert([
+          {
+            content: message.trim(),
+            category: selectedCategory,
+            author_id: userData.user.id,
+            author_initials: displayName,
+            is_anonymous: postAnonymously
+          }
+        ])
+        .select();
+      if (!error) {
+        setMessage('');
+        setSelectedCategory(null);
+        navigation.goBack();
+      }
+    } catch (err) {
+      console.log('Error posting after warnings', err);
     }
   };
 
@@ -526,6 +568,26 @@ const CreatePostScreen = ({ navigation }) => {
 
           <View style={styles.bottomSpacer} />
         </ScrollView>
+        {/* Warning Modal for banned words */}
+        <Modal visible={showWarningModal} transparent animationType="slide" onRequestClose={() => setShowWarningModal(false)}>
+          <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+            <View style={{ backgroundColor: '#1A1A1A', padding: 16, borderTopLeftRadius: 12, borderTopRightRadius: 12 }}>
+              <Text style={{ color: '#fff', fontFamily: fonts.semiBold, fontSize: 16, marginBottom: 8 }}>Content Warning</Text>
+              <Text style={{ color: 'rgba(255,255,255,0.8)', marginBottom: 8 }}>Your post contains words that may violate community guidelines:</Text>
+              {warningMatches.map((m) => (
+                <Text key={m.id} style={{ color: 'rgba(255,255,255,0.7)', marginBottom: 4 }}>• {m.word} — {m.category || 'General'}</Text>
+              ))}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 }}>
+                <TouchableOpacity onPress={() => setShowWarningModal(false)} style={{ padding: 12 }}>
+                  <Text style={{ color: 'rgba(255,255,255,0.8)' }}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={continueDespiteWarnings} style={{ padding: 12 }}>
+                  <Text style={{ color: '#FFCC00', fontFamily: fonts.semiBold }}>Post Anyway</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

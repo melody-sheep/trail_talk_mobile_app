@@ -4,6 +4,7 @@ import { useFonts, Inter_400Regular, Inter_600SemiBold, Inter_700Bold } from '@e
 import { View, Text, ActivityIndicator } from 'react-native';
 import AppNavigator from './src/navigation/AppNavigator';
 import { UserProvider } from './src/contexts/UserContext';
+import Toast from 'react-native-toast-message';
 
 // This bypasses the asset registry issue
 if (typeof global.self === 'undefined') {
@@ -38,6 +39,7 @@ export default function App() {
         <NavigationContainer>
           <AppNavigator />
         </NavigationContainer>
+        <Toast />
       </UserProvider>
     </FontLoader>
   );

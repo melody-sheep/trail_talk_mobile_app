@@ -72,7 +72,8 @@ TRAILTALK - Campus Social Platform
     │   ├── CustomButton.js ✅ COMPLETE
     │   ├── HeaderWithTabs.js ✅ COMPLETE
     │   ├── BottomNavigation.js ✅ COMPLETE
-    │   ├── PostCard.js ✅ COMPLETE
+    │   ├── PostCard.js ✅ UPDATED: Added report action + options menu
+    │   ├── ReportModal.js ✅ ADDED: Bottom-sheet report UI (category chips + description)
     │   └── CommunityPostCard.js ✅ UPDATED / STABLE: Community post UI aligned with PostCard (Ionicons outline for role & category; layout fixes to avoid right-side cutoffs). Keeps community-specific DB interaction logic.
     ├── 📁 contexts/
     │   └── UserContext.js ✅ STABLE: Complete community refresh system with real-time triggers
@@ -83,7 +84,7 @@ TRAILTALK - Campus Social Platform
     │       ✅ Enhanced error handling and admin verification
     │       ✅ All community functions operational
     ├── 📁 navigation/
-    │   └── AppNavigator.js ✅ STABLE: Added CreateCommunityPostScreen navigation with proper parameters
+    │   └── AppNavigator.js ✅ **UPDATED**: Added ChatScreen and FacultyChatScreen navigation with proper safe area handling and enhanced UI
     ├── 📁 screens/
     │   ├── WelcomeScreen.js ✅ COMPLETE
     │   ├── RoleSelectionScreen.js ✅ COMPLETE
@@ -91,7 +92,7 @@ TRAILTALK - Campus Social Platform
     │   ├── SignInScreen.js ✅ COMPLETE
     │   ├── 📁 student/
     │   │   ├── StudentHomeScreen.js ✅ COMPLETE
-    │   │   ├── SearchScreen.js ✅ STABLE: Professional UI with sticky headers & animations
+    │   │   ├── SearchScreen.js ✅ **UPDATED**: Enhanced search functionality with improved UI
     │   │   ├── SupportScreen.js ✅ STABLE: 
     │   │   │   - Shield badge system for verified users
     │   │   │   - Collapsible community creation section
@@ -104,7 +105,7 @@ TRAILTALK - Campus Social Platform
     │   │   │   - Real-time deletion detection
     │   │   │   - Professional badge system
     │   │   │   - Enhanced UI with animations
-    │   │   ├── CommentScreen.js ✅ STABLE: 
+    │   │   ├── CommentScreen.js ✅ **UPDATED**: Enhanced UI with modern minimal design, fixed safe area between keyboard and text field, centered placeholder text and send button, removed character limits, improved visual hierarchy
     │   │   ├── NotificationsScreen.js ✅ **UPDATED / WORKING**: 
     │   │   │   - ✅ Real-time notifications with profile data
     │   │   │   - ✅ Proper user display names and initials
@@ -112,7 +113,7 @@ TRAILTALK - Campus Social Platform
     │   │   │   - ✅ Working refresh button with loading states
     │   │   │   - ✅ Mark as read functionality
     │   │   │   - ✅ Delete notifications
-    │   │   ├── MessagesScreen.js ✅ UI COMPLETE
+    │   │   ├── MessagesScreen.js ✅ **UPDATED**: Enhanced UI with removed role labels, improved visual hierarchy (unread messages brighter, read messages dimmer), message length truncation, better timestamp formatting, unread dot indicators
     │   │   ├── CreatePostScreen.js ✅ COMPLETE
     │   │   ├── ProfileScreen.js ✅ COMPLETE
     │   │   ├── EditProfileScreen.js ✅ **STABLE**: Complete with image upload & modern UI
@@ -133,23 +134,26 @@ TRAILTALK - Campus Social Platform
     │   │   │   - ✅ Professional community info card
     │   │   │   - ✅ Pull-to-refresh functionality
     │   │   │   - Real-time updates now working (hook + onPostCreated + forced refresh fallbacks) ✅
-    │   │   │   - Uses PostCard/CommunityPostCard UI consistently so interaction buttons show correctly ✅
+    │   │   │   - Uses PostCard/CommunityPostCard UI consistently so interaction buttons show correctly ✅ 
     │   │   ├── CommunityMembersScreen.js ⏳ **READY FOR DEVELOPMENT**
-    │   │   └── ViewProfileScreen.js ✅ **NEW: ADDED**
+    │   │   ├── ViewProfileScreen.js ✅ **UPDATED**: Added birthday, join date, and properly positioned follow button matching ProfileScreen pattern
+    │   │   └── ChatScreen.js ✅ **COMPLETED**: Full messaging functionality with real-time updates, enhanced UI with user profile header, proper safe area handling, centered input elements, modern minimal design matching app theme
     │   └── 📁 faculty/
     │       ├── FacultyHomeScreen.js ✅ COMPLETE
-    │       ├── SearchScreen.js ✅ **UI COMPLETE**
+    │       ├── SearchScreen.js ✅ **UPDATED**: Enhanced search functionality with improved UI
     │       ├── SupportScreen.js ✅ **UI COMPLETE**
     │       ├── CommunityScreen.js ✅ **UI COMPLETE**
     │       ├── NotificationsScreen.js ✅ **UI COMPLETE**
-    │       ├── MessagesScreen.js ⏳ **NOT STARTED** (Last remaining screen)
-    │       ├── CreatePostScreen.js ✅ **BASIC UI**
+    │       ├── MessagesScreen.js ✅ **COMPLETED**: Copied from student version with FacultyChat navigation, full messaging functionality with enhanced UI
+    │       ├── CreatePostScreen.js ✅ **UPDATED**: Enhanced create post functionality
+    │       ├── ReportDashboardScreen.js ✅ ADDED: Faculty report management dashboard
     │       ├── ProfileScreen.js ✅ **BASIC UI**
     │       ├── CreateCommunityScreen.js ✅ **STABLE**
     │       ├── CommunityDetailScreen.js ✅ **STABLE**
     │       ├── CommunityFeedScreen.js ✅ **STABLE**
     │       ├── CommunityMembersScreen.js ✅ **STABLE**
-    │       └── ViewProfileScreen.js ✅ **NEW: ADDED**
+    │       ├── ViewProfileScreen.js ✅ **UPDATED**: Added birthday, join date, and properly positioned follow button matching ProfileScreen pattern
+    │       └── ChatScreen.js ✅ **COMPLETED**: Full messaging functionality with real-time updates, enhanced UI matching student version
     ├── 📁 hooks/
     │   ├── usePost.js ✅ **STABLE**: Better error handling & real-time updates
     │   ├── useSearch.js ✅ **STABLE**: Complete search functionality with database integration
@@ -158,7 +162,10 @@ TRAILTALK - Campus Social Platform
     │   │   - ✅ Real-time community posts with subscriptions
     │   │   - Enhanced fetch & formatting to match PostCard fields ✅
     │   │   - Triggers callbacks and forceRefresh() on events so UI updates reliably ✅
-    │   └── useNotifications.js ✅ **UPDATED / WORKING**: 
+    │   ├── useNotifications.js ✅ **UPDATED / WORKING**: 
+    │   ├── useReports.js ✅ ADDED: Fetch/subscribe to reports and manage actions
+    │   └── useBannedWords.js ✅ ADDED: Fetch banned words and provide content checks
+    │   
     │       - ✅ Real-time subscription for all notification events
     │       - ✅ Profile data integration for user names/initials
     │       - ✅ Proper error handling and loading states
@@ -176,18 +183,18 @@ TRAILTALK - Campus Social Platform
 └── package-lock.json ✅ COMPLETE
 └── package.json ✅ COMPLETE
 
-🔄 NOTIFICATION SYSTEM STATUS:
-✅ Database triggers working - automatic notifications being created
-✅ RLS policies configured correctly
-✅ NotificationsScreen.js properly fetching and displaying notifications
-✅ useNotifications.js hook fully implemented and working
-✅ Real-time updates working with user profile data
-✅ Today/Earlier sections with limits (5 today, 7 earlier)
+🔄 MESSAGING SYSTEM STATUS:
+✅ Complete messaging database tables with proper RLS policies
+✅ Real-time messaging functionality for both student and faculty
+✅ Enhanced UI with modern minimal design matching app theme
+✅ Proper safe area handling between keyboard and input fields
+✅ Centered placeholder text and send button alignment
+✅ Visual hierarchy improvements with unread/read message states
 
 🎯 NEXT PRIORITIES:
-1. Complete MessagesScreen.js for faculty
-2. Develop CommunityMembersScreen.js for student
-3. Develop remaining faculty screens (CreateCommunity, CommunityDetail, CommunityFeed, CommunityMembers)
-4. Enhance CommunityFeedScreen.js debugging
+1. Develop CommunityMembersScreen.js for student
+2. Enhance CommunityFeedScreen.js debugging
+3. Finalize remaining faculty screens UI polish
+4. Test cross-role messaging between students and faculty
 
----November 22, 2025---
+---November 23, 2025---
