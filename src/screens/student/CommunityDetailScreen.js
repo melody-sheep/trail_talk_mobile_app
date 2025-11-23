@@ -300,7 +300,6 @@ export default function CommunityDetailScreen({ navigation, route }) {
       communityId, 
       communityName: community?.name,
       onPostCreated: () => {
-        // Immediate refresh when a post is created
         console.log('CommunityDetailScreen: onPostCreated callback invoked');
         setTimeout(() => loadCommunityData(), 100);
         setTimeout(() => loadCommunityData(), 600);
@@ -340,9 +339,9 @@ export default function CommunityDetailScreen({ navigation, route }) {
 
     const config = badgeConfig[type];
     const isSmall = size === 'small';
-    const iconSize = isSmall ? 14 : 16;
-    const fontSize = isSmall ? 10 : 12;
-    const padding = isSmall ? 6 : 8;
+    const iconSize = isSmall ? 12 : 14;
+    const fontSize = isSmall ? 9 : 11;
+    const padding = isSmall ? 4 : 6;
 
     return (
       <View style={[
@@ -351,8 +350,8 @@ export default function CommunityDetailScreen({ navigation, route }) {
           backgroundColor: config.bgColor,
           borderColor: config.borderColor,
           paddingHorizontal: padding,
-          paddingVertical: padding - 2,
-          borderRadius: 8
+          paddingVertical: padding - 1,
+          borderRadius: 6
         }
       ]}>
         <Ionicons name={config.icon} size={iconSize} color={config.color} />
@@ -361,7 +360,7 @@ export default function CommunityDetailScreen({ navigation, route }) {
           { 
             color: config.color, 
             fontSize: fontSize,
-            marginLeft: 4
+            marginLeft: 3
           }
         ]}>
           {config.label}
@@ -389,7 +388,7 @@ export default function CommunityDetailScreen({ navigation, route }) {
     return (
       <View style={styles.memberItem}>
         <View style={styles.memberAvatar}>
-          <Ionicons name="person" size={20} color="rgba(255,255,255,0.6)" />
+          <Ionicons name="person" size={16} color="rgba(255,255,255,0.6)" />
         </View>
         <View style={styles.memberInfo}>
           <Text style={styles.memberName}>
@@ -400,18 +399,16 @@ export default function CommunityDetailScreen({ navigation, route }) {
           </Text>
         </View>
         {item.role === 'admin' && (
-          <Ionicons name="shield-checkmark" size={16} color="#4CAF50" />
+          <Ionicons name="shield-checkmark" size={14} color="#4CAF50" />
         )}
       </View>
     );
   };
 
   // Render post item
-  // Render post item using PostCard (UI + interactions)
   const renderPostItem = ({ item }) => (
     <PostCard post={item} userRole={community?.userRole || 'student'} onInteraction={(postId, field, newCount) => {
       console.log('CommunityDetailScreen: post interaction', postId, field, newCount);
-      // Optionally update local posts array for immediate UI
       setPosts(prev => prev.map(p => p.id === postId ? { ...p, [field]: newCount } : p));
     }} />
   );
@@ -430,7 +427,7 @@ export default function CommunityDetailScreen({ navigation, route }) {
           style={styles.modalContent}
         >
           <View style={styles.modalHeader}>
-            <Ionicons name="warning" size={32} color="#FF6B6B" />
+            <Ionicons name="warning" size={28} color="#FF6B6B" />
             <Text style={styles.modalTitle}>Delete Community</Text>
             <Text style={styles.modalSubtitle}>
               This action cannot be undone
@@ -484,7 +481,7 @@ export default function CommunityDetailScreen({ navigation, route }) {
                 <Text style={styles.deleteButtonText}>Deleting...</Text>
               ) : (
                 <>
-                  <Ionicons name="trash" size={18} color={colors.white} />
+                  <Ionicons name="trash" size={16} color={colors.white} />
                   <Text style={styles.deleteButtonText}>Delete Forever</Text>
                 </>
               )}
@@ -500,7 +497,7 @@ export default function CommunityDetailScreen({ navigation, route }) {
       <SafeAreaView style={styles.safeArea}>
         <StatusBar barStyle="light-content" backgroundColor={colors.homeBackground} />
         <View style={styles.loadingContainer}>
-          <Ionicons name="people" size={48} color="#4ECDC4" />
+          <Ionicons name="people" size={40} color="#4ECDC4" />
           <Text style={styles.loadingText}>Loading Community...</Text>
         </View>
       </SafeAreaView>
@@ -512,7 +509,7 @@ export default function CommunityDetailScreen({ navigation, route }) {
       <SafeAreaView style={styles.safeArea}>
         <StatusBar barStyle="light-content" backgroundColor={colors.homeBackground} />
         <View style={styles.errorContainer}>
-          <Ionicons name="alert-circle" size={48} color="#FF6B6B" />
+          <Ionicons name="alert-circle" size={40} color="#FF6B6B" />
           <Text style={styles.errorText}>Community not found</Text>
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
             <Text style={styles.backButtonText}>Go Back</Text>
@@ -534,7 +531,7 @@ export default function CommunityDetailScreen({ navigation, route }) {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Ionicons name="arrow-back" size={24} color={colors.white} />
+          <Ionicons name="arrow-back" size={22} color={colors.white} />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>
           {community.name}
@@ -544,7 +541,7 @@ export default function CommunityDetailScreen({ navigation, route }) {
             style={styles.deleteHeaderButton}
             onPress={openDeleteModal}
           >
-            <Ionicons name="trash-outline" size={20} color="#FF6B6B" />
+            <Ionicons name="trash-outline" size={18} color="#FF6B6B" />
           </TouchableOpacity>
         )}
       </View>
@@ -563,27 +560,29 @@ export default function CommunityDetailScreen({ navigation, route }) {
       >
         {/* Community Header */}
         <View style={styles.communityHeader}>
-          <View style={[styles.communityIcon, { backgroundColor: `${categoryConfig.color}20` }]}>
-            <Ionicons name={categoryConfig.icon} size={32} color={categoryConfig.color} />
+          <View style={[styles.communityIcon, { backgroundColor: `${categoryConfig.color}15` }]}>
+            <Ionicons name={categoryConfig.icon} size={28} color={categoryConfig.color} />
           </View>
           
           <View style={styles.communityInfo}>
             <View style={styles.titleRow}>
               <Text style={styles.communityName}>{community.name}</Text>
-              {community.is_featured && <ProfessionalBadge type="featured" size="small" />}
-              {community.is_official && <ProfessionalBadge type="official" size="small" />}
-              {community.isAdmin && <ProfessionalBadge type="verified" size="small" />}
+              <View style={styles.badgeRow}>
+                {community.is_featured && <ProfessionalBadge type="featured" size="small" />}
+                {community.is_official && <ProfessionalBadge type="official" size="small" />}
+                {community.isAdmin && <ProfessionalBadge type="verified" size="small" />}
+              </View>
             </View>
             <Text style={styles.communityCategory}>
               {community.category.charAt(0).toUpperCase() + community.category.slice(1)} Community
             </Text>
             <View style={styles.communityStats}>
               <View style={styles.stat}>
-                <Ionicons name="people" size={16} color="rgba(255,255,255,0.6)" />
+                <Ionicons name="people" size={14} color="rgba(255,255,255,0.6)" />
                 <Text style={styles.statText}>{community.member_count} members</Text>
               </View>
               <View style={styles.stat}>
-                <Ionicons name="lock-closed-outline" size={16} color="rgba(255,255,255,0.6)" />
+                <Ionicons name={community.privacy === 'public' ? 'globe' : 'lock-closed'} size={14} color="rgba(255,255,255,0.6)" />
                 <Text style={styles.statText}>
                   {community.privacy === 'public' ? 'Public' : 'Private'}
                 </Text>
@@ -600,14 +599,14 @@ export default function CommunityDetailScreen({ navigation, route }) {
                 style={[styles.actionButton, styles.primaryButton]}
                 onPress={handleCreatePost}
               >
-                <Ionicons name="create-outline" size={20} color={colors.white} />
+                <Ionicons name="create-outline" size={18} color={colors.white} />
                 <Text style={styles.primaryButtonText}>Create Post</Text>
               </TouchableOpacity>
               <TouchableOpacity 
                 style={[styles.actionButton, styles.secondaryButton]}
                 onPress={handleLeaveCommunity}
               >
-                <Ionicons name="exit-outline" size={20} color="#FF6B6B" />
+                <Ionicons name="exit-outline" size={18} color="#FF6B6B" />
                 <Text style={styles.secondaryButtonText}>Leave</Text>
               </TouchableOpacity>
             </>
@@ -616,7 +615,7 @@ export default function CommunityDetailScreen({ navigation, route }) {
               style={[styles.actionButton, styles.primaryButton]}
               onPress={handleJoinCommunity}
             >
-              <Ionicons name="person-add" size={20} color={colors.white} />
+              <Ionicons name="person-add" size={18} color={colors.white} />
               <Text style={styles.primaryButtonText}>Join Community</Text>
             </TouchableOpacity>
           )}
@@ -630,7 +629,7 @@ export default function CommunityDetailScreen({ navigation, route }) {
               style={styles.adminDeleteButton}
               onPress={openDeleteModal}
             >
-              <Ionicons name="trash-outline" size={20} color="#FF6B6B" />
+              <Ionicons name="trash-outline" size={18} color="#FF6B6B" />
               <Text style={styles.adminDeleteText}>Delete Community</Text>
             </TouchableOpacity>
           </View>
@@ -680,26 +679,26 @@ export default function CommunityDetailScreen({ navigation, route }) {
             <Text style={styles.sectionTitle}>Community Info</Text>
             <View style={styles.infoGrid}>
               <View style={styles.infoItem}>
-                <Ionicons name="calendar-outline" size={16} color="rgba(255,255,255,0.6)" />
+                <Ionicons name="calendar-outline" size={14} color="rgba(255,255,255,0.6)" />
                 <Text style={styles.infoLabel}>Created</Text>
                 <Text style={styles.infoValue}>
                   {new Date(community.created_at).toLocaleDateString()}
                 </Text>
               </View>
               <View style={styles.infoItem}>
-                <Ionicons name="people-outline" size={16} color="rgba(255,255,255,0.6)" />
+                <Ionicons name="people-outline" size={14} color="rgba(255,255,255,0.6)" />
                 <Text style={styles.infoLabel}>Max Members</Text>
                 <Text style={styles.infoValue}>{community.max_members}</Text>
               </View>
               <View style={styles.infoItem}>
-                <Ionicons name="lock-closed-outline" size={16} color="rgba(255,255,255,0.6)" />
+                <Ionicons name="lock-closed-outline" size={14} color="rgba(255,255,255,0.6)" />
                 <Text style={styles.infoLabel}>Privacy</Text>
                 <Text style={styles.infoValue}>
                   {community.privacy === 'public' ? 'Public' : 'Private'}
                 </Text>
               </View>
               <View style={styles.infoItem}>
-                <Ionicons name={categoryConfig.icon} size={16} color="rgba(255,255,255,0.6)" />
+                <Ionicons name={categoryConfig.icon} size={14} color="rgba(255,255,255,0.6)" />
                 <Text style={styles.infoLabel}>Category</Text>
                 <Text style={styles.infoValue}>
                   {community.category.charAt(0).toUpperCase() + community.category.slice(1)}
@@ -718,10 +717,11 @@ export default function CommunityDetailScreen({ navigation, route }) {
                 keyExtractor={(item) => item.id}
                 scrollEnabled={false}
                 showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.postsList}
               />
             ) : (
               <View style={styles.emptyState}>
-                <Ionicons name="document-text-outline" size={48} color="rgba(255,255,255,0.3)" />
+                <Ionicons name="document-text-outline" size={40} color="rgba(255,255,255,0.3)" />
                 <Text style={styles.emptyStateText}>No posts yet</Text>
                 <Text style={styles.emptyStateSubtext}>
                   {community.isMember 
@@ -778,10 +778,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.homeBackground,
   },
   loadingText: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: fonts.medium,
     color: 'rgba(255,255,255,0.6)',
-    marginTop: 16,
+    marginTop: 12,
   },
   errorContainer: {
     flex: 1,
@@ -791,103 +791,108 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   errorText: {
-    fontSize: 18,
+    fontSize: 16,
     fontFamily: fonts.medium,
     color: colors.white,
-    marginTop: 16,
-    marginBottom: 24,
+    marginTop: 12,
+    marginBottom: 20,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: colors.homeBackground,
   },
   backButton: {
-    padding: 8,
+    padding: 6,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontFamily: fonts.bold,
     color: colors.white,
     flex: 1,
     textAlign: 'center',
-    marginHorizontal: 16,
+    marginHorizontal: 12,
   },
   deleteHeaderButton: {
-    padding: 8,
+    padding: 6,
   },
   container: {
     flex: 1,
     backgroundColor: colors.homeBackground,
   },
   communityHeader: {
-    padding: 20,
+    padding: 16,
     flexDirection: 'row',
     alignItems: 'flex-start',
   },
   communityIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 16,
+    marginRight: 12,
   },
   communityInfo: {
     flex: 1,
   },
   titleRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    marginBottom: 8,
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: 6,
   },
   communityName: {
-    fontSize: 24,
+    fontSize: 18,
     fontFamily: fonts.bold,
     color: colors.white,
+    flex: 1,
     marginRight: 8,
-    marginBottom: 4,
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    gap: 4,
   },
   communityCategory: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: fonts.medium,
     color: 'rgba(255,255,255,0.7)',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   communityStats: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: 12,
   },
   stat: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
   },
   statText: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: fonts.normal,
     color: 'rgba(255,255,255,0.6)',
   },
   badgeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1.5,
-    borderRadius: 8,
+    borderWidth: 1,
+    borderRadius: 6,
   },
   badgeText: {
     fontFamily: fonts.semiBold,
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
   },
   actionButtons: {
     flexDirection: 'row',
-    gap: 12,
-    paddingHorizontal: 20,
+    gap: 8,
+    paddingHorizontal: 16,
     marginBottom: 16,
   },
   actionButton: {
@@ -895,64 +900,65 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    borderRadius: 12,
-    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    gap: 6,
   },
   primaryButton: {
     backgroundColor: '#4ECDC4',
   },
   secondaryButton: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(255,255,255,0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: 'rgba(255,255,255,0.15)',
   },
   primaryButtonText: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: fonts.medium,
     color: colors.white,
   },
   secondaryButtonText: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: fonts.medium,
     color: '#FF6B6B',
   },
   adminSection: {
-    paddingHorizontal: 20,
-    marginBottom: 24,
+    paddingHorizontal: 16,
+    marginBottom: 20,
   },
   adminTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: fonts.bold,
     color: colors.white,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   adminDeleteButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 107, 107, 0.1)',
+    backgroundColor: 'rgba(255, 107, 107, 0.08)',
     borderWidth: 1,
     borderColor: '#FF6B6B',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    gap: 6,
   },
   adminDeleteText: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: fonts.medium,
     color: '#FF6B6B',
   },
   tabs: {
     flexDirection: 'row',
-    paddingHorizontal: 20,
-    marginBottom: 20,
+    paddingHorizontal: 16,
+    marginBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.1)',
   },
   tab: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 10,
     alignItems: 'center',
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
@@ -961,7 +967,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#4ECDC4',
   },
   tabText: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: fonts.medium,
     color: 'rgba(255,255,255,0.6)',
   },
@@ -970,173 +976,122 @@ const styles = StyleSheet.create({
     fontFamily: fonts.semiBold,
   },
   tabContent: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontFamily: fonts.bold,
     color: colors.white,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   description: {
-    fontSize: 16,
-    fontFamily: fonts.normal,
-    color: 'rgba(255,255,255,0.8)',
-    lineHeight: 24,
-    marginBottom: 24,
-  },
-  rules: {
     fontSize: 14,
     fontFamily: fonts.normal,
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(255,255,255,0.8)',
     lineHeight: 20,
-    marginBottom: 24,
+    marginBottom: 20,
+  },
+  rules: {
+    fontSize: 13,
+    fontFamily: fonts.normal,
+    color: 'rgba(255,255,255,0.7)',
+    lineHeight: 18,
+    marginBottom: 20,
     fontStyle: 'italic',
   },
   infoGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 16,
+    gap: 12,
   },
   infoItem: {
     width: '48%',
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    padding: 16,
-    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    padding: 12,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(255,255,255,0.08)',
   },
   infoLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: fonts.medium,
     color: 'rgba(255,255,255,0.5)',
-    marginTop: 8,
-    marginBottom: 4,
+    marginTop: 6,
+    marginBottom: 2,
   },
   infoValue: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: fonts.semiBold,
     color: colors.white,
   },
   emptyState: {
     alignItems: 'center',
-    paddingVertical: 60,
+    paddingVertical: 40,
   },
   emptyStateText: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: fonts.medium,
     color: 'rgba(255,255,255,0.5)',
-    marginTop: 16,
+    marginTop: 12,
   },
   emptyStateSubtext: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: fonts.normal,
     color: 'rgba(255,255,255,0.4)',
-    marginTop: 8,
+    marginTop: 4,
     textAlign: 'center',
+  },
+  postsList: {
+    gap: 8,
   },
   membersHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   membersCount: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: fonts.medium,
     color: colors.white,
   },
   viewAllText: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: fonts.medium,
     color: '#4ECDC4',
   },
   memberItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.05)',
   },
   memberAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: 'rgba(255,255,255,0.1)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: 10,
   },
   memberInfo: {
     flex: 1,
   },
   memberName: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: fonts.medium,
     color: colors.white,
     marginBottom: 2,
   },
   memberRole: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: fonts.normal,
     color: 'rgba(255,255,255,0.5)',
   },
-  postItem: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-  },
-  postHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  postAuthor: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  authorAvatar: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 8,
-  },
-  authorName: {
-    fontSize: 14,
-    fontFamily: fonts.medium,
-    color: 'rgba(255,255,255,0.8)',
-  },
-  postTime: {
-    fontSize: 12,
-    fontFamily: fonts.normal,
-    color: 'rgba(255,255,255,0.4)',
-  },
-  postContent: {
-    fontSize: 14,
-    fontFamily: fonts.normal,
-    color: 'rgba(255,255,255,0.8)',
-    lineHeight: 20,
-    marginBottom: 12,
-  },
-  postStats: {
-    flexDirection: 'row',
-    gap: 16,
-  },
-  statItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
   bottomSpacer: {
-    height: 30,
+    height: 20,
   },
   // Modal Styles
   modalOverlay: {
@@ -1144,48 +1099,48 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.8)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 16,
   },
   modalContent: {
     backgroundColor: colors.homeBackground,
-    borderRadius: 16,
-    padding: 24,
+    borderRadius: 14,
+    padding: 20,
     width: '100%',
-    maxWidth: 400,
+    maxWidth: 380,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
   },
   modalHeader: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
   },
   modalTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontFamily: fonts.bold,
     color: '#FF6B6B',
-    marginTop: 12,
-    marginBottom: 8,
+    marginTop: 10,
+    marginBottom: 6,
     textAlign: 'center',
   },
   modalSubtitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: fonts.normal,
     color: 'rgba(255,255,255,0.6)',
     textAlign: 'center',
   },
   warningSection: {
-    backgroundColor: 'rgba(255, 107, 107, 0.1)',
-    padding: 16,
-    borderRadius: 12,
+    backgroundColor: 'rgba(255, 107, 107, 0.08)',
+    padding: 14,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255, 107, 107, 0.3)',
-    marginBottom: 24,
+    borderColor: 'rgba(255, 107, 107, 0.2)',
+    marginBottom: 20,
   },
   warningText: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: fonts.medium,
     color: 'rgba(255,255,255,0.9)',
-    marginBottom: 12,
+    marginBottom: 10,
     textAlign: 'center',
   },
   communityNameHighlight: {
@@ -1193,21 +1148,21 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bold,
   },
   warningDetails: {
-    gap: 8,
+    gap: 6,
   },
   warningDetail: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: fonts.normal,
     color: 'rgba(255,255,255,0.7)',
   },
   confirmationSection: {
-    marginBottom: 24,
+    marginBottom: 20,
   },
   confirmationLabel: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: fonts.medium,
     color: 'rgba(255,255,255,0.8)',
-    marginBottom: 12,
+    marginBottom: 10,
     textAlign: 'center',
   },
   confirmationWord: {
@@ -1215,34 +1170,34 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bold,
   },
   confirmationInput: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderWidth: 2,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1.5,
     borderColor: '#FF6B6B',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
     fontFamily: fonts.normal,
     color: colors.white,
     textAlign: 'center',
   },
   modalActions: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
   },
   modalButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: 12,
-    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 10,
+    gap: 6,
   },
   cancelButton: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(255,255,255,0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: 'rgba(255,255,255,0.15)',
   },
   deleteButton: {
     backgroundColor: '#FF6B6B',
@@ -1251,12 +1206,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 107, 107, 0.3)',
   },
   cancelButtonText: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: fonts.medium,
     color: colors.white,
   },
   deleteButtonText: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: fonts.bold,
     color: colors.white,
   },
