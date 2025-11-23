@@ -18,12 +18,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../styles/colors';
 import { fonts } from '../../styles/fonts';
 import { UserContext } from '../../contexts/UserContext';
+import ReportModal from '../../components/ReportModal';
 
 export default function FacultySupportScreen({ navigation }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
   const [expandedItems, setExpandedItems] = useState({});
   const [showFeatured, setShowFeatured] = useState(true);
+  // Local modal state for reporting (reuse ReportModal component)
+  const [reportModalVisible, setReportModalVisible] = useState(false);
   const { user } = useContext(UserContext);
   
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -65,162 +68,110 @@ export default function FacultySupportScreen({ navigation }) {
 
   // Faculty-specific support content
   const [supportContent, setSupportContent] = useState([
-    // FAQ Items - READ ONLY
+    // CITL / Onboarding
     {
-      id: 'faq1',
-      category: 'faq',
-      title: 'Faculty Reporting Guidelines',
-      description: 'How to handle student concerns and reports professionally',
-      content: 'Faculty Reporting Process:\n1. Document concerns with specific details and evidence\n2. Consult with department chair when appropriate\n3. Use official USTP reporting channels\n4. Maintain student confidentiality and privacy\n5. Follow up with relevant administrative offices\n6. Document all actions taken',
-      icon: 'document-text',
-      iconColor: '#4ECDC4',
+      id: 'citl-focus',
+      category: 'resources',
+      title: 'CITL: Faculty Onboarding (FOCUS Online)',
+      description: 'FOCUS Online — an EdApp course on USTP culture, employment, and career growth',
+      content: 'Course: Faculty Onboarding and Career Upstart Seminar (FOCUS) Online\nPlatform: EdApp (USTP CITL)\nPurpose: Introduces USTP culture, policies, teaching expectations, and career development resources.\n\nContact CITL for enrollment or access instructions.',
+      icon: 'school',
+      iconColor: '#8B5CF6',
       emergency: false,
-      lastUpdated: '2024-01-15',
-      updatedBy: 'USTP Administration',
+      lastUpdated: '2024-01-20',
+      updatedBy: 'CITL',
       editable: false,
       isOfficial: true
     },
+    // Research Databases / Access notes
     {
-      id: 'faq2',
-      category: 'faq', 
-      title: 'Student Support Referrals',
-      description: 'Where to refer students for different types of support',
-      content: 'Referral Resources:\n• Academic Issues: Academic Success Center\n• Mental Health: USTP Counseling Services\n• Financial Concerns: Financial Aid Office\n• Disability Accommodations: Accessibility Office\n• Career Guidance: Career Development Center\n• International Students: International Office\n• Housing Issues: Student Housing Office',
-      icon: 'people',
+      id: 'research-dbs',
+      category: 'resources',
+      title: 'Research Databases — Access Notes',
+      description: 'Key research resources and access information for faculty',
+      content: 'ProQuest:\nUsername: PQUSTPhil\nPassword: USTPpq#21\n\nWiley Online Library:\nUsername: EAL00000170035\nPassword: Wiley12345\n\nELSEVIER ScienceDirect:\nRemote access available — download the access guide from CITL or library portal.\n\nNOTE: Credentials and remote access details are managed by the Library/CITL. Please contact CITL or the University Library to confirm current credentials or arrange IP-based access.',
+      icon: 'book',
+      iconColor: '#FFA726',
+      emergency: false,
+      lastUpdated: '2024-01-21',
+      updatedBy: 'University Library / CITL',
+      editable: false,
+      isOfficial: true
+    },
+    // Instructional support
+    {
+      id: 'instructional-support',
+      category: 'resources',
+      title: 'Instructional Support & Video Guides',
+      description: 'Video resources for syllabus creation, modules, and embedding narration',
+      content: 'Resources:\n• How to create a course syllabus\n• Preparing modules and assessments\n• Recording narrated slides and embedding video in PowerPoint\n• Using the LMS and EdTech tools (EdApp, Moodle, etc.)\n\nContact CITL for workshops, templates, and one-on-one instructional support.',
+      icon: 'videocam',
       iconColor: '#45B7D1',
       emergency: false,
-      lastUpdated: '2024-01-10',
-      updatedBy: 'Student Affairs',
+      lastUpdated: '2024-01-18',
+      updatedBy: 'CITL',
       editable: false,
       isOfficial: true
     },
+    // Office of Student Affairs contact (also useful for faculty who coordinate student requests)
     {
-      id: 'faq3',
-      category: 'faq',
-      title: 'Platform Usage Guidelines',
-      description: 'Best practices for faculty using TrailTalk',
-      content: 'Faculty Guidelines:\n• Maintain professional boundaries at all times\n• Use appropriate communication channels\n• Report technical issues promptly to IT\n• Respect student privacy and anonymity settings\n• Provide constructive, professional feedback\n• Follow USTP code of conduct and policies',
-      icon: 'shield-checkmark',
-      iconColor: '#96CEB4',
+      id: 'studentaffairs-cdo',
+      category: 'resources',
+      title: 'Office of Student Affairs — CDO (Student Affairs)',
+      description: 'Student Affairs contact for document requests and student services',
+      content: 'Phone: +63 926-905-3363\nEmail: studentaffairs-cdo@ustp.edu.ph\n\nServices: Good Moral Certificates, student ID updates, records assistance.\nContact this office when faculty need official student documents or verifications.',
+      icon: 'business',
+      iconColor: '#4ECDC4',
       emergency: false,
-      lastUpdated: '2024-01-12',
-      updatedBy: 'IT Department',
+      lastUpdated: '2024-01-20',
+      updatedBy: 'Office of Student Affairs - CDO',
       editable: false,
       isOfficial: true
     },
-
-    // Reporting Items - READ ONLY
+    // USTP Emergency Warning System (EWS)
     {
-      id: 'report1',
-      category: 'reporting',
-      title: 'Emergency Situations Protocol',
-      description: 'Immediate response for critical student situations',
-      content: 'Emergency Protocols:\n• USTP Campus Security: (088) 123-4567\n• Student Crisis Intervention Team: (088) 123-4569\n• Title IX Office: (088) 123-4570\n• Faculty Emergency Hotline: (088) 123-4572\n\nAlways document concerns and follow established protocols.',
+      id: 'ews',
+      category: 'resources',
+      title: 'USTP Emergency Warning System (EWS)',
+      description: 'Color-coded alert levels and recommended actions',
+      content: 'RED — Extreme / Full Emergency:\nOperations seriously impaired or halted. Multiple casualties or severe property damage possible.\nActions: Evacuate if instructed, follow IMT/security orders, seek shelter immediately.\n\nORANGE — Severe / Significant Emergency:\nSignificant damage; campus operations disrupted.\nActions: Prepare to suspend activities, follow campus advisories.\n\nYELLOW — Moderate / Active Emergency:\nLocalized incidents; campus functions continue with caution.\nActions: Monitor updates, avoid affected areas.\n\nGREEN — Normal / Monitoring:\nNo active threat; routine monitoring.\nActions: Continue normal operations and report hazards.',
       icon: 'warning',
       iconColor: '#FF6B6B',
       emergency: true,
-      lastUpdated: '2024-01-14',
-      updatedBy: 'Campus Security',
+      lastUpdated: '2024-01-18',
+      updatedBy: 'USTP System',
       editable: false,
       isOfficial: true
     },
+    // USTP System Campuses
     {
-      id: 'report2',
-      category: 'reporting',
-      title: 'Academic Integrity Reports',
-      description: 'Reporting academic dishonesty concerns',
-      content: 'Academic Integrity Process:\n1. Gather concrete evidence and documentation\n2. Consult with department chair for guidance\n3. Submit official report to Academic Affairs Office\n4. Participate in academic integrity hearings if required\n5. Maintain strict student privacy throughout process\n6. Follow USTP academic integrity policy guidelines',
-      icon: 'school',
+      id: 'ustp-campuses',
+      category: 'resources',
+      title: 'USTP System Campuses',
+      description: 'Main and satellite campuses across the USTP system',
+      content: 'Main Campus: USTP Alubijid\nMajor Campuses: Cagayan de Oro, Claveria, Villanueva\nSatellite Campuses: Balubal, Jasaan, Oroquieta, Panaon\n\nFaculty can contact local campus administration for localized protocols and support.',
+      icon: 'map',
       iconColor: '#FFA726',
       emergency: false,
-      lastUpdated: '2024-01-08',
-      updatedBy: 'Academic Affairs',
+      lastUpdated: '2024-01-18',
+      updatedBy: 'USTP System',
       editable: false,
       isOfficial: true
     },
-
-    // Resource Items - EDITABLE by faculty
+    // Incident Management Team (IMT)
     {
-      id: 'resource1',
+      id: 'imt',
       category: 'resources',
-      title: 'Faculty Development Resources',
-      description: 'Professional growth and teaching enhancement resources',
-      content: 'Available Resources:\n• Center for Teaching Excellence workshops\n• Faculty Mentoring Program sessions\n• Research Support Services consultations\n• Technology Training Workshops schedule\n• Grant Writing Assistance programs\n• Professional Development funding opportunities',
-      icon: 'book',
-      iconColor: '#45B7D1',
+      title: 'Incident Management Team (IMT)',
+      description: 'Emergency coordination team for USTP',
+      content: 'Chairperson: Vice President for Administration and Legal Affairs – USTP System\nCo-Chairperson: Director for Disaster Risk Reduction and Management Office – USTP System\nMembers include: Chief of Security and Safety (each campus), Security & Safety Coordinator – USTP System, Incident Commander (each major campus)\n\nIMT issues official instructions during emergencies and coordinates multi-campus responses.',
+      icon: 'people',
+      iconColor: '#8B5CF6',
       emergency: false,
-      lastUpdated: '2024-01-11',
-      updatedBy: 'Faculty Development',
-      editable: true
-    },
-    {
-      id: 'resource2',
-      category: 'resources',
-      title: 'Faculty Wellness Support',
-      description: 'Resources for faculty mental health and work-life balance',
-      content: 'Faculty Wellness Programs:\n• Employee Assistance Program (confidential)\n• Mindfulness and Meditation Sessions\n• Work-Life Balance Workshops\n• Faculty Peer Support Network\n• Health and Wellness Center services\n• Stress management resources and tools',
-      icon: 'heart',
-      iconColor: '#FF6B6B',
-      emergency: false,
-      lastUpdated: '2024-01-07',
-      updatedBy: 'Wellness Committee',
-      editable: true
-    },
-
-    // Faculty Specific Items - EDITABLE by faculty
-    {
-      id: 'faculty1',
-      category: 'faculty',
-      title: 'Faculty Community Forum',
-      description: 'Connect with fellow USTP faculty members',
-      content: 'Faculty Community Features:\n• Department-specific discussion channels\n• Teaching strategy sharing and collaboration\n• Research partnership opportunities\n• Policy updates and important announcements\n• Social events and networking opportunities\n• Cross-disciplinary project discussions',
-      icon: 'people-circle',
-      iconColor: '#4ECDC4',
-      emergency: false,
-      lastUpdated: '2024-01-13',
-      updatedBy: 'Faculty Senate',
-      editable: true
-    },
-    {
-      id: 'faculty2',
-      category: 'faculty',
-      title: 'Administrative Support Contacts',
-      description: 'Key department and administrative resources',
-      content: 'Administrative Resources:\n• Department Chairs directory\n• Dean\'s Office contact information\n• HR Services and benefits\n• IT Support and help desk\n• Facilities Management requests\n• Research Administration office\n• Budget and Finance contacts',
-      icon: 'business',
-      iconColor: '#96CEB4',
-      emergency: false,
-      lastUpdated: '2024-01-09',
-      updatedBy: 'Administration',
-      editable: true
-    },
-
-    // Support Items - EDITABLE by faculty
-    {
-      id: 'support1',
-      category: 'support',
-      title: 'Technical Support Services',
-      description: 'IT help and platform technical assistance',
-      content: 'Technical Support Channels:\n• IT Help Desk: help@ustp.edu.ph\n• Platform Support: support@trailtalk.ustp.edu.ph\n• Emergency IT Line: (088) 123-4571\n• Online Knowledge Base and tutorials\n• Classroom technology support\n• Software and tool assistance',
-      icon: 'desktop',
-      iconColor: '#45B7D1',
-      emergency: false,
-      lastUpdated: '2024-01-06',
-      updatedBy: 'IT Department',
-      editable: true
-    },
-    {
-      id: 'support2',
-      category: 'support',
-      title: 'Teaching Support Services',
-      description: 'Resources for course development and instructional excellence',
-      content: 'Teaching Support Services:\n• Course Design Consultation\n• Classroom Technology Training\n• Assessment Development support\n• Online Teaching Resources library\n• Instructional Design assistance\n• Teaching innovation grants\n• Student evaluation analysis',
-      icon: 'ribbon',
-      iconColor: '#FFA726',
-      emergency: false,
-      lastUpdated: '2024-01-05',
-      updatedBy: 'Teaching Excellence',
-      editable: true
+      lastUpdated: '2024-01-18',
+      updatedBy: 'USTP System',
+      editable: false,
+      isOfficial: true
     }
   ]);
 
@@ -231,21 +182,25 @@ export default function FacultySupportScreen({ navigation }) {
       label: 'Report Concern', 
       icon: 'flag-outline', 
       color: '#FF6B6B',
-      action: () => navigation.navigate('FacultyReportFlow')
+      action: () => setReportModalVisible(true)
     },
     { 
       id: 'resources', 
       label: 'Faculty Resources', 
       icon: 'library-outline', 
       color: '#4ECDC4',
-      action: () => navigation.navigate('FacultyResources')
+      action: () => {
+        // reuse the support page design: filter to resources
+        setActiveCategory('resources');
+        scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+      }
     },
     { 
       id: 'community', 
       label: 'Faculty Forum', 
       icon: 'people-circle-outline', 
       color: '#45B7D1',
-      action: () => navigation.navigate('Communities', { 
+      action: () => navigation.navigate('FacultyCommunity', { 
         filter: 'faculty',
         source: 'faculty-support'
       })
@@ -276,23 +231,16 @@ export default function FacultySupportScreen({ navigation }) {
       icon: 'shield-checkmark' 
     },
     { 
-      id: 'faculty-emergency', 
-      name: 'Faculty Emergency Line', 
-      number: '(088) 123-4572', 
+      id: 'crisis', 
+      name: 'Crisis Hotline', 
+      number: '988', 
       available: '24/7',
       icon: 'call' 
     },
     { 
-      id: 'it-emergency', 
-      name: 'IT Emergency Support', 
-      number: '(088) 123-4571', 
-      available: '24/7',
-      icon: 'desktop' 
-    },
-    { 
-      id: 'crisis-team', 
-      name: 'Crisis Intervention Team', 
-      number: '(088) 123-4569', 
+      id: 'counseling', 
+      name: 'USTP Counseling', 
+      number: '(088) 123-4568', 
       available: 'Mon-Fri 8AM-5PM',
       icon: 'medical' 
     }
@@ -301,9 +249,9 @@ export default function FacultySupportScreen({ navigation }) {
   // Faculty Community Stats
   const facultyCommunityStats = {
     createdCommunities: user?.createdCommunities || 0,
-    maxFreeCommunities: 5, // Faculty get more free communities
+    maxFreeCommunities: 5,
     subscription: user?.subscription || 'free',
-    isVerifiedCreator: user?.isVerifiedCreator || true // Faculty are automatically verified
+    isVerifiedCreator: user?.isVerifiedCreator || false
   };
 
   // Enhanced permission checking for faculty
@@ -454,7 +402,7 @@ export default function FacultySupportScreen({ navigation }) {
         
         {/* RIGHT: Featured Label + Dropdown Icon */}
         <View style={styles.headerRight}>
-          <ProfessionalBadge type="faculty" size="medium" />
+          <ProfessionalBadge type="faculty" size="small" />
           <Ionicons 
             name={showFeatured ? 'chevron-up' : 'chevron-down'} 
             size={20} 
@@ -497,10 +445,6 @@ export default function FacultySupportScreen({ navigation }) {
               </View>
               <View style={styles.featureRow}>
                 <Ionicons name="checkmark-circle" size={16} color="#4CAF50" />
-                <Text style={styles.featureItem}>Up to 200 members per community</Text>
-              </View>
-              <View style={styles.featureRow}>
-                <Ionicons name="checkmark-circle" size={16} color="#4CAF50" />
                 <Text style={styles.featureItem}>Academic collaboration tools</Text>
               </View>
             </View>
@@ -528,7 +472,7 @@ export default function FacultySupportScreen({ navigation }) {
                   Advanced tools for department-wide communities
                 </Text>
               </View>
-              <ProfessionalBadge type="verified" size="medium" />
+              <ProfessionalBadge type="verified" size="small" />
             </View>
             
             <View style={styles.featuresList}>
@@ -542,15 +486,7 @@ export default function FacultySupportScreen({ navigation }) {
               </View>
               <View style={styles.featureRow}>
                 <Ionicons name="checkmark-circle" size={16} color="#FFD700" />
-                <Text style={styles.premiumFeatureItem}>Advanced analytics dashboard</Text>
-              </View>
-              <View style={styles.featureRow}>
-                <Ionicons name="checkmark-circle" size={16} color="#FFD700" />
                 <Text style={styles.premiumFeatureItem}>Priority faculty support</Text>
-              </View>
-              <View style={styles.featureRow}>
-                <Ionicons name="checkmark-circle" size={16} color="#FFD700" />
-                <Text style={styles.premiumFeatureItem}>Custom department branding</Text>
               </View>
             </View>
             
@@ -848,11 +784,18 @@ export default function FacultySupportScreen({ navigation }) {
         </View>
 
         <View style={styles.bottomSpacer} />
+        <ReportModal
+          visible={reportModalVisible}
+          onClose={() => setReportModalVisible(false)}
+          postId={null}
+          onSubmitted={() => { setReportModalVisible(false); }}
+        />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
+// Styles: copied from student SupportScreen for compact header and sections
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -891,9 +834,9 @@ const styles = StyleSheet.create({
   headerSubtitle: {
     fontSize: 16,
     fontFamily: fonts.normal,
-    color: 'rgba(255, 255, 255, 0.8)',
-    textAlign: 'center',
+    color: 'rgba(255,255,255,0.8)',
     marginTop: 8,
+    textAlign: 'center',
   },
   collapsedHeaderContent: {
     position: 'absolute',
@@ -903,16 +846,15 @@ const styles = StyleSheet.create({
     bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 12,
   },
   collapsedHeaderTitle: {
     fontSize: 20,
     fontFamily: fonts.bold,
     color: colors.white,
+    textAlign: 'center',
   },
   editHeaderButton: {
-    padding: 8,
+    padding: 6,
     borderRadius: 8,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
@@ -923,38 +865,37 @@ const styles = StyleSheet.create({
     right: 0,
     zIndex: 20,
     backgroundColor: colors.homeBackground,
-    paddingTop: 16,
+    paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
   container: {
     flex: 1,
     backgroundColor: colors.homeBackground,
-    marginTop: 160,
+    marginTop: 200,
   },
   scrollContent: {
     flexGrow: 1,
-    paddingTop: 140,
-    paddingBottom: 30,
+    paddingTop: 70,
+    paddingBottom: 20,
   },
-  // ENHANCED Badge Styles with Shield
   badgeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1.5,
+    borderWidth: 1.2,
     borderRadius: 8,
   },
   badgeText: {
     fontFamily: fonts.semiBold,
     letterSpacing: 0.3,
+    fontSize: 11,
   },
-  // NEW: Enhanced Featured Section Styles
   featuredSection: {
-    marginHorizontal: 20,
-    marginTop: 10,
-    marginBottom: 30,
+    marginHorizontal: 16,
+    marginTop: 20,
+    marginBottom: 18,
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 16,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
     overflow: 'hidden',
@@ -963,217 +904,221 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 20,
+    padding: 14,
     backgroundColor: 'rgba(255, 255, 255, 0.03)',
   },
   headerLeft: {
     flex: 1,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 16,
     fontFamily: fonts.bold,
     color: colors.white,
   },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 8,
   },
   dropdownIcon: {
     marginLeft: 4,
   },
   featuredContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingHorizontal: 14,
+    paddingBottom: 14,
+    paddingTop: 12,
   },
   planCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    padding: 20,
-    borderRadius: 16,
+    padding: 14,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
-    marginBottom: 16,
+    marginBottom: 10,
   },
   premiumCard: {
-    backgroundColor: 'rgba(139, 92, 246, 0.08)',
-    borderColor: 'rgba(139, 92, 246, 0.3)',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   planHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 16,
+    marginBottom: 10,
   },
   planTitleContainer: {
     flex: 1,
   },
   planName: {
-    fontSize: 18,
+    fontSize: 15,
     fontFamily: fonts.bold,
     color: colors.white,
-    marginBottom: 6,
+    marginBottom: 4,
   },
   premiumPlanName: {
-    fontSize: 18,
+    fontSize: 15,
     fontFamily: fonts.bold,
-    color: '#8B5CF6',
-    marginBottom: 6,
+    color: '#FFD700',
+    marginBottom: 4,
   },
   planDescription: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: fonts.normal,
     color: 'rgba(255, 255, 255, 0.7)',
-    lineHeight: 18,
+    lineHeight: 16,
   },
   communityCount: {
     backgroundColor: 'rgba(76, 175, 80, 0.2)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
   },
   communityCountFull: {
     backgroundColor: 'rgba(255, 107, 107, 0.2)',
   },
   countText: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: fonts.bold,
     color: '#4CAF50',
   },
   featuresList: {
-    marginBottom: 20,
+    marginBottom: 12,
   },
   featureRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   featureItem: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: fonts.normal,
     color: 'rgba(255, 255, 255, 0.8)',
-    marginLeft: 8,
-    lineHeight: 18,
+    marginLeft: 6,
+    lineHeight: 16,
   },
   premiumFeatureItem: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: fonts.normal,
     color: 'rgba(255, 255, 255, 0.9)',
-    marginLeft: 8,
-    lineHeight: 18,
+    marginLeft: 6,
+    lineHeight: 16,
   },
   planButton: {
     backgroundColor: '#4ECDC4',
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
     alignItems: 'center',
   },
   disabledButton: {
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
   },
   planButtonText: {
-    fontSize: 16,
+    fontSize: 13,
     fontFamily: fonts.bold,
     color: colors.white,
   },
   premiumButton: {
-    backgroundColor: '#8B5CF6',
-    paddingVertical: 16,
-    borderRadius: 12,
+    backgroundColor: '#FFD700',
+    paddingVertical: 10,
+    borderRadius: 10,
     alignItems: 'center',
   },
   premiumButtonText: {
-    fontSize: 16,
+    fontSize: 13,
     fontFamily: fonts.bold,
-    color: colors.white,
+    color: '#000',
   },
   premiumButtonSubtext: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: fonts.normal,
-    color: 'rgba(255, 255, 255, 0.7)',
-    marginTop: 4,
+    color: 'rgba(0, 0, 0, 0.7)',
+    marginTop: 2,
   },
-  // Search and Edit Styles
   searchContainer: {
     paddingHorizontal: 20,
-    marginBottom: 16,
+    marginBottom: 10,
+    marginTop: 10,
   },
   searchInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    minHeight: 44,
   },
   searchIcon: {
-    marginRight: 12,
+    marginRight: 8,
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: fonts.normal,
     color: colors.white,
     padding: 0,
   },
   quickEditButton: {
-    padding: 4,
-    marginLeft: 8,
+    padding: 2,
+    marginLeft: 6,
   },
-  // FIXED Section Header Styles with proper margins
   sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-    paddingHorizontal: 20,
+    justifyContent: 'flex-start',
+    marginBottom: 10,
+    paddingHorizontal: 10,
   },
   manageButton: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
   },
   manageButtonText: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: fonts.medium,
     color: '#4ECDC4',
   },
   quickActionsSection: {
-    marginBottom: 30,
+    marginBottom: 18,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontFamily: fonts.bold,
     color: colors.white,
+    textAlign: 'left',
+    marginLeft: 0,
   },
   quickActionsList: {
-    paddingHorizontal: 20,
-    gap: 12,
+    paddingHorizontal: 16,
+    gap: 8,
   },
   quickActionButton: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 18,
-    paddingHorizontal: 20,
-    borderRadius: 16,
-    minWidth: 120,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    minWidth: 90,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   actionIcon: {
-    marginBottom: 8,
+    marginBottom: 6,
   },
   actionLabel: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: fonts.medium,
     color: colors.white,
     textAlign: 'center',
   },
   categoriesSection: {
+    paddingTop: 6,
     paddingHorizontal: 20,
-    paddingBottom: 16,
+    paddingBottom: 0,
   },
   categoriesList: {
     gap: 8,
@@ -1181,13 +1126,13 @@ const styles = StyleSheet.create({
   categoryChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: 'rgba(255,255,255,0.05)',
     borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: 'rgba(255,255,255,0.2)',
     borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    minWidth: 100,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    minWidth: 90,
   },
   categoryChipSelected: {
     backgroundColor: colors.white,
@@ -1197,147 +1142,147 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   categoryChipText: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: fonts.medium,
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: 'rgba(255,255,255,0.9)',
   },
   categoryChipTextSelected: {
     color: colors.homeBackground,
     fontFamily: fonts.semiBold,
   },
   contentSection: {
-    marginBottom: 30,
+    marginBottom: 18,
   },
   sectionHeader: {
-    marginBottom: 20,
+    marginBottom: 12,
   },
   sectionHeaderContent: {
     paddingHorizontal: 20,
   },
   sectionSubtitle: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: fonts.normal,
     color: 'rgba(255, 255, 255, 0.6)',
-    marginTop: 4,
+    marginTop: 2,
   },
-  // Support Card Enhanced Styles
   supportCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    marginHorizontal: 20,
-    marginBottom: 12,
-    padding: 20,
-    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    marginHorizontal: 16,
+    marginBottom: 8,
+    padding: 12,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+    minHeight: 70,
   },
   emergencyCard: {
     borderColor: '#FF6B6B',
-    backgroundColor: 'rgba(255, 107, 107, 0.1)',
+    backgroundColor: 'rgba(255, 107, 107, 0.08)',
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
   },
   cardIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 16,
+    marginRight: 10,
   },
   cardContent: {
     flex: 1,
-    marginRight: 12,
+    marginRight: 8,
   },
   cardTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 6,
+    gap: 6,
+    marginBottom: 4,
     flexWrap: 'wrap',
   },
   cardTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: fonts.bold,
     color: colors.white,
   },
   cardDescription: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: fonts.normal,
     color: 'rgba(255, 255, 255, 0.6)',
-    lineHeight: 20,
-    marginBottom: 6,
+    lineHeight: 16,
+    marginBottom: 4,
   },
   lastUpdated: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: fonts.normal,
     color: 'rgba(255, 255, 255, 0.4)',
     fontStyle: 'italic',
   },
   cardActions: {
     alignItems: 'flex-end',
-    gap: 8,
+    gap: 6,
   },
   editIconButton: {
-    padding: 6,
+    padding: 4,
     borderRadius: 8,
     backgroundColor: 'rgba(78, 205, 196, 0.1)',
   },
   expandedContent: {
-    marginTop: 16,
-    paddingTop: 16,
+    marginTop: 10,
+    paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255, 255, 255, 0.1)',
   },
   expandedText: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: fonts.normal,
     color: 'rgba(255, 255, 255, 0.8)',
-    lineHeight: 22,
+    lineHeight: 16,
   },
   editContentButton: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    marginTop: 12,
-    padding: 8,
+    marginTop: 8,
+    padding: 6,
     borderRadius: 8,
     backgroundColor: 'rgba(78, 205, 196, 0.1)',
-    gap: 6,
+    gap: 4,
   },
   editContentText: {
-    fontSize: 13,
+    fontSize: 11,
     fontFamily: fonts.medium,
     color: '#4ECDC4',
   },
   emergencySection: {
-    marginBottom: 20,
+    marginBottom: 12,
   },
   emergencyHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginBottom: 8,
+    gap: 6,
+    marginBottom: 6,
   },
   emergencySubtitle: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: fonts.normal,
     color: 'rgba(255, 255, 255, 0.6)',
-    marginBottom: 20,
+    marginBottom: 10,
   },
-  // Emergency Contact Styles
   emergencyContact: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    padding: 20,
-    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    padding: 12,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    marginBottom: 12,
-    marginHorizontal: 20,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+    marginBottom: 8,
+    marginHorizontal: 16,
+    minHeight: 60,
   },
   contactLeft: {
     flexDirection: 'row',
@@ -1345,36 +1290,36 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contactIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255, 107, 107, 0.1)',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 107, 107, 0.08)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 16,
+    marginRight: 10,
   },
   contactInfo: {
     flex: 1,
   },
   contactName: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: fonts.bold,
     color: colors.white,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   contactNumber: {
-    fontSize: 15,
+    fontSize: 12,
     fontFamily: fonts.medium,
     color: 'rgba(255, 255, 255, 0.9)',
-    marginBottom: 6,
+    marginBottom: 2,
   },
   contactMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
   },
   contactAvailability: {
-    fontSize: 13,
+    fontSize: 11,
     fontFamily: fonts.normal,
     color: 'rgba(255, 255, 255, 0.5)',
   },
@@ -1382,19 +1327,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#4CAF50',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
-    gap: 8,
-    minWidth: 80,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    gap: 6,
+    minWidth: 60,
     justifyContent: 'center',
   },
   callButtonText: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: fonts.medium,
     color: colors.white,
   },
   bottomSpacer: {
-    height: 30,
+    height: 18,
   },
 });

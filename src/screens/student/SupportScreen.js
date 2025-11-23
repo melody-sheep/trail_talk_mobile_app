@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../styles/colors';
 import { fonts } from '../../styles/fonts';
 import { UserContext } from '../../contexts/UserContext';
+import ReportModal from '../../components/ReportModal';
 
 export default function SupportScreen({ navigation }) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -152,6 +153,67 @@ export default function SupportScreen({ navigation }) {
       updatedBy: 'Student Affairs',
       editable: true
     }
+    ,
+    // Office of Student Affairs - CDO Campus (official contact)
+    {
+      id: 'studentaffairs-cdo',
+      category: 'resources',
+      title: 'Office of Student Affairs — CDO (Student Affairs)',
+      description: 'Contact for document requests (Good Moral Certificate, student ID updates)',
+      content: 'Phone: +63 926-905-3363\nEmail: studentaffairs-cdo@ustp.edu.ph\n\nServices:\n• Good Moral Certificates and verification\n• Student ID updates and replacements\n• Assistance with student records and requests\n\nHours: Mon-Fri, 8AM–5PM',
+      icon: 'business',
+      iconColor: '#4ECDC4',
+      emergency: false,
+      lastUpdated: '2024-01-20',
+      updatedBy: 'Office of Student Affairs - CDO',
+      editable: false,
+      isOfficial: true
+    },
+    // USTP Emergency Warning System (EWS)
+    {
+      id: 'ews',
+      category: 'resources',
+      title: 'USTP Emergency Warning System (EWS)',
+      description: 'Official color-coded alert levels and actions',
+      content: 'RED — Extreme / Full Emergency:\nOperations seriously impaired or halted. Multiple casualties or severe property damage possible.\nActions: Evacuate if instructed, follow IMT/security orders, seek shelter immediately.\n\nORANGE — Severe / Significant Emergency:\nSignificant damage; campus operations disrupted.\nActions: Prepare to suspend activities, follow campus advisories.\n\nYELLOW — Moderate / Active Emergency:\nLocalized incidents; campus functions continue with caution.\nActions: Monitor updates, avoid affected areas.\n\nGREEN — Normal / Monitoring:\nNo active threat; routine monitoring.\nActions: Continue normal operations and report hazards.',
+      icon: 'warning',
+      iconColor: '#FF6B6B',
+      emergency: true,
+      lastUpdated: '2024-01-18',
+      updatedBy: 'USTP System',
+      editable: false,
+      isOfficial: true
+    },
+    // USTP System Campuses
+    {
+      id: 'ustp-campuses',
+      category: 'resources',
+      title: 'USTP System Campuses',
+      description: 'Overview of USTP campuses and locations',
+      content: 'Main Campus: USTP Alubijid\nMajor Campuses: Cagayan de Oro, Claveria, Villanueva\nSatellite Campuses: Balubal, Jasaan, Oroquieta, Panaon\n\nIf you need campus-specific assistance, contact the local campus Student Affairs office.',
+      icon: 'map',
+      iconColor: '#FFA726',
+      emergency: false,
+      lastUpdated: '2024-01-18',
+      updatedBy: 'USTP System',
+      editable: false,
+      isOfficial: true
+    },
+    // Incident Management Team (IMT)
+    {
+      id: 'imt',
+      category: 'resources',
+      title: 'Incident Management Team (IMT)',
+      description: 'Team responsible for coordinating emergency response across USTP',
+      content: 'Chairperson: Vice President for Administration and Legal Affairs – USTP System\nCo-Chairperson: Director for Disaster Risk Reduction and Management Office – USTP System\nMembers: Chief of Security and Safety (each campus), Security & Safety Coordinator – USTP System, Incident Commander (each major campus)\n\nThe IMT issues official campus alerts and coordinates with local authorities during emergencies.',
+      icon: 'people',
+      iconColor: '#8B5CF6',
+      emergency: false,
+      lastUpdated: '2024-01-18',
+      updatedBy: 'USTP System',
+      editable: false,
+      isOfficial: true
+    }
   ]);
 
   // Quick action buttons
@@ -161,17 +223,19 @@ export default function SupportScreen({ navigation }) {
       label: 'Report Content', 
       icon: 'flag-outline', 
       color: '#FF6B6B',
-      action: () => navigation.navigate('ReportFlow')
+      action: () => setReportModalVisible(true)
     },
     { 
       id: 'find-support', 
       label: 'Find Support', 
       icon: 'search-outline', 
       color: '#4ECDC4',
-      action: () => navigation.navigate('Communities', { 
-        filter: 'support',
-        source: 'support-page'
-      })
+      action: () => {
+        // reuse the support page UI: switch to 'resources' filter
+        setActiveCategory('resources');
+        // scroll to top so user sees the filtered list
+        scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+      }
     },
     { 
       id: 'create-community', 
@@ -188,6 +252,9 @@ export default function SupportScreen({ navigation }) {
       action: () => scrollToEmergency()
     }
   ];
+
+  // Local modal state for reporting (use ReportModal component)
+  const [reportModalVisible, setReportModalVisible] = useState(false);
 
   // USTP Specific Emergency contacts
   const emergencyContacts = [
@@ -363,7 +430,7 @@ export default function SupportScreen({ navigation }) {
         
         {/* RIGHT: Featured Label + Dropdown Icon */}
         <View style={styles.headerRight}>
-          <ProfessionalBadge type="featured" size="medium" />
+          <ProfessionalBadge type="featured" size="small" />
           <Ionicons 
             name={showFeatured ? 'chevron-up' : 'chevron-down'} 
             size={20} 
@@ -376,7 +443,7 @@ export default function SupportScreen({ navigation }) {
       {/* CONTENT that shows/hides with dropdown */}
       {showFeatured && (
         <View style={styles.featuredContent}>
-          {/* Free Plan Card */}
+          {/* Student Free/Basic Plan Card (mirrors faculty layout) */}
           <View style={styles.planCard}>
             <View style={styles.planHeader}>
               <View style={styles.planTitleContainer}>
@@ -404,10 +471,6 @@ export default function SupportScreen({ navigation }) {
                 <Ionicons name="checkmark-circle" size={16} color="#4CAF50" />
                 <Text style={styles.featureItem}>Basic community features</Text>
               </View>
-              <View style={styles.featureRow}>
-                <Ionicons name="checkmark-circle" size={16} color="#4CAF50" />
-                <Text style={styles.featureItem}>Up to 50 members each</Text>
-              </View>
             </View>
             
             <TouchableOpacity 
@@ -424,7 +487,7 @@ export default function SupportScreen({ navigation }) {
             </TouchableOpacity>
           </View>
 
-          {/* Premium Plan Card */}
+          {/* Student Premium / Department Plan Card (same visual treatment as faculty) */}
           <View style={[styles.planCard, styles.premiumCard]}>
             <View style={styles.planHeader}>
               <View style={styles.planTitleContainer}>
@@ -433,7 +496,7 @@ export default function SupportScreen({ navigation }) {
                   Advanced tools for serious community builders
                 </Text>
               </View>
-              <ProfessionalBadge type="verified" size="medium" />
+              <ProfessionalBadge type="verified" size="small" />
             </View>
             
             <View style={styles.featuresList}>
@@ -447,15 +510,7 @@ export default function SupportScreen({ navigation }) {
               </View>
               <View style={styles.featureRow}>
                 <Ionicons name="checkmark-circle" size={16} color="#FFD700" />
-                <Text style={styles.premiumFeatureItem}>Advanced analytics</Text>
-              </View>
-              <View style={styles.featureRow}>
-                <Ionicons name="checkmark-circle" size={16} color="#FFD700" />
                 <Text style={styles.premiumFeatureItem}>Priority support</Text>
-              </View>
-              <View style={styles.featureRow}>
-                <Ionicons name="checkmark-circle" size={16} color="#FFD700" />
-                <Text style={styles.premiumFeatureItem}>Custom branding</Text>
               </View>
             </View>
             
@@ -751,6 +806,12 @@ export default function SupportScreen({ navigation }) {
         </View>
 
         <View style={styles.bottomSpacer} />
+        <ReportModal
+          visible={reportModalVisible}
+          onClose={() => setReportModalVisible(false)}
+          postId={null}
+          onSubmitted={() => { setReportModalVisible(false); /* optionally refresh state */ }}
+        />
       </ScrollView>
     </SafeAreaView>
   );
@@ -794,9 +855,9 @@ const styles = StyleSheet.create({
   headerSubtitle: {
     fontSize: 16,
     fontFamily: fonts.normal,
-    color: 'rgba(255, 255, 255, 0.8)',
-    textAlign: 'center',
+    color: 'rgba(255,255,255,0.8)',
     marginTop: 8,
+    textAlign: 'center',
   },
   collapsedHeaderContent: {
     position: 'absolute',
@@ -806,16 +867,15 @@ const styles = StyleSheet.create({
     bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 12,
   },
   collapsedHeaderTitle: {
     fontSize: 20,
     fontFamily: fonts.bold,
     color: colors.white,
+    textAlign: 'center',
   },
   editHeaderButton: {
-    padding: 8,
+    padding: 6,
     borderRadius: 8,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
@@ -826,38 +886,39 @@ const styles = StyleSheet.create({
     right: 0,
     zIndex: 20,
     backgroundColor: colors.homeBackground,
-    paddingTop: 16,
+    paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
   container: {
     flex: 1,
     backgroundColor: colors.homeBackground,
-    marginTop: 160,
+    marginTop: 200,
   },
   scrollContent: {
     flexGrow: 1,
-    paddingTop: 140,
-    paddingBottom: 30,
+    paddingTop: 70,
+    paddingBottom: 20,
   },
   // ENHANCED Badge Styles with Shield
   badgeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1.5,
+    borderWidth: 1.2,
     borderRadius: 8,
   },
   badgeText: {
     fontFamily: fonts.semiBold,
     letterSpacing: 0.3,
+    fontSize: 11,
   },
   // NEW: Enhanced Featured Section Styles
   featuredSection: {
-    marginHorizontal: 20,
-    marginTop: 10,
-    marginBottom: 30,
+    marginHorizontal: 16,
+    marginTop: 20,
+    marginBottom: 18,
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 16,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
     overflow: 'hidden',
@@ -866,217 +927,223 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 20,
+    padding: 14,
     backgroundColor: 'rgba(255, 255, 255, 0.03)',
   },
   headerLeft: {
     flex: 1,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 16,
     fontFamily: fonts.bold,
     color: colors.white,
   },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 8,
   },
   dropdownIcon: {
     marginLeft: 4,
   },
   featuredContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingHorizontal: 14,
+    paddingBottom: 14,
+    paddingTop: 12, // add top padding for membership plan content
   },
   planCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    padding: 20,
-    borderRadius: 16,
+    padding: 14,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
-    marginBottom: 16,
+    marginBottom: 10,
   },
   premiumCard: {
-    backgroundColor: 'rgba(255, 215, 0, 0.08)',
-    borderColor: 'rgba(255, 215, 0, 0.3)',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   planHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 16,
+    marginBottom: 10,
   },
   planTitleContainer: {
     flex: 1,
   },
   planName: {
-    fontSize: 18,
+    fontSize: 15,
     fontFamily: fonts.bold,
     color: colors.white,
-    marginBottom: 6,
+    marginBottom: 4,
   },
   premiumPlanName: {
-    fontSize: 18,
+    fontSize: 15,
     fontFamily: fonts.bold,
     color: '#FFD700',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   planDescription: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: fonts.normal,
     color: 'rgba(255, 255, 255, 0.7)',
-    lineHeight: 18,
+    lineHeight: 16,
   },
   communityCount: {
     backgroundColor: 'rgba(76, 175, 80, 0.2)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
   },
   communityCountFull: {
     backgroundColor: 'rgba(255, 107, 107, 0.2)',
   },
   countText: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: fonts.bold,
     color: '#4CAF50',
   },
   featuresList: {
-    marginBottom: 20,
+    marginBottom: 12,
   },
   featureRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   featureItem: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: fonts.normal,
     color: 'rgba(255, 255, 255, 0.8)',
-    marginLeft: 8,
-    lineHeight: 18,
+    marginLeft: 6,
+    lineHeight: 16,
   },
   premiumFeatureItem: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: fonts.normal,
     color: 'rgba(255, 255, 255, 0.9)',
-    marginLeft: 8,
-    lineHeight: 18,
+    marginLeft: 6,
+    lineHeight: 16,
   },
   planButton: {
     backgroundColor: '#4ECDC4',
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
     alignItems: 'center',
   },
   disabledButton: {
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
   },
   planButtonText: {
-    fontSize: 16,
+    fontSize: 13,
     fontFamily: fonts.bold,
     color: colors.white,
   },
   premiumButton: {
     backgroundColor: '#FFD700',
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
     alignItems: 'center',
   },
   premiumButtonText: {
-    fontSize: 16,
+    fontSize: 13,
     fontFamily: fonts.bold,
     color: '#000',
   },
   premiumButtonSubtext: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: fonts.normal,
     color: 'rgba(0, 0, 0, 0.7)',
-    marginTop: 4,
+    marginTop: 2,
   },
   // Search and Edit Styles
   searchContainer: {
     paddingHorizontal: 20,
-    marginBottom: 16,
+    marginBottom: 10,
+    marginTop: 10, // add top margin for search field
   },
   searchInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    minHeight: 44,
   },
   searchIcon: {
-    marginRight: 12,
+    marginRight: 8,
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: fonts.normal,
     color: colors.white,
     padding: 0,
   },
   quickEditButton: {
-    padding: 4,
-    marginLeft: 8,
+    padding: 2,
+    marginLeft: 6,
   },
   // FIXED Section Header Styles with proper margins
   sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-    paddingHorizontal: 20, // ADDED: Proper margin alignment
+    justifyContent: 'flex-start',
+    marginBottom: 10,
+    paddingHorizontal: 10, // reduced from 20
   },
   manageButton: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
   },
   manageButtonText: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: fonts.medium,
     color: '#4ECDC4',
   },
   quickActionsSection: {
-    marginBottom: 30,
+    marginBottom: 18,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontFamily: fonts.bold,
     color: colors.white,
+    textAlign: 'left',
+    marginLeft: 0, // ensure no extra left margin
   },
   quickActionsList: {
-    paddingHorizontal: 20, // FIXED: Now aligned with other content
-    gap: 12,
+    paddingHorizontal: 16,
+    gap: 8,
   },
   quickActionButton: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 18,
-    paddingHorizontal: 20,
-    borderRadius: 16,
-    minWidth: 120,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    minWidth: 90,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   actionIcon: {
-    marginBottom: 8,
+    marginBottom: 6,
   },
   actionLabel: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: fonts.medium,
     color: colors.white,
     textAlign: 'center',
   },
   categoriesSection: {
+    paddingTop: 6,
     paddingHorizontal: 20,
-    paddingBottom: 16,
+    paddingBottom: 0,
   },
   categoriesList: {
     gap: 8,
@@ -1084,13 +1151,13 @@ const styles = StyleSheet.create({
   categoryChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: 'rgba(255,255,255,0.05)',
     borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: 'rgba(255,255,255,0.2)',
     borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    minWidth: 100,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    minWidth: 90,
   },
   categoryChipSelected: {
     backgroundColor: colors.white,
@@ -1100,147 +1167,149 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   categoryChipText: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: fonts.medium,
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: 'rgba(255,255,255,0.9)',
   },
   categoryChipTextSelected: {
     color: colors.homeBackground,
     fontFamily: fonts.semiBold,
   },
   contentSection: {
-    marginBottom: 30,
+    marginBottom: 18,
   },
   sectionHeader: {
-    marginBottom: 20,
+    marginBottom: 12,
   },
   sectionHeaderContent: {
     paddingHorizontal: 20,
   },
   sectionSubtitle: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: fonts.normal,
     color: 'rgba(255, 255, 255, 0.6)',
-    marginTop: 4,
+    marginTop: 2,
   },
   // Support Card Enhanced Styles
   supportCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    marginHorizontal: 20,
-    marginBottom: 12,
-    padding: 20,
-    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    marginHorizontal: 16,
+    marginBottom: 8,
+    padding: 12,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+    minHeight: 70,
   },
   emergencyCard: {
     borderColor: '#FF6B6B',
-    backgroundColor: 'rgba(255, 107, 107, 0.1)',
+    backgroundColor: 'rgba(255, 107, 107, 0.08)',
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
   },
   cardIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 16,
+    marginRight: 10,
   },
   cardContent: {
     flex: 1,
-    marginRight: 12,
+    marginRight: 8,
   },
   cardTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 6,
+    gap: 6,
+    marginBottom: 4,
     flexWrap: 'wrap',
   },
   cardTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: fonts.bold,
     color: colors.white,
   },
   cardDescription: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: fonts.normal,
     color: 'rgba(255, 255, 255, 0.6)',
-    lineHeight: 20,
-    marginBottom: 6,
+    lineHeight: 16,
+    marginBottom: 4,
   },
   lastUpdated: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: fonts.normal,
     color: 'rgba(255, 255, 255, 0.4)',
     fontStyle: 'italic',
   },
   cardActions: {
     alignItems: 'flex-end',
-    gap: 8,
+    gap: 6,
   },
   editIconButton: {
-    padding: 6,
+    padding: 4,
     borderRadius: 8,
     backgroundColor: 'rgba(78, 205, 196, 0.1)',
   },
   expandedContent: {
-    marginTop: 16,
-    paddingTop: 16,
+    marginTop: 10,
+    paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255, 255, 255, 0.1)',
   },
   expandedText: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: fonts.normal,
     color: 'rgba(255, 255, 255, 0.8)',
-    lineHeight: 22,
+    lineHeight: 16,
   },
   editContentButton: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    marginTop: 12,
-    padding: 8,
+    marginTop: 8,
+    padding: 6,
     borderRadius: 8,
     backgroundColor: 'rgba(78, 205, 196, 0.1)',
-    gap: 6,
+    gap: 4,
   },
   editContentText: {
-    fontSize: 13,
+    fontSize: 11,
     fontFamily: fonts.medium,
     color: '#4ECDC4',
   },
   emergencySection: {
-    marginBottom: 20,
+    marginBottom: 12,
   },
   emergencyHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginBottom: 8,
+    gap: 6,
+    marginBottom: 6,
   },
   emergencySubtitle: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: fonts.normal,
     color: 'rgba(255, 255, 255, 0.6)',
-    marginBottom: 20,
+    marginBottom: 10,
   },
   // Emergency Contact Styles
   emergencyContact: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    padding: 20,
-    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    padding: 12,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    marginBottom: 12,
-    marginHorizontal: 20,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+    marginBottom: 8,
+    marginHorizontal: 16,
+    minHeight: 60,
   },
   contactLeft: {
     flexDirection: 'row',
@@ -1248,36 +1317,36 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contactIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255, 107, 107, 0.1)',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 107, 107, 0.08)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 16,
+    marginRight: 10,
   },
   contactInfo: {
     flex: 1,
   },
   contactName: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: fonts.bold,
     color: colors.white,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   contactNumber: {
-    fontSize: 15,
+    fontSize: 12,
     fontFamily: fonts.medium,
     color: 'rgba(255, 255, 255, 0.9)',
-    marginBottom: 6,
+    marginBottom: 2,
   },
   contactMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
   },
   contactAvailability: {
-    fontSize: 13,
+    fontSize: 11,
     fontFamily: fonts.normal,
     color: 'rgba(255, 255, 255, 0.5)',
   },
@@ -1285,19 +1354,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#4CAF50',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
-    gap: 8,
-    minWidth: 80,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    gap: 6,
+    minWidth: 60,
     justifyContent: 'center',
   },
   callButtonText: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: fonts.medium,
     color: colors.white,
   },
   bottomSpacer: {
-    height: 30,
+    height: 18,
   },
 });

@@ -545,7 +545,7 @@ const styles = StyleSheet.create({
     bottom: 0 
   },
   headerTitle: { 
-    fontSize: 28, 
+    fontSize: 25, 
     fontFamily: fonts.bold, 
     color: colors.white,
     textAlign: 'center',
