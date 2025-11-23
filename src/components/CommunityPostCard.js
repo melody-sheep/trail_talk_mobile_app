@@ -226,21 +226,21 @@ const CommunityPostCard = ({ post, userRole = 'student', onInteraction }) => {
   // Get icon source based on interaction state - USE SAME ICONS AS POSTCARD
   const getLikeIcon = () => 
     isLiked 
-      ? require('../../assets/post_card_icons/like_icon_fill.png')
-      : require('../../assets/post_card_icons/like_icon.png');
+      ? require('../../assets/post_interaction_icons/like_icon_fill.png')
+      : require('../../assets/post_interaction_icons/like_icon.png');
 
   const getCommentIcon = () => 
-    require('../../assets/post_card_icons/comment_icon.png');
+    require('../../assets/post_interaction_icons/comment_icon.png');
 
   const getRepostIcon = () => 
     isReposted 
-      ? require('../../assets/post_card_icons/repost_icon_fill.png')
-      : require('../../assets/post_card_icons/repost_icon.png');
+      ? require('../../assets/post_interaction_icons/repost_icon_fill.png')
+      : require('../../assets/post_interaction_icons/repost_icon.png');
 
   const getBookmarkIcon = () => 
     isBookmarked 
-      ? require('../../assets/post_card_icons/book_mark_icon_fill.png')
-      : require('../../assets/post_card_icons/book_mark_icon.png');
+      ? require('../../assets/post_interaction_icons/book_mark_icon_fill.png')
+      : require('../../assets/post_interaction_icons/book_mark_icon.png');
 
   // Get text color based on interaction state - SAME AS POSTCARD
   const getLikeTextColor = () => 
@@ -256,11 +256,9 @@ const CommunityPostCard = ({ post, userRole = 'student', onInteraction }) => {
     isBookmarked ? '#FFCC00' : 'rgba(255, 255, 255, 0.8)';
 
   // Get the display name - use same logic as PostCard
-  // Use the author's display name and true role when available
-
-  // Fetch author profile (with avatar and nickname) if missing
   const [authorProfile, setAuthorProfile] = useState(null);
   const [avatarUrl, setAvatarUrl] = useState(null);
+  
   useEffect(() => {
     if (!post.author && post.author_id) {
       fetchAuthorProfile(post.author_id);
@@ -277,7 +275,6 @@ const CommunityPostCard = ({ post, userRole = 'student', onInteraction }) => {
       if (!error && data) {
         setAuthorProfile(data);
         if (data.avatar_url) {
-          // Get public URL from Supabase storage
           const { data: publicUrlData } = supabase.storage
             .from('avatars')
             .getPublicUrl(data.avatar_url);
@@ -293,13 +290,11 @@ const CommunityPostCard = ({ post, userRole = 'student', onInteraction }) => {
     }
   };
 
-  // Show nickname unless anonymous posting is toggled
   // Display name logic: show nickname unless anonymous posting is toggled
   const getDisplayName = () => {
     if (post.is_anonymous) {
       return post.anonymous_username || 'Anonymous';
     }
-    // Prefer nickname, then display_name, then username
     return (
       post.author?.nickname ||
       authorProfile?.nickname ||
@@ -312,12 +307,11 @@ const CommunityPostCard = ({ post, userRole = 'student', onInteraction }) => {
   };
 
   // Use true user role from DB
-  // True user role for icon/label
   const getAuthorRole = () => {
     return post.author?.user_type || authorProfile?.user_type || post.user_type || userRole;
   };
 
-  // Ionicons outline for role
+  // Ionicons outline for role - EXACT SAME AS POSTCARD
   const getRoleIconName = (role) => {
     switch((role || '').toLowerCase()) {
       case 'faculty': return 'school-outline';
@@ -327,7 +321,7 @@ const CommunityPostCard = ({ post, userRole = 'student', onInteraction }) => {
     }
   };
 
-  // Ionicons outline for category, matching CreateCommunityPostScreen
+  // Ionicons outline for category - EXACT SAME AS POSTCARD
   const getCategoryIconName = (category) => {
     switch((category || '').toString().toLowerCase()) {
       case 'discussion': return 'chatbubble-outline';
@@ -337,6 +331,64 @@ const CommunityPostCard = ({ post, userRole = 'student', onInteraction }) => {
       case 'resource': return 'book-outline';
       default: return 'document-text-outline';
     }
+  };
+
+  // Professional Badge Component - FROM SUPPORTSCREEN
+  const ProfessionalBadge = ({ type, size = 'medium' }) => {
+    const badgeConfig = {
+      verified: {
+        icon: 'shield-checkmark',
+        color: '#1877F2',
+        label: 'Verified',
+        bgColor: 'rgba(24, 119, 242, 0.1)',
+        borderColor: '#1877F2'
+      },
+      official: {
+        icon: 'shield-checkmark',
+        color: '#4CAF50',
+        label: 'Official',
+        bgColor: 'rgba(76, 175, 80, 0.1)',
+        borderColor: '#4CAF50'
+      },
+      featured: {
+        icon: 'star',
+        color: '#FFD700',
+        label: 'Featured',
+        bgColor: 'rgba(255, 215, 0, 0.1)',
+        borderColor: '#FFD700'
+      }
+    };
+
+    const config = badgeConfig[type];
+    const isSmall = size === 'small';
+    const iconSize = isSmall ? 14 : 16;
+    const fontSize = isSmall ? 10 : 12;
+    const padding = isSmall ? 6 : 8;
+
+    return (
+      <View style={[
+        styles.badgeContainer,
+        { 
+          backgroundColor: config.bgColor,
+          borderColor: config.borderColor,
+          paddingHorizontal: padding,
+          paddingVertical: padding - 2,
+          borderRadius: 8
+        }
+      ]}>
+        <Ionicons name={config.icon} size={iconSize} color={config.color} />
+        <Text style={[
+          styles.badgeText, 
+          { 
+            color: config.color, 
+            fontSize: fontSize,
+            marginLeft: 4
+          }
+        ]}>
+          {config.label}
+        </Text>
+      </View>
+    );
   };
 
   return (
@@ -353,7 +405,7 @@ const CommunityPostCard = ({ post, userRole = 'student', onInteraction }) => {
             />
           ) : (
             <Image
-              source={require('../../assets/post_card_icons/anon_profile_icon.png')}
+              source={require('../../assets/post_interaction_icons/anon_profile_icon.png')}
               style={styles.anonIcon}
               resizeMode="contain"
             />
@@ -380,13 +432,15 @@ const CommunityPostCard = ({ post, userRole = 'student', onInteraction }) => {
             </TouchableOpacity>
           </View>
 
-          {/* Category Section */}
+          {/* Category Section with Professional Badge */}
           <View style={styles.categorySection}>
             <Ionicons name={getCategoryIconName(post.category)} size={16} color="rgba(255,255,255,0.9)" style={styles.categoryIcon} />
             <Text style={styles.categoryText}>{post.category}</Text>
+            {post.is_official && <ProfessionalBadge type="official" size="small" />}
+            {post.is_featured && <ProfessionalBadge type="featured" size="small" />}
           </View>
 
-          {/* Content Box */}
+          {/* Content Box - SUPPORTSCREEN STYLE */}
           <View style={styles.contentBox}>
             <Text style={styles.contentText}>{post.content}</Text>
           </View>
@@ -474,35 +528,7 @@ const formatTime = (timestamp) => {
   else return `${Math.floor(diffInHours / 24)}d ago`;
 };
 
-// Get category icons - SAME AS POSTCARD
-const getCategoryIcon = (category) => {
-  switch(category) {
-    case 'Academics': 
-    case 'Academic': 
-    case 'Discussion': 
-    case 'Question': 
-    case 'Announcement': 
-      return require('../../assets/post_card_icons/academic_icon.png');
-    
-    case 'Rant': 
-    case 'Resource': 
-    case 'General': 
-      return require('../../assets/post_card_icons/rant_icon.png');
-    
-    case 'Support': 
-    case 'Help': 
-      return require('../../assets/post_card_icons/support_icon.png');
-    
-    case 'Campus': 
-    case 'Event': 
-      return require('../../assets/post_card_icons/campus_icon.png');
-    
-    default: 
-      return require('../../assets/post_card_icons/general_icon.png');
-  }
-};
-
-// Styles - EXACTLY THE SAME AS POSTCARD
+// Styles - EXACTLY THE SAME AS POSTCARD + PROFESSIONAL BADGES
 const styles = StyleSheet.create({
   container: {
     backgroundColor: '#252428',
@@ -554,11 +580,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  roleIcon: {
-    width: 14,
-    height: 14,
-    marginRight: 6,
-  },
   roleText: {
     fontSize: 13,
     fontFamily: fonts.medium,
@@ -600,6 +621,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: fonts.semiBold,
     color: colors.white,
+    marginRight: 8,
+  },
+  badgeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    marginRight: 6,
+  },
+  badgeText: {
+    fontFamily: fonts.semiBold,
   },
   contentBox: {
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
