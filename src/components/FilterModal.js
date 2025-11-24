@@ -42,36 +42,53 @@ const FilterModal = ({ visible, onClose, onApplyFilters, selectedCategories = []
       id: 'academics', 
       name: 'Academics', 
       icon: 'school-outline',
+      selectedIcon: 'school',
       iconType: 'Ionicons',
-      color: '#4ECDC4'
+      // neon blue when selected
+      color: '#00E5FF',
+      bgColor: 'rgba(0, 229, 255, 0.12)',
+      borderColor: 'rgba(0, 229, 255, 0.25)'
     },
     { 
       id: 'rant', 
       name: 'Rant', 
-      icon: 'chatbubble-outline',
+      icon: 'flame-outline',
+      selectedIcon: 'flame',
       iconType: 'Ionicons',
-      color: '#FF6B6B'
+      // bright ember yellow/orange when selected
+      color: '#FFB020',
+      bgColor: 'rgba(255, 176, 32, 0.12)',
+      borderColor: 'rgba(255, 176, 32, 0.25)'
     },
     { 
       id: 'support', 
       name: 'Support', 
-      icon: 'handshake-outline',
-      iconType: 'MaterialIcons',
-      color: '#45B7D1'
+      icon: 'heart-outline',
+      selectedIcon: 'heart',
+      iconType: 'Ionicons',
+      color: '#EC4899',
+      bgColor: 'rgba(236, 72, 153, 0.15)',
+      borderColor: 'rgba(236, 72, 153, 0.3)'
     },
     { 
       id: 'campus', 
       name: 'Campus', 
       icon: 'business-outline',
+      selectedIcon: 'business',
       iconType: 'Ionicons',
-      color: '#96CEB4'
+      color: '#10B981',
+      bgColor: 'rgba(16, 185, 129, 0.15)',
+      borderColor: 'rgba(16, 185, 129, 0.3)'
     },
     { 
       id: 'general', 
       name: 'General', 
-      icon: 'chat-outline',
+      icon: 'chatbubble-outline',
+      selectedIcon: 'chatbubble',
       iconType: 'Ionicons',
-      color: '#FFCC00'
+      color: '#8B5CF6',
+      bgColor: 'rgba(139, 92, 246, 0.15)',
+      borderColor: 'rgba(139, 92, 246, 0.3)'
     }
   ];
 
@@ -99,20 +116,26 @@ const FilterModal = ({ visible, onClose, onApplyFilters, selectedCategories = []
   const isCategorySelected = (categoryId) => tempSelectedCategories.includes(categoryId);
 
   const renderIcon = (category) => {
+    const isSelected = isCategorySelected(category.id);
+    const iconName = isSelected ? category.selectedIcon : category.icon;
+    const iconColor = isSelected ? category.color : 'rgba(255, 255, 255, 0.7)';
+
     const iconProps = {
-      size: 20,
-      color: isCategorySelected(category.id) ? colors.homeBackground : category.color
+      size: 22,
+      color: iconColor
     };
 
     switch(category.iconType) {
       case 'MaterialIcons':
-        return <MaterialIcons name={category.icon} {...iconProps} />;
+        return <MaterialIcons name={iconName} {...iconProps} />;
       case 'FontAwesome5':
-        return <FontAwesome5 name={category.icon} {...iconProps} />;
+        return <FontAwesome5 name={iconName} {...iconProps} />;
       default:
-        return <Ionicons name={category.icon} {...iconProps} />;
+        return <Ionicons name={iconName} {...iconProps} />;
     }
   };
+
+  const hasSelections = tempSelectedCategories.length > 0;
 
   return (
     <Modal
@@ -158,36 +181,48 @@ const FilterModal = ({ visible, onClose, onApplyFilters, selectedCategories = []
               contentContainerStyle={styles.categoriesContent}
             >
               <View style={styles.categoriesGrid}>
-                {categories.map((category) => (
-                  <TouchableOpacity
-                    key={category.id}
-                    style={[
-                      styles.categoryChip,
-                      isCategorySelected(category.id) && styles.categoryChipSelected,
-                      isCategorySelected(category.id) && { backgroundColor: category.color }
-                    ]}
-                    onPress={() => toggleCategory(category.id)}
-                    activeOpacity={0.7}
-                  >
-                    <View style={styles.categoryIconContainer}>
-                      {renderIcon(category)}
-                    </View>
-                    <Text style={[
-                      styles.categoryName,
-                      isCategorySelected(category.id) && styles.categoryNameSelected
-                    ]}>
-                      {category.name}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                {categories.map((category) => {
+                  const isSelected = isCategorySelected(category.id);
+                  return (
+                    <TouchableOpacity
+                      key={category.id}
+                      style={[
+                        styles.categoryChip,
+                        isSelected && [
+                          styles.categoryChipSelected,
+                          { 
+                            backgroundColor: category.bgColor,
+                            borderColor: category.color
+                          }
+                        ]
+                      ]}
+                      onPress={() => toggleCategory(category.id)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.iconContainer}>
+                        {renderIcon(category)}
+                      </View>
+                      <Text style={[
+                        styles.categoryName,
+                        isSelected && [
+                          styles.categoryNameSelected,
+                          { color: category.color }
+                        ]
+                      ]}>
+                        {category.name}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </ScrollView>
 
             {/* Selection Summary */}
-            {tempSelectedCategories.length > 0 && (
+            {hasSelections && (
               <View style={styles.selectionSummary}>
+                <Ionicons name="checkmark-circle" size={18} color="#22C55E" />
                 <Text style={styles.summaryText}>
-                  {tempSelectedCategories.length} category{tempSelectedCategories.length !== 1 ? 's' : ''} selected
+                  {tempSelectedCategories.length} categor{tempSelectedCategories.length !== 1 ? 'ies' : 'y'} selected
                 </Text>
               </View>
             )}
@@ -195,26 +230,38 @@ const FilterModal = ({ visible, onClose, onApplyFilters, selectedCategories = []
             {/* Action Buttons */}
             <View style={styles.actionButtons}>
               <TouchableOpacity 
-                style={[styles.button, styles.clearButton]}
+                style={[
+                  styles.button, 
+                  styles.clearButton,
+                  !hasSelections && styles.buttonDisabled
+                ]}
                 onPress={handleClear}
-                disabled={tempSelectedCategories.length === 0}
+                disabled={!hasSelections}
               >
                 <Text style={[
                   styles.clearButtonText,
-                  tempSelectedCategories.length === 0 && styles.disabledButtonText
+                  !hasSelections && styles.disabledButtonText
                 ]}>
                   Clear All
                 </Text>
               </TouchableOpacity>
               
               <TouchableOpacity 
-                style={[styles.button, styles.applyButton]}
+                style={[
+                  styles.button, 
+                  styles.applyButton,
+                  !hasSelections && styles.buttonDisabled
+                ]}
                 onPress={handleApply}
+                disabled={!hasSelections}
               >
-                <Text style={styles.applyButtonText}>
+                <Text style={[
+                  styles.applyButtonText,
+                  !hasSelections && styles.disabledButtonText
+                ]}>
                   Apply Filters
                 </Text>
-                {tempSelectedCategories.length > 0 && (
+                {hasSelections && (
                   <View style={styles.filterCount}>
                     <Text style={styles.filterCountText}>
                       {tempSelectedCategories.length}
@@ -223,6 +270,9 @@ const FilterModal = ({ visible, onClose, onApplyFilters, selectedCategories = []
                 )}
               </TouchableOpacity>
             </View>
+
+            {/* Bottom margin for better touch area */}
+            <View style={styles.bottomTouchArea} />
           </View>
         </Animated.View>
       </View>
@@ -243,8 +293,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.homeBackground,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    maxHeight: screenHeight * 0.65, // More compressed height
-    paddingBottom: 20,
+    maxHeight: screenHeight * 0.65,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -271,6 +320,7 @@ const styles = StyleSheet.create({
   modalContent: {
     paddingHorizontal: 20,
     paddingTop: 16,
+    paddingBottom: 8, // Reduced bottom padding since we have bottomTouchArea
   },
   sectionTitle: {
     fontSize: 18,
@@ -285,7 +335,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   categoriesContainer: {
-    maxHeight: 280, // Reduced height for compression
+    maxHeight: 280,
   },
   categoriesContent: {
     paddingBottom: 8,
@@ -293,25 +343,25 @@ const styles = StyleSheet.create({
   categoriesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10, // Using gap instead of margins for better spacing
+    gap: 10,
   },
   categoryChip: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 20, // More rounded for modern look
+    borderRadius: 16,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderWidth: 1.5,
     borderColor: 'rgba(255, 255, 255, 0.1)',
-    minWidth: (screenWidth - 60) / 2 - 5, // Adjusted for gap
+    minWidth: (screenWidth - 60) / 2 - 5,
     flexGrow: 1,
   },
   categoryChipSelected: {
-    borderColor: 'transparent',
+    borderWidth: 1.5,
   },
-  categoryIconContainer: {
-    marginRight: 8,
+  iconContainer: {
+    marginRight: 10,
   },
   categoryName: {
     fontSize: 14,
@@ -319,35 +369,45 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.9)',
   },
   categoryNameSelected: {
-    color: colors.homeBackground,
     fontFamily: fonts.semiBold,
   },
   selectionSummary: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(34, 197, 94, 0.1)',
     padding: 12,
     borderRadius: 12,
     marginTop: 12,
-    alignItems: 'center',
+    gap: 8,
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.2)',
   },
   summaryText: {
     fontSize: 14,
     fontFamily: fonts.medium,
-    color: '#FFCC00',
+    color: '#22C55E',
   },
   actionButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 16,
     gap: 12,
+    marginBottom: 8, // Added margin bottom
   },
   button: {
     flex: 1,
-    paddingVertical: 14,
+    paddingVertical: 16, // Increased padding for better touch
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
     gap: 8,
+    minHeight: 52, // Minimum touch target size
+  },
+  buttonDisabled: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   clearButton: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
@@ -355,33 +415,39 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   applyButton: {
-    backgroundColor: '#FFCC00',
+    backgroundColor: '#22C55E', // Bright green
+    borderWidth: 1,
+    borderColor: '#22C55E',
   },
   clearButtonText: {
     fontSize: 16,
     fontFamily: fonts.medium,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: 'rgba(255, 255, 255, 0.9)',
   },
   applyButtonText: {
     fontSize: 16,
     fontFamily: fonts.semiBold,
-    color: colors.homeBackground,
+    color: colors.white,
   },
   disabledButtonText: {
-    color: 'rgba(255, 255, 255, 0.3)',
+    color: 'rgba(255, 255, 255, 0.4)',
   },
   filterCount: {
-    backgroundColor: colors.homeBackground,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    backgroundColor: colors.white,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
+    marginLeft: 4,
   },
   filterCountText: {
     fontSize: 12,
     fontFamily: fonts.semiBold,
-    color: '#FFCC00',
+    color: '#22C55E',
+  },
+  bottomTouchArea: {
+    height: 20, // Extra bottom margin for better touch area
   },
 });
 
