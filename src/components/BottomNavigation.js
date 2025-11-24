@@ -1,6 +1,7 @@
 // src/components/BottomNavigation.js
 import React from 'react';
 import { View, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { colors } from '../styles/colors';
 
@@ -81,6 +82,14 @@ export default function BottomNavigation({ userRole, state }) {
     }
   };
 
+  const handleReportPress = () => {
+    try {
+      navigation.navigate('ReportDashboard');
+    } catch (err) {
+      console.log('Report navigation error', err);
+    }
+  };
+
   const renderTabIcon = (tab) => {
     const isActive = activeTab === tab.id;
     const iconSource = isActive ? tab.activeIcon : tab.icon;
@@ -104,8 +113,20 @@ export default function BottomNavigation({ userRole, state }) {
     <View style={styles.mainContainer}>
       {/* FAB Button */}
       <View style={styles.fabContainer}>
+        {/* Report FAB - Faculty only */}
+        {userRole === 'faculty' && (
+          <TouchableOpacity
+            style={styles.reportFabButton}
+            onPress={handleReportPress}
+            activeOpacity={0.8}
+          >
+            <MaterialIcons name="flag" size={20} color="#FFF" />
+          </TouchableOpacity>
+        )}
+
+        {/* Create Post FAB */}
         <TouchableOpacity
-          style={styles.fabButton}
+          style={[styles.fabButton, styles.createFabPosition]}
           onPress={handleFABPress}
           activeOpacity={0.7}
         >
@@ -183,6 +204,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 12,
+  },
+  createFabPosition: {
+    position: 'absolute',
+    right: 0,
+    bottom: -80,
+    zIndex: 10,
+  },
+  reportFabButton: {
+    position: 'absolute',
+    right: 15,
+    bottom: 0,
+    backgroundColor: '#EF4444',
+    width: 40,
+    height: 40,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 12,
+    elevation: 12,
   },
   fabIcon: {
     width: 56,

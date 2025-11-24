@@ -1,22 +1,36 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
-import { View, Text, StyleSheet, StatusBar, ScrollView, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, StatusBar, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useIsFocused } from '@react-navigation/native';
 import { colors } from '../../styles/colors';
 import { fonts } from '../../styles/fonts';
 import HeaderWithTabs from '../../components/HeaderWithTabs';
 import PostCard from '../../components/PostCard';
+import FilterModal from '../../components/FilterModal';
 import { usePosts } from '../../hooks/usePost';
 import { UserContext } from '../../contexts/UserContext';
 
 export default function StudentHomeScreen({ navigation, route }) {
   const [activeTab, setActiveTab] = useState('forYou');
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [selectedCategories, setSelectedCategories] = useState([]);
   const { user } = useContext(UserContext);
   const isFocused = useIsFocused();
   const lastRefreshTime = useRef(0);
-  const refreshCooldown = 5000; // 5 seconds cooldown between refreshes
+  const refreshCooldown = 5000;
   
   const { posts, refreshing, onRefresh, refetchPosts } = usePosts(activeTab, user?.id);
+
+  // Filter posts based on selected categories - FIXED LOGIC
+  const filteredPosts = selectedCategories.length > 0 
+    ? posts.filter(post => {
+        // Handle both cases: post.category might be undefined or different case
+        const postCategory = post.category?.toLowerCase() || '';
+        return selectedCategories.some(selectedCat => 
+          postCategory.includes(selectedCat.toLowerCase())
+        );
+      })
+    : posts;
 
   // If returning from CommentScreen with a commentedPostId param, refresh posts
   useEffect(() => {
@@ -24,7 +38,6 @@ export default function StudentHomeScreen({ navigation, route }) {
     if (commentedPostId) {
       console.log('Detected commentedPostId, refetching posts:', commentedPostId);
       refetchPosts();
-      // clear the param so repeated focuses don't trigger another refresh
       try {
         navigation.setParams({ commentedPostId: null });
       } catch (e) {
@@ -34,14 +47,18 @@ export default function StudentHomeScreen({ navigation, route }) {
   }, [route?.params?.commentedPostId]);
 
   const handleFilterPress = () => {
-    console.log('Filter pressed');
+    setShowFilterModal(true);
   };
 
-  // MANUAL FOCUS MANAGEMENT - No more useFocusEffect
+  const handleApplyFilters = (categories) => {
+    console.log('Applying filters:', categories);
+    setSelectedCategories(categories);
+  };
+
+  // MANUAL FOCUS MANAGEMENT
   useEffect(() => {
     if (isFocused) {
       const now = Date.now();
-      // Only refresh if it's been more than 5 seconds since last refresh
       if (now - lastRefreshTime.current > refreshCooldown) {
         console.log('Screen focused - refreshing posts after cooldown');
         lastRefreshTime.current = now;
@@ -55,9 +72,17 @@ export default function StudentHomeScreen({ navigation, route }) {
   // Log mount once
   useEffect(() => {
     console.log('StudentHomeScreen mounted with user:', user?.id);
-    // Initial load
     refetchPosts();
   }, [user?.id]);
+
+  // Category mapping for display
+  const categoryMap = {
+    'academics': 'Academics',
+    'rant': 'Rant',
+    'support': 'Support',
+    'campus': 'Campus',
+    'general': 'General'
+  };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -82,36 +107,66 @@ export default function StudentHomeScreen({ navigation, route }) {
         }
         showsVerticalScrollIndicator={false}
       >
-        {posts.length === 0 ? (
+        {/* Filter Status */}
+        {selectedCategories.length > 0 && (
+          <View style={styles.filterStatus}>
+            <Text style={styles.filterStatusText}>
+              Showing {filteredPosts.length} posts in: {selectedCategories.map(cat => 
+                categoryMap[cat] || cat
+              ).join(', ')}
+            </Text>
+            <TouchableOpacity 
+              onPress={() => setSelectedCategories([])}
+              style={styles.clearFilterButton}
+            >
+              <Text style={styles.clearFilterText}>Clear</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {filteredPosts.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyTitle}>
-              {activeTab === 'forYou' ? 'No posts yet' : 'No posts from followed users'}
+              {selectedCategories.length > 0 
+                ? 'No posts match your filters'
+                : activeTab === 'forYou' 
+                  ? 'No posts yet' 
+                  : 'No posts from followed users'
+              }
             </Text>
             <Text style={styles.emptySubtitle}>
-              {activeTab === 'forYou' 
-                ? 'Be the first to share something with the community!'
-                : 'Follow some users to see their posts here!'
+              {selectedCategories.length > 0
+                ? 'Try selecting different categories or clear filters'
+                : activeTab === 'forYou' 
+                  ? 'Be the first to share something with the community!'
+                  : 'Follow some users to see their posts here!'
               }
             </Text>
           </View>
         ) : (
-          posts.map((post) => (
+          filteredPosts.map((post) => (
             <PostCard 
               key={post.id} 
               post={post} 
               userRole="student"
               currentUserId={user?.id}
               onInteraction={() => {
-                // Don't refresh immediately on interaction
                 console.log('Post interaction - not refreshing');
               }}
             />
           ))
         )}
         
-        {/* Add some bottom padding */}
         <View style={styles.bottomPadding} />
       </ScrollView>
+
+      {/* Filter Modal */}
+      <FilterModal
+        visible={showFilterModal}
+        onClose={() => setShowFilterModal(false)}
+        onApplyFilters={handleApplyFilters}
+        selectedCategories={selectedCategories}
+      />
     </SafeAreaView>
   );
 }
@@ -125,6 +180,33 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.homeBackground,
     paddingTop: 10,
+  },
+  filterStatus: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 204, 0, 0.1)',
+    marginHorizontal: 20,
+    marginBottom: 10,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 204, 0, 0.3)',
+  },
+  filterStatusText: {
+    fontSize: 14,
+    fontFamily: fonts.normal,
+    color: '#FFCC00',
+    flex: 1,
+  },
+  clearFilterButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  clearFilterText: {
+    fontSize: 14,
+    fontFamily: fonts.semiBold,
+    color: '#FFCC00',
   },
   emptyState: {
     alignItems: 'center',

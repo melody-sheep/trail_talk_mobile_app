@@ -662,17 +662,34 @@ const PostCard = ({ post, userRole = 'student', onInteraction, onCommentUpdate, 
   );
 };
 
-// Add the missing formatTime function
+// Improved relative time formatter
 const formatTime = (timestamp) => {
   if (!timestamp) return 'Just now';
-  
+
   const now = new Date();
   const postTime = new Date(timestamp);
-  const diffInHours = (now - postTime) / (1000 * 60 * 60);
-  
-  if (diffInHours < 1) return 'Just now';
-  else if (diffInHours < 24) return `${Math.floor(diffInHours)}h ago`;
-  else return `${Math.floor(diffInHours / 24)}d ago`;
+  const diffInSeconds = Math.floor((now - postTime) / 1000);
+
+  if (isNaN(diffInSeconds) || diffInSeconds < 0) return 'Just now';
+  if (diffInSeconds < 5) return 'Just now';
+  if (diffInSeconds < 60) return `${diffInSeconds} sec${diffInSeconds > 1 ? 's' : ''} ago`;
+
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  if (diffInMinutes < 60) return `${diffInMinutes} min${diffInMinutes > 1 ? 's' : ''} ago`;
+
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) return `${diffInHours} hr${diffInHours > 1 ? 's' : ''} ago`;
+
+  const diffInDays = Math.floor(diffInHours / 24);
+  if (diffInDays < 7) return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
+
+  // For older posts, show a short date (e.g., "Mar 5" or "Mar 5, 2024")
+  const options = { month: 'short', day: 'numeric' };
+  if (postTime.getFullYear() !== now.getFullYear()) {
+    options.year = 'numeric';
+  }
+
+  return postTime.toLocaleDateString(undefined, options);
 };
 
 // Add the missing getCategoryIcon function
