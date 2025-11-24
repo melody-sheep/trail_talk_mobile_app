@@ -366,7 +366,7 @@ const CreateCommunityPostScreen = ({ navigation, route }) => {
 
               <View style={styles.titleContainer}>
                 <View style={styles.headerTitleWrapper}>
-                  <Text style={styles.headerTitleTop}>Create Community</Text>
+                  <Text style={styles.headerTitleTop}>Create Faculty Community</Text>
                   <Text style={styles.headerTitleBottom}>Post</Text>
                 </View>
               </View>
@@ -392,7 +392,6 @@ const CreateCommunityPostScreen = ({ navigation, route }) => {
                 </Text>
               </View>
             </View>
-            {/* Description removed per UI request (Create Community Post screens only) */}
           </View>
 
           {/* Faculty User Identity Card */}
