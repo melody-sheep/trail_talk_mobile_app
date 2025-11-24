@@ -37,24 +37,9 @@ const CommunityPostCard = ({ post, userRole = 'student', onInteraction }) => {
   useEffect(() => {
     // Always attempt to fetch a fresh profile/avatar when we have an author_id
     if (post.author_id) {
-      // If post already contains author object with avatar url, use that first
-      if (post.author && post.author.avatar_url) {
-        try {
-          const { data: publicUrlData } = supabase.storage
-            .from('avatars')
-            .getPublicUrl(post.author.avatar_url);
-          if (publicUrlData?.publicUrl) {
-            setAvatarUrl(publicUrlData.publicUrl);
-          }
-        } catch (err) {
-          // fallback to fetch
-          fetchAuthorProfile(post.author_id);
-        }
-      } else {
-        fetchAuthorProfile(post.author_id);
-      }
+      fetchAuthorProfile(post.author_id);
     }
-  }, [post.author, post.author_id]);
+  }, [post.author_id]);
 
   // Hook for comments (used to detect if current user has commented)
   const { hasCommented, fetchComments } = useComments(post?.id, user?.id, {
@@ -106,9 +91,10 @@ const CommunityPostCard = ({ post, userRole = 'student', onInteraction }) => {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('username, display_name, user_type, avatar_url, nickname')
+        .select('username, display_name, user_type, avatar_url, nickname, created_at')
         .eq('id', authorId)
         .single();
+      
       if (!error && data) {
         setAuthorProfile(data);
         if (data.avatar_url) {
@@ -324,7 +310,7 @@ const CommunityPostCard = ({ post, userRole = 'student', onInteraction }) => {
   // Display name logic: show nickname unless anonymous posting is toggled
   const getDisplayName = () => {
     if (post.is_anonymous) {
-      return post.anonymous_username || 'Anonymous';
+      return post.anonymous_name || 'Anonymous';
     }
     return (
       post.author?.nickname ||
@@ -362,6 +348,22 @@ const CommunityPostCard = ({ post, userRole = 'student', onInteraction }) => {
       case 'resource': return 'book-outline';
       default: return 'document-text-outline';
     }
+  };
+
+  // Enhanced time format function
+  const formatTime = (timestamp) => {
+    const now = new Date();
+    const postTime = new Date(timestamp);
+    const diffInSeconds = Math.floor((now - postTime) / 1000);
+    const diffInMinutes = Math.floor(diffInSeconds / 60);
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    const diffInDays = Math.floor(diffInHours / 24);
+
+    if (diffInSeconds < 60) return 'Just now';
+    else if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+    else if (diffInHours < 24) return `${diffInHours}h ago`;
+    else if (diffInDays < 7) return `${diffInDays}d ago`;
+    else return `${Math.floor(diffInDays / 7)}w ago`;
   };
 
   // Professional Badge Component
@@ -429,33 +431,45 @@ const CommunityPostCard = ({ post, userRole = 'student', onInteraction }) => {
         {/* Profile Column */}
         <View style={styles.profileColumn}>
           {avatarUrl ? (
-            <Image
-              source={{ uri: avatarUrl }}
-              style={styles.anonIcon}
-              resizeMode="cover"
-            />
+            <TouchableOpacity onPress={() => navigation.navigate('ViewProfile', { userId: post.author_id })}>
+              <Image
+                source={{ uri: avatarUrl }}
+                style={styles.anonIcon}
+                resizeMode="cover"
+              />
+            </TouchableOpacity>
           ) : (
-            <View style={styles.anonIconPlaceholder}>
-              <Ionicons name="person" size={20} color="rgba(255,255,255,0.6)" />
-            </View>
+            <TouchableOpacity onPress={() => navigation.navigate('ViewProfile', { userId: post.author_id })}>
+              <View style={styles.anonIconPlaceholder}>
+                <Ionicons name="person" size={20} color="rgba(255,255,255,0.6)" />
+              </View>
+            </TouchableOpacity>
           )}
         </View>
 
         {/* Content Column */}
         <View style={styles.contentColumn}>
-          {/* Header Row */}
+          {/* Header Row - UPDATED LAYOUT */}
           <View style={styles.headerRow}>
             <View style={styles.headerLeft}>
-              <View style={styles.usernameRow}>
-                <Text style={styles.username}>{getDisplayName()}</Text>
-                <View style={styles.roleTimeContainer}>
-                  <Ionicons name={getRoleIconName(getAuthorRole())} size={14} color="rgba(255,255,255,0.8)" style={{ marginRight: 6 }} />
-                  <Text style={styles.roleText}>{getAuthorRole() ? (getAuthorRole().charAt(0).toUpperCase() + getAuthorRole().slice(1)) : (userRole === 'student' ? 'Student' : 'Faculty')}</Text>
-                  <View style={styles.dot} />
-                  <Text style={styles.timeText}>{formatTime(post.created_at)}</Text>
+              {/* Name and Role on same line */}
+              <View style={styles.nameRoleRow}>
+                <TouchableOpacity onPress={() => navigation.navigate('ViewProfile', { userId: post.author_id })}>
+                  <Text style={styles.username}>{getDisplayName()}</Text>
+                </TouchableOpacity>
+                <View style={styles.roleContainer}>
+                  <Ionicons name={getRoleIconName(getAuthorRole())} size={14} color="rgba(255,255,255,0.8)" />
+                  <Text style={styles.roleText}>
+                    {getAuthorRole() ? (getAuthorRole().charAt(0).toUpperCase() + getAuthorRole().slice(1)) : (userRole === 'student' ? 'Student' : 'Faculty')}
+                  </Text>
                 </View>
               </View>
+              
+              {/* Time stamp below name/role */}
+              <Text style={styles.timeText}>{formatTime(post.created_at)}</Text>
             </View>
+            
+            {/* Kebab button with 0 left margin */}
             <TouchableOpacity style={styles.kebabButton} onPress={() => setShowOptionsModal(true)}>
               <Ionicons name="ellipsis-vertical" size={18} color="rgba(255,255,255,0.7)" />
             </TouchableOpacity>
@@ -542,6 +556,7 @@ const CommunityPostCard = ({ post, userRole = 'student', onInteraction }) => {
           </View>
         </View>
       </View>
+      
       {/* Options Modal copied from PostCard (report/delete) */}
       {showOptionsModal && (
         <View style={styles.optionsBackdrop}>
@@ -623,17 +638,6 @@ const CommunityPostCard = ({ post, userRole = 'student', onInteraction }) => {
   );
 };
 
-// Format time function
-const formatTime = (timestamp) => {
-  const now = new Date();
-  const postTime = new Date(timestamp);
-  const diffInHours = (now - postTime) / (1000 * 60 * 60);
-  
-  if (diffInHours < 1) return 'Just now';
-  else if (diffInHours < 24) return `${Math.floor(diffInHours)}h ago`;
-  else return `${Math.floor(diffInHours / 24)}d ago`;
-};
-
 // Styles
 const styles = StyleSheet.create({
   container: {
@@ -679,42 +683,39 @@ const styles = StyleSheet.create({
   headerLeft: {
     flex: 1,
   },
-  usernameRow: {
+  nameRoleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    flexWrap: 'wrap',
+    marginBottom: 4,
   },
   username: {
     fontSize: 16,
     fontFamily: fonts.semiBold,
     color: colors.white,
-    marginRight: 12,
+    marginRight: 8,
   },
-  roleTimeContainer: {
+  roleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+    gap: 4,
   },
   roleText: {
-    fontSize: 13,
+    fontSize: 11,
     fontFamily: fonts.medium,
-    color: 'rgba(255, 255, 255, 0.7)',
-    marginRight: 12,
-  },
-  dot: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
-    marginRight: 12,
+    color: 'rgba(255, 255, 255, 0.8)',
   },
   timeText: {
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: fonts.normal,
     color: 'rgba(255, 255, 255, 0.5)',
   },
   kebabButton: {
     padding: 4,
-    marginLeft: 8,
+    marginLeft: 0, // Changed from 8 to 0
   },
   categorySection: {
     flexDirection: 'row',

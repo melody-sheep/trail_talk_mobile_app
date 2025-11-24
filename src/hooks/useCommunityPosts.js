@@ -44,7 +44,10 @@ export const useCommunityPosts = (communityId) => {
             id,
             username,
             display_name,
-            user_type
+            user_type,
+            avatar_url,
+            nickname,
+            created_at
           )
         `)
         .eq('community_id', communityId)
@@ -54,7 +57,7 @@ export const useCommunityPosts = (communityId) => {
       
       console.log(`✅ FOUND ${postsData?.length || 0} posts`);
 
-      // FIXED: Use consistent field names
+      // ENHANCED: Format posts with proper author data
       const formattedPosts = (postsData || []).map(post => ({
         ...post,
         anonymous_username: post.anonymous_name || 'Anonymous',
@@ -62,7 +65,13 @@ export const useCommunityPosts = (communityId) => {
         comments_count: post.comment_count || 0,
         reposts_count: post.repost_count || 0,
         bookmarks_count: post.bookmark_count || 0,
-        category: post.category || 'Discussion'
+        category: post.category || 'Discussion',
+        // Ensure author data is properly structured
+        author: post.author ? {
+          ...post.author,
+          // Add avatar URL if available
+          avatar_url: post.author.avatar_url
+        } : null
       }));
 
       setPosts(formattedPosts);
