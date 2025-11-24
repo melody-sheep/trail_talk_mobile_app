@@ -178,6 +178,13 @@ export const joinCommunity = async (communityId, userId) => {
 
     return { data, error: null };
   } catch (error) {
+    // Handle duplicate membership (user already joined)
+    const isDuplicate = (error && (error.code === '23505' || (error.message && error.message.toLowerCase().includes('duplicate'))));
+    if (isDuplicate) {
+      console.warn('Attempted to join community but membership already exists', { communityId, userId });
+      return { data: null, error: { code: '23505', message: 'Already a member' } };
+    }
+
     console.error('Error joining community:', error);
     return { data: null, error };
   }
@@ -654,5 +661,219 @@ export const checkIsFollowing = async (currentUserId, targetUserId) => {
   } catch (error) {
     console.log('Error in checkIsFollowing:', error);
     return false;
+  }
+};
+
+// Find user by username (partial or exact)
+export const findUserByUsername = async (query) => {
+  try {
+    const like = `%${query}%`;
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, username, display_name, role, user_type, avatar_url')
+      .ilike('username', like)
+      .limit(50);
+
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error finding user by username:', error);
+    return { data: null, error };
+  }
+};
+
+// ==================== COMMUNITY INVITATION FUNCTIONS ====================
+
+// Create a community invitation
+export const createCommunityInvitation = async ({ communityId, invitedUserId, invitedById, invitedRole = 'member' }) => {
+  try {
+    const payload = {
+      community_id: communityId,
+      invited_user_id: invitedUserId,
+      invited_by: invitedById,
+      role: invitedRole,
+      status: 'pending'
+    };
+
+    const { data, error } = await supabase
+      .from('community_invitations')
+      .insert([payload])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error creating community invitation:', error);
+    return { data: null, error };
+  }
+};
+
+// Get invitations for a user - FIXED VERSION
+export const getUserCommunityInvitations = async (userId) => {
+  try {
+    const { data, error } = await supabase
+      .from('community_invitations')
+      .select(`
+        id,
+        status,
+        role,
+        created_at,
+        community:communities(id, name, icon),
+        invited_by_user:profiles!community_invitations_invited_by_fkey(id, display_name, username, avatar_url),
+        invited_user:profiles!community_invitations_invited_user_id_fkey(id, display_name, username, avatar_url)
+      `)
+      .eq('invited_user_id', userId)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error) {
+    // If the invitations table is not present in the database, return an empty list
+    if (error && error.code === 'PGRST205') {
+      console.warn('community_invitations table not found; returning empty invitations list');
+      return { data: [], error: null };
+    }
+
+    console.error('Error fetching user community invitations:', error);
+    return { data: null, error };
+  }
+};
+
+// Accept an invitation: join the community and remove the invitation
+export const acceptCommunityInvitation = async (invitationId, userId) => {
+  try {
+    // Get invitation
+    const { data: inv, error: invErr } = await supabase
+      .from('community_invitations')
+      .select('*')
+      .eq('id', invitationId)
+      .single();
+
+    if (invErr) throw invErr;
+    if (!inv) throw new Error('Invitation not found');
+
+    // Add membership
+    const { data: memberData, error: memberErr } = await supabase
+      .from('community_members')
+      .insert([{
+        community_id: inv.community_id,
+        user_id: userId,
+        role: inv.role || 'member'
+      }])
+      .select()
+      .single();
+
+    if (memberErr) throw memberErr;
+
+    // Update member count via RPC if exists
+    try {
+      const { error: rpcErr } = await supabase.rpc('increment_member_count', { community_id: inv.community_id });
+      if (rpcErr) console.error('RPC increment_member_count error:', rpcErr);
+    } catch (e) {
+      console.log('RPC increment_member_count not available or failed', e);
+    }
+
+    // Delete the invitation (or set status accepted)
+    const { error: delErr } = await supabase
+      .from('community_invitations')
+      .delete()
+      .eq('id', invitationId);
+
+    if (delErr) console.error('Error deleting invitation after accept:', delErr);
+
+    return { data: memberData, error: null };
+  } catch (error) {
+    console.error('Error accepting community invitation:', error);
+    return { data: null, error };
+  }
+};
+
+// Decline an invitation: just delete it
+export const declineCommunityInvitation = async (invitationId) => {
+  try {
+    const { data, error } = await supabase
+      .from('community_invitations')
+      .delete()
+      .eq('id', invitationId);
+
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error declining community invitation:', error);
+    return { data: null, error };
+  }
+};
+
+
+
+// Add these functions to your existing supabase.js file:
+
+// Get community invitations for admin view
+export const getCommunityInvitations = async (communityId) => {
+  try {
+    const { data, error } = await supabase
+      .from('community_invitations')
+      .select(`
+        id,
+        status,
+        role,
+        created_at,
+        invited_user:profiles!community_invitations_invited_user_id_fkey(
+          id,
+          username,
+          display_name,
+          avatar_url,
+          user_type
+        ),
+        invited_by:profiles!community_invitations_invited_by_fkey(
+          id,
+          username,
+          display_name,
+          avatar_url
+        )
+      `)
+      .eq('community_id', communityId)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error fetching community invitations:', error);
+    return { data: null, error };
+  }
+};
+
+// Cancel/revoke an invitation
+export const cancelCommunityInvitation = async (invitationId) => {
+  try {
+    const { data, error } = await supabase
+      .from('community_invitations')
+      .delete()
+      .eq('id', invitationId);
+
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error canceling community invitation:', error);
+    return { data: null, error };
+  }
+};
+
+// Bulk create community invitations
+export const createBulkCommunityInvitations = async (invitations) => {
+  try {
+    const { data, error } = await supabase
+      .from('community_invitations')
+      .insert(invitations)
+      .select();
+
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error creating bulk community invitations:', error);
+    return { data: null, error };
   }
 };

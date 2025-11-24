@@ -365,7 +365,10 @@ const CreateCommunityPostScreen = ({ navigation, route }) => {
               </TouchableOpacity>
 
               <View style={styles.titleContainer}>
-                <Text style={styles.headerTitle}>Create Faculty Post</Text>
+                <View style={styles.headerTitleWrapper}>
+                  <Text style={styles.headerTitleTop}>Create Community</Text>
+                  <Text style={styles.headerTitleBottom}>Post</Text>
+                </View>
               </View>
 
               <View style={styles.rightSpacer} />
@@ -389,11 +392,7 @@ const CreateCommunityPostScreen = ({ navigation, route }) => {
                 </Text>
               </View>
             </View>
-            {communityData?.description && (
-              <Text style={styles.communityDescription} numberOfLines={2}>
-                {communityData.description}
-              </Text>
-            )}
+            {/* Description removed per UI request (Create Community Post screens only) */}
           </View>
 
           {/* Faculty User Identity Card */}
@@ -631,6 +630,24 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 24,
+    fontFamily: fonts.medium,
+    color: colors.white,
+    textAlign: 'center',
+    letterSpacing: 1,
+  },
+  headerTitleWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitleTop: {
+    fontSize: 20,
+    fontFamily: fonts.normal,
+    color: 'rgba(255,255,255,0.9)',
+    textAlign: 'center',
+    letterSpacing: 0.6,
+  },
+  headerTitleBottom: {
+    fontSize: 18,
     fontFamily: fonts.medium,
     color: colors.white,
     textAlign: 'center',

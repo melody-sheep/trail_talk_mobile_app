@@ -21,7 +21,7 @@ import { fonts } from '../../styles/fonts';
 import { UserContext } from '../../contexts/UserContext';
 import { useCommunityPosts } from '../../hooks/useCommunityPosts';
 import { joinCommunity, leaveCommunity, getCommunityDetails } from '../../lib/supabase';
-import PostCard from '../../components/PostCard';
+import CommunityPostCard from '../../components/CommunityPostCard';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -32,6 +32,7 @@ export default function CommunityFeedScreen({ route, navigation }) {
   const [userRole, setUserRole] = useState('student');
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
+  const [postsTabReady, setPostsTabReady] = useState(false);
   
   const { user, refreshTrigger } = useContext(UserContext);
   
@@ -71,6 +72,13 @@ export default function CommunityFeedScreen({ route, navigation }) {
     forceRefresh();
   }, [refreshTrigger]);
 
+  // Auto-ready posts tab after initial load
+  useEffect(() => {
+    if (!loading && !postsTabReady) {
+      setPostsTabReady(true);
+    }
+  }, [loading]);
+
   const loadCommunityDetails = async () => {
     try {
       if (!user?.id) return;
@@ -96,6 +104,12 @@ export default function CommunityFeedScreen({ route, navigation }) {
         setIsMember(true);
         loadCommunityDetails();
         Alert.alert('Success', 'You have joined the community!');
+      } else if (error.code === '23505' || (error.message && error.message.toLowerCase().includes('already'))) {
+        // Membership already exists - treat as success for UX
+        setIsMember(true);
+        loadCommunityDetails();
+        console.log('User already a member, ignoring duplicate error');
+        Alert.alert('Info', 'You are already a member of this community.');
       } else {
         Alert.alert('Error', 'Failed to join community. Please try again.');
       }
@@ -229,7 +243,7 @@ export default function CommunityFeedScreen({ route, navigation }) {
         ],
       }}
     >
-      <PostCard
+      <CommunityPostCard
         post={item}
         userRole={userRole}
         onInteraction={(postId, field, newCount) => {
@@ -429,14 +443,21 @@ export default function CommunityFeedScreen({ route, navigation }) {
                 <Ionicons name="create-outline" size={20} color={colors.white} />
                 <Text style={styles.primaryButtonText}>Create Post</Text>
               </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={styles.secondaryButton}
-                onPress={handleLeaveCommunity}
-              >
-                <Ionicons name="exit-outline" size={18} color="#FF6B6B" />
-                <Text style={styles.leaveButtonText}>Leave</Text>
-              </TouchableOpacity>
+
+              <View style={{ flexDirection: 'column', gap: 8 }}>
+                <TouchableOpacity style={[styles.joinButton, styles.joinedBadge]} disabled>
+                  <Ionicons name="checkmark" size={16} color={colors.white} />
+                  <Text style={styles.joinButtonText}>Joined</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={styles.secondaryButton}
+                  onPress={handleLeaveCommunity}
+                >
+                  <Ionicons name="exit-outline" size={18} color="#FF6B6B" />
+                  <Text style={styles.leaveButtonText}>Leave</Text>
+                </TouchableOpacity>
+              </View>
             </>
           ) : (
             <TouchableOpacity 
@@ -465,9 +486,9 @@ export default function CommunityFeedScreen({ route, navigation }) {
         </View>
       </Animated.View>
 
-      {/* Posts List */}
+      {/* Posts List - INSTANT LOADING */}
       <FlatList
-        data={posts}
+        data={postsTabReady ? posts : []} // Show empty array until ready to avoid loading screen
         renderItem={renderPostItem}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.postsList}
@@ -500,7 +521,7 @@ export default function CommunityFeedScreen({ route, navigation }) {
               </View>
             )}
             
-            {posts.length === 0 && !loading && (
+            {posts.length === 0 && !loading && postsTabReady && (
               <View style={styles.emptyState}>
                 <Ionicons name="chatbubble-ellipses-outline" size={80} color="rgba(255, 255, 255, 0.2)" />
                 <Text style={styles.emptyStateTitle}>No posts yet</Text>
@@ -524,11 +545,8 @@ export default function CommunityFeedScreen({ route, navigation }) {
           </View>
         }
         ListEmptyComponent={
-          loading ? (
+          loading && !postsTabReady ? (
             <View style={styles.loadingState}>
-              <Animated.View style={styles.loadingDot} />
-              <Animated.View style={[styles.loadingDot, { animationDelay: '0.2s' }]} />
-              <Animated.View style={[styles.loadingDot, { animationDelay: '0.4s' }]} />
               <Text style={styles.loadingText}>Loading posts...</Text>
             </View>
           ) : null
@@ -772,6 +790,10 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 6,
   },
+  joinedBadge: {
+    backgroundColor: '#FF6B6B',
+    shadowColor: '#FF6B6B',
+  },
   joinButtonText: {
     fontSize: 16,
     fontFamily: fonts.semiBold,
@@ -866,18 +888,9 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   loadingState: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 40,
-    gap: 8,
-  },
-  loadingDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#4ECDC4',
-    opacity: 0.6,
   },
   listFooter: {
     padding: 20,

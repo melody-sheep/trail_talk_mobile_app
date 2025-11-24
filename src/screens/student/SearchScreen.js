@@ -21,7 +21,7 @@ import { colors } from '../../styles/colors';
 import { fonts } from '../../styles/fonts';
 import { UserContext } from '../../contexts/UserContext';
 import { checkIfFollowing, followUser, unfollowUser } from '../../utils/followingUtils';
-import { supabase } from '../../lib/supabase';
+import { supabase, joinCommunity, leaveCommunity } from '../../lib/supabase';
 
 export default function SearchScreen({ navigation }) {
   const { user } = useContext(UserContext);
@@ -217,16 +217,23 @@ export default function SearchScreen({ navigation }) {
   const onJoinToggle = async (communityId) => {
     if (!user) return;
     const isMember = !!communityMembershipMap[communityId];
+    // optimistic UI update
     setCommunityMembershipMap(prev => ({ ...prev, [communityId]: !prev[communityId] }));
     try {
       if (isMember) {
-        await supabase.from('community_members').delete().match({ user_id: user.id, community_id: communityId });
+        const { error } = await leaveCommunity(communityId, user.id);
+        if (error) throw error;
       } else {
-        await supabase.from('community_members').insert({ user_id: user.id, community_id: communityId });
+        const { error } = await joinCommunity(communityId, user.id);
+        if (error && !(error.code === '23505' || (error.message && error.message.toLowerCase().includes('already')))) {
+          throw error;
+        }
       }
-      fetchCommunities(debouncedQuery || '');
+
+      await fetchCommunities(debouncedQuery || '');
     } catch (e) {
       console.error('Join toggle error', e);
+      // rollback optimistic update
       setCommunityMembershipMap(prev => ({ ...prev, [communityId]: isMember }));
     }
   };

@@ -13,6 +13,7 @@ import {
   Animated,
   RefreshControl
 } from 'react-native';
+import { Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../styles/colors';
@@ -22,8 +23,10 @@ import {
   getCommunitiesWithUserStatus, 
   joinCommunity, 
   leaveCommunity, 
-  canUserCreateCommunity 
+  canUserCreateCommunity, 
+  supabase
 } from '../../lib/supabase';
+import { getUserCommunityInvitations, acceptCommunityInvitation, declineCommunityInvitation } from '../../lib/supabase';
 
 export default function CommunityScreen({ navigation }) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -31,7 +34,12 @@ export default function CommunityScreen({ navigation }) {
   const [expandedItems, setExpandedItems] = useState({});
   const [showFeatured, setShowFeatured] = useState(true);
   const [communities, setCommunities] = useState([]);
+  const [membersCountMap, setMembersCountMap] = useState({});
+  const [userCommunities, setUserCommunities] = useState([]);
+  const [otherCommunities, setOtherCommunities] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [invitations, setInvitations] = useState([]);
+  const [invProcessing, setInvProcessing] = useState(false);
   const [userCommunityStats, setUserCommunityStats] = useState({
     createdCommunities: 0,
     maxFreeCommunities: 3,
@@ -122,8 +130,86 @@ export default function CommunityScreen({ navigation }) {
     if (user?.id) {
       loadCommunities();
       loadUserCommunityStats();
+      loadInvitations();
+
+      // --- Supabase real-time subscription for community_members table ---
+      const channel = supabase.channel('community-members-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'community_members',
+          },
+          (payload) => {
+            // Determine affected community id (insert uses new, delete uses old)
+            const communityId = payload.new?.community_id || payload.old?.community_id;
+            // Wait a short moment to allow RPC to update member_count, then refresh
+            setTimeout(() => {
+              if (communityId) fetchMemberCount(communityId);
+              loadCommunities();
+              loadUserCommunityStats();
+            }, 350);
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [activeCategory, user?.id, refreshCommunities]);
+
+  const loadInvitations = async () => {
+    if (!user?.id) return;
+    try {
+      const { data, error } = await getUserCommunityInvitations(user.id);
+      if (!error && data) setInvitations(data);
+    } catch (e) {
+      console.error('Error loading invitations', e);
+    }
+  };
+
+  const handleAcceptInvitation = async (invId) => {
+    if (!user?.id) return;
+    try {
+      setInvProcessing(true);
+      const { data, error } = await acceptCommunityInvitation(invId, user.id);
+      if (error) {
+        // If PostgREST returned PGRST116 (no rows) or other error, show a helpful message
+        console.error('Accept invitation error', error);
+        Alert.alert('Error', 'Failed to accept invitation');
+        return;
+      }
+
+      // Refresh invitations, communities, and user stats so UI reflects the new membership and member count
+      await Promise.all([
+        loadInvitations(),
+        loadCommunities(),
+        loadUserCommunityStats()
+      ]);
+      Alert.alert('Joined', 'You have joined the community');
+    } catch (e) {
+      console.error('Accept invitation error', e);
+      Alert.alert('Error', 'Failed to accept invitation');
+    } finally {
+      setInvProcessing(false);
+    }
+  };
+
+  const handleDeclineInvitation = async (invId) => {
+    try {
+      setInvProcessing(true);
+      const { data, error } = await declineCommunityInvitation(invId);
+      if (error) throw error;
+      await loadInvitations();
+    } catch (e) {
+      console.error('Decline invitation error', e);
+      Alert.alert('Error', 'Failed to decline invitation');
+    } finally {
+      setInvProcessing(false);
+    }
+  };
 
   const loadCommunities = async () => {
     if (!user?.id) return;
@@ -131,12 +217,58 @@ export default function CommunityScreen({ navigation }) {
     try {
       const { data, error } = await getCommunitiesWithUserStatus(user.id, activeCategory === 'my' ? 'all' : activeCategory);
       if (!error && data) {
-        setCommunities(data);
+        // Normalize flags (backwards compatibility)
+        const normalized = data.map(c => ({
+          ...c,
+          isJoined: c.isJoined || c.is_joined || c.is_member || false
+        }));
+
+        if (activeCategory === 'my') {
+          const mine = normalized.filter(c => c.isJoined || c.created_by === user.id);
+          setUserCommunities(mine);
+          setOtherCommunities([]);
+          setCommunities(mine);
+        } else if (activeCategory === 'all') {
+          const mine = normalized.filter(c => c.isJoined || c.created_by === user.id);
+          const others = normalized.filter(c => !(c.isJoined || c.created_by === user.id));
+          setUserCommunities(mine);
+          setOtherCommunities(others);
+          setCommunities(normalized);
+        } else {
+          setUserCommunities([]);
+          setOtherCommunities([]);
+          setCommunities(normalized);
+        }
       } else {
         console.error('Error loading communities:', error);
       }
+        // After loading communities, fetch accurate member counts for displayed communities
+        try {
+          const ids = (data || []).map(c => c.id).filter(Boolean);
+          // fetch counts in parallel (limit to first 50 to avoid huge requests)
+          const limited = ids.slice(0, 50);
+          await Promise.all(limited.map(id => fetchMemberCount(id)));
+        } catch (e) {
+          console.error('Error fetching member counts after loadCommunities', e);
+        }
     } catch (error) {
       console.error('Error in loadCommunities:', error);
+    }
+  };
+
+  const fetchMemberCount = async (communityId) => {
+    try {
+      const res = await supabase
+        .from('community_members')
+        .select('id', { count: 'exact', head: true })
+        .eq('community_id', communityId);
+
+      const count = res.count || 0;
+      setMembersCountMap(prev => ({ ...prev, [communityId]: count }));
+      return count;
+    } catch (e) {
+      console.error('Error fetching member count for', communityId, e);
+      return null;
     }
   };
 
@@ -188,12 +320,21 @@ export default function CommunityScreen({ navigation }) {
     try {
       const { error } = await joinCommunity(communityId, user.id);
       if (!error) {
-        loadCommunities();
-        loadUserCommunityStats();
-      } else {
-        console.error('Error joining community:', error);
-        alert('Failed to join community. Please try again.');
+        await loadCommunities();
+        await loadUserCommunityStats();
+        return;
       }
+
+      if (error.code === '23505' || (error.message && error.message.toLowerCase().includes('already'))) {
+        // Already joined - refresh and proceed
+        console.log('User already member of community', communityId);
+        await loadCommunities();
+        await loadUserCommunityStats();
+        return;
+      }
+
+      console.error('Error joining community:', error);
+      alert('Failed to join community. Please try again.');
     } catch (error) {
       console.error('Error in handleJoinCommunity:', error);
     }
@@ -203,8 +344,8 @@ export default function CommunityScreen({ navigation }) {
     try {
       const { error } = await leaveCommunity(communityId, user.id);
       if (!error) {
-        loadCommunities();
-        loadUserCommunityStats();
+        await loadCommunities();
+        await loadUserCommunityStats();
       } else {
         console.error('Error leaving community:', error);
         alert('Failed to leave community. Please try again.');
@@ -437,7 +578,20 @@ export default function CommunityScreen({ navigation }) {
 
   // ENHANCED Community Card with SupportScreen styling
   const renderCommunityCard = ({ item }) => {
-    const isMember = item.is_member;
+    // prefer explicit icon_color from item, otherwise fall back to canonical category color
+    const getCategoryColor = (category) => {
+      const map = {
+        academic: '#4ECDC4',
+        social: '#FFA726',
+        support: '#FF6B6B',
+        hobbies: '#45B7D1',
+        sports: '#FFD700'
+      };
+      return map[category] || '#4ECDC4';
+    };
+
+    const baseColor = item.icon_color || getCategoryColor(item.category);
+    const isMember = !!(item.isJoined || item.is_member || item.is_joined || item.isJoined);
     const isAdmin = item.role === 'admin';
     const canJoin = !isMember && item.privacy === 'public';
     
@@ -448,8 +602,8 @@ export default function CommunityScreen({ navigation }) {
         activeOpacity={0.7}
       >
         <View style={styles.cardHeader}>
-          <View style={[styles.cardIconContainer, { backgroundColor: `${item.icon_color || '#4ECDC4'}20` }]}>
-            <Ionicons name={item.icon || 'people-outline'} size={20} color={item.icon_color || '#4ECDC4'} />
+          <View style={[styles.cardIconContainer, { backgroundColor: `${baseColor}20` }]}>
+            <Ionicons name={item.icon || 'people-outline'} size={20} color={baseColor} />
           </View>
           <View style={styles.cardContent}>
             <View style={styles.cardTitleRow}>
@@ -463,7 +617,7 @@ export default function CommunityScreen({ navigation }) {
             <View style={styles.communityMeta}>
               <View style={styles.metaItem}>
                 <Ionicons name="people" size={14} color="rgba(255, 255, 255, 0.6)" />
-                <Text style={styles.metaText}>{item.member_count} members</Text>
+                <Text style={styles.metaText}>{(membersCountMap[item.id] ?? item.member_count) || 0} members</Text>
               </View>
               <View style={styles.metaItem}>
                 <Ionicons name="lock-closed" size={14} color="rgba(255, 255, 255, 0.6)" />
@@ -473,13 +627,18 @@ export default function CommunityScreen({ navigation }) {
           </View>
           <View style={styles.cardActions}>
             {isMember ? (
-              <TouchableOpacity 
-                style={[styles.joinButton, styles.leaveButton]}
-                onPress={() => handleLeaveCommunity(item.id)}
-              >
-                <Ionicons name="checkmark" size={16} color={colors.white} />
-                <Text style={styles.leaveButtonText}>Joined</Text>
-              </TouchableOpacity>
+              <View style={{ alignItems: 'flex-end' }}>
+                <TouchableOpacity style={styles.joinedButton} disabled>
+                  <Ionicons name="checkmark" size={14} color="#00FF00" />
+                  <Text style={styles.joinedLabelText}>Joined</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.leaveActionButton]}
+                  onPress={() => handleLeaveCommunity(item.id)}
+                >
+                  <Text style={styles.leaveButtonText}>Leave</Text>
+                </TouchableOpacity>
+              </View>
             ) : canJoin ? (
               <TouchableOpacity 
                 style={styles.joinButton}
@@ -608,52 +767,173 @@ export default function CommunityScreen({ navigation }) {
         {/* Community Creation Section with Dropdown */}
         <CommunityCreationSection />
 
-        {/* Communities List */}
-        <View style={styles.contentSection}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionHeaderContent}>
-              <View style={styles.sectionHeaderRow}>
-                <Text style={styles.sectionTitle}>
-                  {activeCategory === 'all' && 'All Communities'}
-                  {activeCategory === 'academic' && 'Academic Communities'}
-                  {activeCategory === 'social' && 'Social Communities'}
-                  {activeCategory === 'support' && 'Support Communities'}
-                  {activeCategory === 'hobbies' && 'Hobby Communities'}
-                  {activeCategory === 'sports' && 'Sports Communities'}
-                  {activeCategory === 'my' && 'My Communities'}
-                </Text>
-                {canEditCommunities && <ProfessionalBadge type="verified" size="small" />}
-              </View>
-              <Text style={styles.sectionSubtitle}>
-                {communities.length} {communities.length === 1 ? 'community' : 'communities'} available
-              </Text>
-            </View>
+        {/* Invitations block follows */}
+
+        {/* Invitations Section */}
+        {invitations && invitations.length > 0 && (
+          <View style={{ marginHorizontal: 16, marginTop: 8 }}>
+            <Text style={{ color: colors.white, fontFamily: fonts.bold, fontSize: 17, marginBottom: 2 }}>Invitations</Text>
+            <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, marginBottom: 10 }}>{invitations.length} pending</Text>
+            {invitations.map(inv => {
+              const iconColor = inv.community?.icon_color || '#4ECDC4';
+              return (
+                <View key={inv.id} style={{
+                  backgroundColor: 'rgba(255,255,255,0.04)',
+                  borderRadius: 10,
+                  borderWidth: 1,
+                  borderColor: 'rgba(255,255,255,0.08)',
+                  padding: 10,
+                  marginBottom: 10,
+                  minHeight: 0,
+                  alignItems: 'stretch',
+                  justifyContent: 'flex-start',
+                }}>
+                  {/* Row: Icon + Name */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
+                    <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: iconColor + '20', alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
+                      <Ionicons name={inv.community?.icon || 'people-outline'} size={18} color={iconColor} />
+                    </View>
+                    <Text style={{ color: colors.white, fontFamily: fonts.semiBold, fontSize: 14 }}>{inv.community?.name}</Text>
+                  </View>
+                  {/* Description */}
+                  {inv.community?.description ? (
+                    <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, marginBottom: 2, marginLeft: 2 }}>{inv.community.description}</Text>
+                  ) : null}
+                  {/* Invited by */}
+                  <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11, marginBottom: 6, marginLeft: 2 }}>
+                    {inv.invited_by_user?.display_name || inv.invited_by_user?.username} invited you
+                  </Text>
+                  {/* Actions */}
+                  <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 8 }}>
+                    <TouchableOpacity 
+                      style={{
+                        backgroundColor: '#4CAF50',
+                        borderRadius: 8,
+                        minWidth: 70,
+                        paddingVertical: 6,
+                        paddingHorizontal: 14,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginRight: 2
+                      }}
+                      onPress={() => handleAcceptInvitation(inv.id)} 
+                      disabled={invProcessing}
+                    >
+                      <Text style={{ color: colors.white, fontFamily: fonts.bold, fontSize: 13, textAlign: 'center' }}>Accept</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={{
+                        backgroundColor: '#FF6B6B',
+                        borderRadius: 8,
+                        minWidth: 70,
+                        paddingVertical: 6,
+                        paddingHorizontal: 14,
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                      onPress={() => handleDeclineInvitation(inv.id)} 
+                      disabled={invProcessing}
+                    >
+                      <Text style={{ color: colors.white, fontFamily: fonts.bold, fontSize: 13, textAlign: 'center' }}>Decline</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              );
+            })}
           </View>
-          
-          {communities.length > 0 ? (
-            <FlatList
-              data={communities}
-              renderItem={renderCommunityCard}
-              keyExtractor={(item) => item.id}
-              scrollEnabled={false}
-              showsVerticalScrollIndicator={false}
-            />
-          ) : (
-            <View style={styles.emptyState}>
-              <Ionicons name="people-outline" size={64} color="rgba(255, 255, 255, 0.3)" />
-              <Text style={styles.emptyStateTitle}>No communities found</Text>
-              <Text style={styles.emptyStateText}>
-                {activeCategory === 'my' 
-                  ? "You haven't joined any communities yet."
-                  : "No communities match your search criteria."
-                }
-              </Text>
-              <TouchableOpacity 
-                style={styles.emptyStateButton}
-                onPress={() => setActiveCategory('all')}
-              >
-                <Text style={styles.emptyStateButtonText}>Browse All Communities</Text>
-              </TouchableOpacity>
+        )}
+        
+        {/* Communities List */} 
+        <View style={styles.contentSection}>
+          {/* My Communities (when applicable) */}
+          { (activeCategory === 'all' || activeCategory === 'my') && (
+            <View>
+              <View style={styles.sectionHeader}>
+                <View style={styles.sectionHeaderContent}>
+                  <View style={styles.sectionHeaderRow}>
+                    <Text style={styles.sectionTitle}>{activeCategory === 'my' ? 'My Communities' : 'My Communities'}</Text>
+                    {canEditCommunities && <ProfessionalBadge type="verified" size="small" />}
+                  </View>
+                  <Text style={styles.sectionSubtitle}>
+                    {userCommunities.length} {userCommunities.length === 1 ? 'community' : 'communities'}
+                  </Text>
+                </View>
+              </View>
+
+              {userCommunities.length > 0 ? (
+                <FlatList
+                  data={userCommunities}
+                  renderItem={renderCommunityCard}
+                  keyExtractor={(item) => item.id}
+                  scrollEnabled={false}
+                  showsVerticalScrollIndicator={false}
+                />
+              ) : activeCategory === 'my' ? (
+                <View style={styles.emptyState}>
+                  <Ionicons name="people-outline" size={64} color="rgba(255, 255, 255, 0.3)" />
+                  <Text style={styles.emptyStateTitle}>No communities found</Text>
+                  <Text style={styles.emptyStateText}>You haven't joined or created any communities yet.</Text>
+                  <TouchableOpacity 
+                    style={styles.emptyStateButton}
+                    onPress={() => setActiveCategory('all')}
+                  >
+                    <Text style={styles.emptyStateButtonText}>Browse All Communities</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
+            </View>
+          )}
+
+          {/* All / Other Communities */}
+          { (activeCategory === 'all' || activeCategory !== 'my') && (
+            <View>
+              <View style={styles.sectionHeader}>
+                <View style={styles.sectionHeaderContent}>
+                  <View style={styles.sectionHeaderRow}>
+                    <Text style={styles.sectionTitle}>
+                      {activeCategory === 'all' ? 'All Communities' : (
+                        activeCategory === 'academic' && 'Academic Communities' ||
+                        activeCategory === 'social' && 'Social Communities' ||
+                        activeCategory === 'support' && 'Support Communities' ||
+                        activeCategory === 'hobbies' && 'Hobby Communities' ||
+                        activeCategory === 'sports' && 'Sports Communities' ||
+                        'Communities'
+                      )}
+                    </Text>
+                    {canEditCommunities && <ProfessionalBadge type="verified" size="small" />}
+                  </View>
+                  <Text style={styles.sectionSubtitle}>
+                    { (activeCategory === 'all' ? (otherCommunities.length + userCommunities.length) : communities.length) } {(activeCategory === 'all' ? (otherCommunities.length + userCommunities.length) : communities.length) === 1 ? 'community' : 'communities'} available
+                  </Text>
+                </View>
+              </View>
+
+              { (activeCategory === 'all' ? otherCommunities : communities).length > 0 ? (
+                <FlatList
+                  data={activeCategory === 'all' ? otherCommunities : communities}
+                  renderItem={renderCommunityCard}
+                  keyExtractor={(item) => item.id}
+                  scrollEnabled={false}
+                  showsVerticalScrollIndicator={false}
+                />
+              ) : (
+                <View style={styles.emptyState}>
+                  <Ionicons name="people-outline" size={64} color="rgba(255, 255, 255, 0.3)" />
+                  <Text style={styles.emptyStateTitle}>No communities found</Text>
+                  <Text style={styles.emptyStateText}>
+                    {activeCategory === 'my' 
+                      ? "You haven't joined any communities yet."
+                      : "No communities match your search criteria."
+                    }
+                  </Text>
+                  <TouchableOpacity 
+                    style={styles.emptyStateButton}
+                    onPress={() => setActiveCategory('all')}
+                  >
+                    <Text style={styles.emptyStateButtonText}>Browse All Communities</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
           )}
         </View>
@@ -1108,6 +1388,26 @@ const styles = StyleSheet.create({
     minWidth: 70, // Increased
     justifyContent: 'center',
   },
+  joinedButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    gap: 6,
+    minWidth: 70,
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  leaveActionButton: {
+    backgroundColor: '#FF6B6B',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#FF6B6B'
+  },
   leaveButton: {
     backgroundColor: 'rgba(255, 107, 107, 0.2)',
     borderWidth: 1,
@@ -1118,10 +1418,15 @@ const styles = StyleSheet.create({
     fontFamily: fonts.medium,
     color: colors.white,
   },
+  joinedLabelText: {
+    fontSize: 13,
+    fontFamily: fonts.medium,
+    color: '#00FF00',
+  },
   leaveButtonText: {
     fontSize: 13, // Increased
     fontFamily: fonts.medium,
-    color: '#FF6B6B',
+    color: colors.white,
   },
   disabledButton: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',

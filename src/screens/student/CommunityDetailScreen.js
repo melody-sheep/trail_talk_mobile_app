@@ -13,7 +13,8 @@ import {
   Modal,
   TextInput,
   KeyboardAvoidingView,
-  Platform
+  Platform,
+  Image
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,10 +27,13 @@ import {
   leaveCommunity,
   getCommunityMembers,
   getCommunityPosts,
-  deleteCommunity
+  deleteCommunity,
+  findUserByUsername,
+  createCommunityInvitation,
+  getCommunityInvitations,
+  supabase
 } from '../../lib/supabase';
-import PostCard from '../../components/PostCard';
-import { supabase } from '../../lib/supabase';
+import CommunityPostCard from '../../components/CommunityPostCard';
 
 export default function CommunityDetailScreen({ navigation, route }) {
   const { communityId } = route.params;
@@ -37,6 +41,7 @@ export default function CommunityDetailScreen({ navigation, route }) {
   
   const [community, setCommunity] = useState(null);
   const [members, setMembers] = useState([]);
+  const [communityInvitations, setCommunityInvitations] = useState([]);
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -44,6 +49,13 @@ export default function CommunityDetailScreen({ navigation, route }) {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const [deleting, setDeleting] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteQuery, setInviteQuery] = useState('');
+  const [inviteResults, setInviteResults] = useState([]);
+  const [inviteRole, setInviteRole] = useState('member');
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [selectedUsers, setSelectedUsers] = useState([]);
+  const [searchTimeout, setSearchTimeout] = useState(null);
 
   // Load community data
   useEffect(() => {
@@ -104,11 +116,20 @@ export default function CommunityDetailScreen({ navigation, route }) {
           table: 'community_posts',
           filter: `community_id=eq.${communityId}`
         },
-        (payload) => {
+        async (payload) => {
           console.log('CommunityDetailScreen real-time post event:', payload.eventType, payload.new?.id || payload.old?.id);
-          // Refresh posts when changes happen
+          // For posts tab, fetch posts only to avoid toggling the global loading state
           if (activeTab === 'posts') {
-            loadCommunityData();
+            try {
+              const { data: postsData, error: postsError } = await getCommunityPosts(communityId);
+              if (!postsError && postsData) {
+                setPosts(postsData || []);
+              } else if (postsError) {
+                console.error('Error fetching posts on realtime update', postsError);
+              }
+            } catch (e) {
+              console.error('Realtime posts fetch error', e);
+            }
           }
         }
       )
@@ -118,6 +139,75 @@ export default function CommunityDetailScreen({ navigation, route }) {
       try { postsSub.unsubscribe(); } catch (e) { console.log('Error unsubscribing postsSub', e); }
     };
   }, [communityId, activeTab]);
+
+  // Real-time subscriptions for invitations and members to auto-refresh UI
+  useEffect(() => {
+    if (!communityId) return;
+
+    const invSub = supabase
+      .channel(`community-invitations-${communityId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'community_invitations',
+          filter: `community_id=eq.${communityId}`
+        },
+        async (payload) => {
+          // Refresh pending invitations
+          try {
+            const { data: invitesData, error: invitesError } = await getCommunityInvitations(communityId);
+            if (!invitesError && invitesData) setCommunityInvitations(invitesData || []);
+          } catch (e) {
+            console.error('Realtime fetch invitations error', e);
+          }
+
+          // If an invitation was accepted elsewhere, members may have changed; refresh members too
+          try {
+            const { data: membersData, error: membersError } = await getCommunityMembers(communityId);
+            if (!membersError && membersData) setMembers(membersData || []);
+          } catch (e) {
+            console.error('Realtime fetch members error (from invitations sub)', e);
+          }
+        }
+      )
+      .subscribe();
+
+    const membersSub = supabase
+      .channel(`community-members-${communityId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'community_members',
+          filter: `community_id=eq.${communityId}`
+        },
+        async (payload) => {
+          // Refresh members list
+          try {
+            const { data: membersData, error: membersError } = await getCommunityMembers(communityId);
+            if (!membersError && membersData) setMembers(membersData || []);
+          } catch (e) {
+            console.error('Realtime fetch members error', e);
+          }
+          // Also refresh invitations so invite modal updates when membership changes
+          try {
+            const { data: invitesData, error: invitesError } = await getCommunityInvitations(communityId);
+            if (!invitesError && invitesData) setCommunityInvitations(invitesData || []);
+          } catch (e) {
+            console.error('Realtime fetch invitations error (from members sub)', e);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      try { invSub.unsubscribe(); } catch (e) { /* ignore */ }
+      try { membersSub.unsubscribe(); } catch (e) { /* ignore */ }
+    };
+  }, [communityId]);
 
   const loadCommunityData = async () => {
     try {
@@ -155,6 +245,24 @@ export default function CommunityDetailScreen({ navigation, route }) {
         throw membersError;
         }
         setMembers(membersData || []);
+        // Ensure community.member_count reflects actual members length (member_count field can be stale)
+        if (membersData && communityData) {
+          setCommunity(prev => ({ ...(prev || communityData), member_count: membersData.length }));
+        }
+
+        // Load pending community invitations (for admin invite modal filtering)
+        try {
+          const { data: invitesData, error: invitesError } = await getCommunityInvitations(communityId);
+          if (!invitesError && invitesData) {
+            setCommunityInvitations(invitesData || []);
+          } else if (invitesError) {
+            console.warn('Error loading community invitations', invitesError);
+            setCommunityInvitations([]);
+          }
+        } catch (e) {
+          console.error('Error fetching community invitations', e);
+          setCommunityInvitations([]);
+        }
 
         // Load posts if on posts tab
         if (activeTab === 'posts') {
@@ -194,11 +302,21 @@ export default function CommunityDetailScreen({ navigation, route }) {
 
     try {
       const { error } = await joinCommunity(communityId, user.id);
-      if (error) throw error;
+      if (!error) {
+        await loadCommunityData();
+        Alert.alert('Success', `You've joined ${community.name}!`);
+        return;
+      }
 
-      await loadCommunityData();
-      
-      Alert.alert('Success', `You've joined ${community.name}!`);
+      if (error.code === '23505' || (error.message && error.message.toLowerCase().includes('already'))) {
+        // Already a member
+        console.log('Already a member:', communityId, user.id);
+        await loadCommunityData();
+        Alert.alert('Info', `You're already a member of ${community.name}.`);
+        return;
+      }
+
+      throw error;
     } catch (error) {
       console.error('Error joining community:', error);
       Alert.alert('Error', 'Failed to join community. Please try again.');
@@ -288,6 +406,143 @@ export default function CommunityDetailScreen({ navigation, route }) {
   const openDeleteModal = () => {
     setShowDeleteModal(true);
     setDeleteConfirmation('');
+  };
+
+  const openInviteModal = () => {
+    setShowInviteModal(true);
+    setInviteQuery('');
+    setInviteResults([]);
+    setSelectedUsers([]);
+    // populate default user list for invite modal
+    performUserSearch('');
+  };
+
+  const closeInviteModal = () => {
+    setShowInviteModal(false);
+    setInviteQuery('');
+    setInviteResults([]);
+    setSelectedUsers([]);
+  };
+
+  const performUserSearch = async (q) => {
+    setInviteLoading(true);
+    try {
+      let data = null;
+
+      // If query is empty, fetch a default list of profiles to allow selecting without searching
+      if (!q || q.trim().length === 0) {
+        const { data: profilesData, error } = await supabase
+          .from('profiles')
+          .select('id, username, display_name, role, user_type, avatar_url')
+          .limit(50)
+          .order('display_name', { ascending: true });
+
+        if (error) {
+          console.error('Error fetching profiles for invite', error);
+          setInviteResults([]);
+          return;
+        }
+        data = profilesData;
+      } else {
+        const { data: found, error } = await findUserByUsername(q.trim());
+        if (error) {
+          console.error('Invite search error', error);
+          setInviteResults([]);
+          return;
+        }
+        data = found;
+      }
+
+      if (data) {
+        // Filter out current user and users who are already members
+        const filteredUsers = data.filter(u => 
+          u.id !== user.id && 
+          !members.some(member => member.user?.id === u.id) &&
+          !communityInvitations.some(inv => inv.invited_user?.id === u.id)
+        );
+        setInviteResults(filteredUsers);
+      } else {
+        setInviteResults([]);
+      }
+    } catch (e) {
+      console.error('Error searching users for invite', e);
+      setInviteResults([]);
+    } finally {
+      setInviteLoading(false);
+    }
+  };
+
+  const handleSearchChange = (text) => {
+    setInviteQuery(text);
+    
+    // Debounce search
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+    
+    setSearchTimeout(setTimeout(() => {
+      performUserSearch(text);
+    }, 500));
+  };
+
+  const toggleUserSelection = (user) => {
+    setSelectedUsers(prev => {
+      const isSelected = prev.some(u => u.id === user.id);
+      if (isSelected) {
+        return prev.filter(u => u.id !== user.id);
+      } else {
+        return [...prev, user];
+      }
+    });
+  };
+
+  const handleSendInvites = async () => {
+    if (selectedUsers.length === 0 || !community) return;
+    
+    try {
+      setInviteLoading(true);
+      
+      const invitations = selectedUsers.map(u => ({
+        communityId: community.id,
+        invitedUserId: u.id,
+        invitedById: user.id,
+        role: inviteRole
+      }));
+
+      // Send invitations one by one
+      const results = [];
+      for (const invitation of invitations) {
+        try {
+          const { data, error } = await createCommunityInvitation(invitation);
+          if (!error) {
+            results.push({ success: true, user: invitation.invitedUserId });
+          } else {
+            results.push({ success: false, user: invitation.invitedUserId, error });
+          }
+        } catch (e) {
+          results.push({ success: false, user: invitation.invitedUserId, error: e });
+        }
+      }
+
+      const successful = results.filter(r => r.success).length;
+      const failed = results.filter(r => !r.success).length;
+
+      let message = '';
+      if (successful > 0) {
+        message += `Successfully sent ${successful} invitation${successful > 1 ? 's' : ''}.`;
+      }
+      if (failed > 0) {
+        message += ` ${failed} invitation${failed > 1 ? 's' : ''} failed to send.`;
+      }
+
+      Alert.alert('Invitations Sent', message);
+      closeInviteModal();
+    } catch (e) {
+      console.error('Error sending invitations', e);
+      Alert.alert('Error', 'Failed to send invitations.');
+    } finally {
+      setInviteLoading(false);
+    }
   };
 
   const closeDeleteModal = () => {
@@ -388,7 +643,14 @@ export default function CommunityDetailScreen({ navigation, route }) {
     return (
       <View style={styles.memberItem}>
         <View style={styles.memberAvatar}>
-          <Ionicons name="person" size={16} color="rgba(255,255,255,0.6)" />
+          {item.user?.avatar_url ? (
+            <Image
+              source={{ uri: item.user.avatar_url }}
+              style={styles.memberAvatarImage}
+            />
+          ) : (
+            <Ionicons name="person" size={16} color="rgba(255,255,255,0.6)" />
+          )}
         </View>
         <View style={styles.memberInfo}>
           <Text style={styles.memberName}>
@@ -407,11 +669,55 @@ export default function CommunityDetailScreen({ navigation, route }) {
 
   // Render post item
   const renderPostItem = ({ item }) => (
-    <PostCard post={item} userRole={community?.userRole || 'student'} onInteraction={(postId, field, newCount) => {
+    <CommunityPostCard post={item} userRole={community?.userRole || 'student'} onInteraction={(postId, field, newCount) => {
       console.log('CommunityDetailScreen: post interaction', postId, field, newCount);
       setPosts(prev => prev.map(p => p.id === postId ? { ...p, [field]: newCount } : p));
     }} />
   );
+
+  // Render user search result item
+  const renderUserItem = ({ item }) => {
+    const isSelected = selectedUsers.some(u => u.id === item.id);
+    
+    return (
+      <TouchableOpacity 
+        style={[
+          styles.userItem,
+          isSelected && styles.userItemSelected
+        ]}
+        onPress={() => toggleUserSelection(item)}
+      >
+        <View style={styles.userInfo}>
+          <View style={styles.userAvatar}>
+            {item.avatar_url ? (
+              <Image
+                source={{ uri: item.avatar_url }}
+                style={styles.userAvatarImage}
+              />
+            ) : (
+              <Ionicons name="person" size={20} color="rgba(255,255,255,0.6)" />
+            )}
+          </View>
+          <View style={styles.userDetails}>
+            <Text style={styles.userName}>
+              {item.display_name || item.username}
+            </Text>
+            <Text style={styles.userRole}>
+              {item.user_type || item.role || 'User'}
+            </Text>
+          </View>
+        </View>
+        <View style={[
+          styles.checkbox,
+          isSelected && styles.checkboxSelected
+        ]}>
+          {isSelected && (
+            <Ionicons name="checkmark" size={16} color={colors.white} />
+          )}
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   // Delete Confirmation Modal
   const renderDeleteModal = () => (
@@ -536,14 +842,7 @@ export default function CommunityDetailScreen({ navigation, route }) {
         <Text style={styles.headerTitle} numberOfLines={1}>
           {community.name}
         </Text>
-        {community.isAdmin && (
-          <TouchableOpacity 
-            style={styles.deleteHeaderButton}
-            onPress={openDeleteModal}
-          >
-            <Ionicons name="trash-outline" size={18} color="#FF6B6B" />
-          </TouchableOpacity>
-        )}
+        {/* Removed header delete icon to make deletion less accessible */}
       </View>
 
       <ScrollView 
@@ -573,9 +872,16 @@ export default function CommunityDetailScreen({ navigation, route }) {
                 {community.isAdmin && <ProfessionalBadge type="verified" size="small" />}
               </View>
             </View>
-            <Text style={styles.communityCategory}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                        <Text style={styles.communityCategory}>
               {community.category.charAt(0).toUpperCase() + community.category.slice(1)} Community
-            </Text>
+                        </Text>
+                        {community.isMember && (
+                          <View style={styles.joinedSmall}>
+                            <Text style={styles.joinedSmallText}>Joined</Text>
+                          </View>
+                        )}
+                      </View>
             <View style={styles.communityStats}>
               <View style={styles.stat}>
                 <Ionicons name="people" size={14} color="rgba(255,255,255,0.6)" />
@@ -591,10 +897,10 @@ export default function CommunityDetailScreen({ navigation, route }) {
           </View>
         </View>
 
-        {/* Action Buttons */}
-        <View style={styles.actionButtons}>
-          {community.isMember ? (
-            <>
+        {/* Action Buttons: Joined label above, Create Post + Leave side-by-side */}
+        {community.isMember ? (
+          <>
+            <View style={styles.actionButtonsRow}>
               <TouchableOpacity 
                 style={[styles.actionButton, styles.primaryButton]}
                 onPress={handleCreatePost}
@@ -602,15 +908,18 @@ export default function CommunityDetailScreen({ navigation, route }) {
                 <Ionicons name="create-outline" size={18} color={colors.white} />
                 <Text style={styles.primaryButtonText}>Create Post</Text>
               </TouchableOpacity>
+
               <TouchableOpacity 
-                style={[styles.actionButton, styles.secondaryButton]}
+                style={[styles.actionButton, styles.leaveButtonRed]}
                 onPress={handleLeaveCommunity}
               >
-                <Ionicons name="exit-outline" size={18} color="#FF6B6B" />
-                <Text style={styles.secondaryButtonText}>Leave</Text>
+                <Ionicons name="exit-outline" size={18} color={colors.white} />
+                <Text style={[styles.leaveButtonTextWhite]}>Leave</Text>
               </TouchableOpacity>
-            </>
-          ) : (
+            </View>
+          </>
+        ) : (
+          <View style={styles.actionButtons}>
             <TouchableOpacity 
               style={[styles.actionButton, styles.primaryButton]}
               onPress={handleJoinCommunity}
@@ -618,18 +927,25 @@ export default function CommunityDetailScreen({ navigation, route }) {
               <Ionicons name="person-add" size={18} color={colors.white} />
               <Text style={styles.primaryButtonText}>Join Community</Text>
             </TouchableOpacity>
-          )}
-        </View>
+          </View>
+        )}
 
         {/* Admin Actions */}
         {community.isAdmin && (
           <View style={styles.adminSection}>
             <Text style={styles.adminTitle}>Admin Actions</Text>
             <TouchableOpacity 
+              style={styles.adminInviteButton}
+              onPress={openInviteModal}
+            >
+              <Ionicons name="person-add-outline" size={18} color="#4ECDC4" />
+              <Text style={styles.adminInviteText}>Invite Members</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
               style={styles.adminDeleteButton}
               onPress={openDeleteModal}
             >
-              <Ionicons name="trash-outline" size={18} color="#FF6B6B" />
+              <Ionicons name="trash-bin" size={18} color="#FF6B6B" />
               <Text style={styles.adminDeleteText}>Delete Community</Text>
             </TouchableOpacity>
           </View>
@@ -762,6 +1078,119 @@ export default function CommunityDetailScreen({ navigation, route }) {
 
       {/* Delete Confirmation Modal */}
       {renderDeleteModal()}
+      
+      {/* Invite Members Modal */}
+      <Modal
+        visible={showInviteModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={closeInviteModal}
+      >
+        <View style={styles.inviteModalOverlay}>
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.inviteModalContent}>
+            <View style={styles.modalInner}>
+              <View style={styles.modalHeader}>
+              <Ionicons name="person-add" size={28} color="#4ECDC4" />
+              <Text style={styles.modalTitle}>Invite Members</Text>
+              <Text style={styles.modalSubtitle}>Search users and select multiple to invite</Text>
+            </View>
+
+            {/* Search Input */}
+            <View style={styles.searchSection}>
+              <Ionicons name="search" size={20} color="rgba(255,255,255,0.5)" style={styles.searchIcon} />
+              <TextInput
+                placeholder="Search by username..."
+                placeholderTextColor="rgba(255,255,255,0.5)"
+                value={inviteQuery}
+                onChangeText={handleSearchChange}
+                style={styles.searchInput}
+                autoCapitalize="none"
+              />
+            </View>
+
+            {/* Role Selection */}
+            <View style={styles.roleSection}>
+              <Text style={styles.roleLabel}>Invite as:</Text>
+              <View style={styles.roleButtons}>
+                <TouchableOpacity 
+                  style={[styles.roleButton, inviteRole === 'member' && styles.roleButtonActive]}
+                  onPress={() => setInviteRole('member')}
+                >
+                  <Text style={[styles.roleButtonText, inviteRole === 'member' && styles.roleButtonTextActive]}>
+                    Member
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.roleButton, inviteRole === 'admin' && styles.roleButtonActive]}
+                  onPress={() => setInviteRole('admin')}
+                >
+                  <Text style={[styles.roleButtonText, inviteRole === 'admin' && styles.roleButtonTextActive]}>
+                    Admin
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Selected Users Count */}
+              {selectedUsers.length > 0 && (
+                <View style={styles.selectedCount}>
+                  <Text style={styles.selectedCountText}>
+                    {selectedUsers.length} user{selectedUsers.length > 1 ? 's' : ''} selected
+                  </Text>
+                </View>
+              )}
+
+              {/* Users List */}
+              <View style={styles.usersListContainer}>
+              {inviteLoading ? (
+                <View style={styles.loadingState}>
+                  <Text style={styles.loadingText}>Searching users...</Text>
+                </View>
+              ) : inviteResults.length === 0 && inviteQuery ? (
+                <View style={styles.emptyState}>
+                  <Ionicons name="people-outline" size={40} color="rgba(255,255,255,0.3)" />
+                  <Text style={styles.emptyStateText}>No users found</Text>
+                </View>
+              ) : (
+                <FlatList
+                  data={inviteResults}
+                  renderItem={renderUserItem}
+                  keyExtractor={(item) => item.id}
+                  style={styles.usersList}
+                  contentContainerStyle={styles.usersListContent}
+                  nestedScrollEnabled={true}
+                  keyboardShouldPersistTaps="handled"
+                  showsVerticalScrollIndicator={false}
+                />
+              )}
+            </View>
+
+              {/* Action Buttons */}
+              <View style={styles.modalActions}>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.cancelButton]} 
+                onPress={closeInviteModal}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[
+                  styles.modalButton, 
+                  styles.primaryButton,
+                  (selectedUsers.length === 0 || inviteLoading) && styles.buttonDisabled
+                ]} 
+                onPress={handleSendInvites}
+                disabled={selectedUsers.length === 0 || inviteLoading}
+              >
+                <Text style={styles.primaryButtonText}>
+                  {inviteLoading ? 'Sending...' : `Invite (${selectedUsers.length})`}
+                </Text>
+              </TouchableOpacity>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -908,6 +1337,17 @@ const styles = StyleSheet.create({
   primaryButton: {
     backgroundColor: '#4ECDC4',
   },
+  joinedBadge: {
+    backgroundColor: '#FF8C00',
+    borderWidth: 0,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 6,
+  },
   secondaryButton: {
     backgroundColor: 'rgba(255,255,255,0.08)',
     borderWidth: 1,
@@ -922,6 +1362,32 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: fonts.medium,
     color: '#FF6B6B',
+  },
+  /* New layout styles for joined + action row */
+  joinedRow: {
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    marginBottom: 8,
+  },
+  joinedBadgeCentered: {
+    alignSelf: 'center',
+  },
+  joinedText: {
+    fontSize: 13,
+    fontFamily: fonts.semiBold,
+    color: colors.white,
+  },
+  actionButtonsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+  },
+  leaveButtonStyle: {
+    borderColor: 'rgba(255,255,255,0.12)'
+  },
+  leaveButtonText: {
+    color: '#FF8C00'
   },
   adminSection: {
     paddingHorizontal: 16,
@@ -948,6 +1414,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: fonts.medium,
     color: '#FF6B6B',
+  },
+  adminInviteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(78,205,196,0.08)',
+    borderWidth: 1,
+    borderColor: '#4ECDC4',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    gap: 6,
+    marginBottom: 8,
+  },
+  adminInviteText: {
+    fontSize: 14,
+    fontFamily: fonts.medium,
+    color: '#4ECDC4',
   },
   tabs: {
     flexDirection: 'row',
@@ -1076,6 +1559,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 10,
   },
+  memberAvatarImage: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+  },
   memberInfo: {
     flex: 1,
   },
@@ -1101,6 +1589,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
   },
+  inviteModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingTop: 60,
+  },
   modalContent: {
     backgroundColor: colors.homeBackground,
     borderRadius: 14,
@@ -1110,6 +1606,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
   },
+  inviteModalContent: {
+    backgroundColor: colors.homeBackground,
+    borderRadius: 14,
+    padding: 20,
+    width: '100%',
+    maxWidth: 400,
+    height: '78%',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  modalInner: {
+    flex: 1,
+    justifyContent: 'space-between',
+  },
   modalHeader: {
     alignItems: 'center',
     marginBottom: 20,
@@ -1117,7 +1627,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontFamily: fonts.bold,
-    color: '#FF6B6B',
+    color: '#4ECDC4',
     marginTop: 10,
     marginBottom: 6,
     textAlign: 'center',
@@ -1205,6 +1715,9 @@ const styles = StyleSheet.create({
   deleteButtonDisabled: {
     backgroundColor: 'rgba(255, 107, 107, 0.3)',
   },
+  buttonDisabled: {
+    backgroundColor: 'rgba(78, 205, 196, 0.3)',
+  },
   cancelButtonText: {
     fontSize: 14,
     fontFamily: fonts.medium,
@@ -1214,5 +1727,179 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: fonts.bold,
     color: colors.white,
+  },
+  // Invite Modal Styles
+  searchSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    marginBottom: 16,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: fonts.normal,
+    color: colors.white,
+    paddingVertical: 12,
+  },
+  roleSection: {
+    marginBottom: 16,
+  },
+  roleLabel: {
+    fontSize: 14,
+    fontFamily: fonts.medium,
+    color: 'rgba(255,255,255,0.8)',
+    marginBottom: 8,
+  },
+  roleButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  roleButton: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+  },
+  roleButtonActive: {
+    backgroundColor: 'rgba(78, 205, 196, 0.2)',
+    borderColor: '#4ECDC4',
+  },
+  roleButtonText: {
+    fontSize: 12,
+    fontFamily: fonts.medium,
+    color: 'rgba(255,255,255,0.7)',
+  },
+  roleButtonTextActive: {
+    color: '#4ECDC4',
+    fontFamily: fonts.semiBold,
+  },
+  /* small joined badge near title */
+  joinedSmall: {
+    backgroundColor: '#FF8C00',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginLeft: 6,
+    alignSelf: 'flex-start'
+  },
+  joinedSmallText: {
+    fontSize: 11,
+    fontFamily: fonts.semiBold,
+    color: colors.white,
+  },
+  /* leave button red style */
+  leaveButtonRed: {
+    backgroundColor: '#FF6B6B',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  leaveButtonTextWhite: {
+    fontSize: 14,
+    fontFamily: fonts.medium,
+    color: colors.white,
+  },
+  selectedCount: {
+    backgroundColor: 'rgba(78, 205, 196, 0.1)',
+    padding: 8,
+    borderRadius: 8,
+    marginBottom: 12,
+    alignItems: 'center',
+  },
+  selectedCountText: {
+    fontSize: 12,
+    fontFamily: fonts.medium,
+    color: '#4ECDC4',
+  },
+  usersListContainer: {
+    flex: 1,
+    minHeight: 150,
+    maxHeight: '60%',
+    marginBottom: 16,
+    overflow: 'hidden',
+  },
+  usersList: {
+    flex: 1,
+  },
+  usersListContent: {
+    paddingBottom: 12,
+  },
+  userItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.05)',
+  },
+  userItemSelected: {
+    backgroundColor: 'rgba(78, 205, 196, 0.08)',
+    borderRadius: 8,
+  },
+  userInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  userAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  userAvatarImage: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+  },
+  userDetails: {
+    flex: 1,
+  },
+  userName: {
+    fontSize: 14,
+    fontFamily: fonts.medium,
+    color: colors.white,
+    marginBottom: 2,
+  },
+  userRole: {
+    fontSize: 11,
+    fontFamily: fonts.normal,
+    color: 'rgba(255,255,255,0.5)',
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxSelected: {
+    backgroundColor: '#4ECDC4',
+    borderColor: '#4ECDC4',
+  },
+  loadingState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
   },
 });
