@@ -125,20 +125,30 @@ export default function NotificationsScreen({ navigation }) {
   const getNotificationColor = (type) => {
     switch(type) {
       case 'like': 
-      case 'post_like': return '#FF6B6B';
-      case 'comment': return '#4ECDC4';
-      case 'follow': return '#45B7D1';
+      case 'post_like': return '#ee1a64ff';
+      case 'comment': return '#3ad3c9ff';
+      case 'follow': return '#29c348ff';
       case 'community': 
       case 'community_post': return '#96CEB4';
       case 'system': return '#FFD166';
       case 'mention': return '#A882DD';
-      case 'repost': return '#6A8EAE';
+      case 'repost': return '#5187b7ff';
       case 'achievement': return '#FF9F1C';
       case 'bookmark': return '#118AB2';
       case 'post_created': return '#06D6A0';
       default: return '#8A8A8A';
     }
   };
+
+    const getContrastColor = (hex) => {
+      if (!hex || hex[0] !== '#') return colors.white;
+      const c = hex.substring(1);
+      const r = parseInt(c.substring(0,2), 16);
+      const g = parseInt(c.substring(2,4), 16);
+      const b = parseInt(c.substring(4,6), 16);
+      const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+      return luminance > 0.6 ? '#ffffffff' : colors.white;
+    };
 
   const handleDeleteNotification = async (notificationId) => {
     Alert.alert(
@@ -181,43 +191,47 @@ export default function NotificationsScreen({ navigation }) {
     { useNativeDriver: false }
   );
 
-  const renderNotificationItem = ({ item }) => (
-    <TouchableOpacity 
-      style={[
-        styles.notificationCard,
-        !item.isRead && styles.unreadNotification
-      ]}
-      onPress={() => markAsRead(item.id)}
-      activeOpacity={0.7}
-    >
-      {/* Avatar with Unread Indicator */}
-      <View style={styles.avatarContainer}>
-        <View style={[styles.avatarPlaceholder, { backgroundColor: getNotificationColor(item.type) }]}>
-          <Ionicons 
-            name={getNotificationIcon(item.type)} 
-            size={20} 
-            color={colors.white} 
-          />
-        </View>
-        {/* Unread Indicator - Top Left */}
-        {!item.isRead && <View style={styles.unreadIndicator} />}
-      </View>
-
-      {/* Content Section */}
-      <View style={styles.contentSection}>
-        <Text style={styles.notificationDescription}>{item.description}</Text>
-        <Text style={styles.timestamp}>{item.time}</Text>
-      </View>
-
-      {/* Kebab Menu */}
+  const renderNotificationItem = ({ item }) => {
+    const bgColor = getNotificationColor(item.type);
+    const iconColor = getContrastColor(bgColor);
+    return (
       <TouchableOpacity 
-        style={styles.kebabButton}
-        onPress={() => handleDeleteNotification(item.id)}
+        style={[
+          styles.notificationCard,
+          !item.isRead && styles.unreadNotification
+        ]}
+        onPress={() => markAsRead(item.id)}
+        activeOpacity={0.7}
       >
-        <Ionicons name="ellipsis-vertical" size={16} color="rgba(255, 255, 255, 0.6)" />
+        {/* Avatar with Unread Indicator */}
+        <View style={styles.avatarContainer}>
+          <View style={[styles.avatarPlaceholder, { backgroundColor: bgColor }]}>
+            <Ionicons 
+              name={getNotificationIcon(item.type)} 
+              size={20} 
+              color={iconColor} 
+            />
+          </View>
+          {/* Unread Indicator - Top Left */}
+          {!item.isRead && <View style={styles.unreadIndicator} />}
+        </View>
+
+        {/* Content Section */}
+        <View style={styles.contentSection}>
+          <Text style={styles.notificationDescription}>{item.description}</Text>
+          <Text style={styles.timestamp}>{item.time}</Text>
+        </View>
+
+        {/* Kebab Menu */}
+        <TouchableOpacity 
+          style={styles.kebabButton}
+          onPress={() => handleDeleteNotification(item.id)}
+        >
+          <Ionicons name="ellipsis-vertical" size={16} color="rgba(255, 255, 255, 0.6)" />
+        </TouchableOpacity>
       </TouchableOpacity>
-    </TouchableOpacity>
-  );
+    );
+  };
 
   const renderSectionHeader = ({ section }) => (
     <View style={section.title === 'Earlier' ? styles.sectionHeaderEarlier : styles.sectionHeader}>

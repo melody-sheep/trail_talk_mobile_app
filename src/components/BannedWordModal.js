@@ -145,16 +145,16 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 30,
-    marginBottom: 30, // small buffer above device bottom
-    maxHeight: '90%',
+    paddingTop: 20,
+    paddingBottom: 10,
+    marginBottom: 10, // small buffer above device bottom
+    maxHeight: '100%',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 16,
+    marginBottom: 10,
   },
   headerContent: {
     flexDirection: 'row',

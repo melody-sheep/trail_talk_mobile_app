@@ -125,20 +125,21 @@ export default function NotificationsScreen({ navigation }) {
   const getNotificationColor = (type) => {
     switch(type) {
       case 'like': 
-      case 'post_like': return '#FF6B6B';
-      case 'comment': return '#4ECDC4';
-      case 'follow': return '#45B7D1';
+      case 'post_like': return '#ee1a64ff';
+      case 'comment': return '#3ad3c9ff';
+      case 'follow': return '#29c348ff';
       case 'community': 
       case 'community_post': return '#96CEB4';
       case 'system': return '#FFD166';
       case 'mention': return '#A882DD';
-      case 'repost': return '#6A8EAE';
+      case 'repost': return '#5187b7ff';
       case 'achievement': return '#FF9F1C';
       case 'bookmark': return '#118AB2';
       case 'post_created': return '#06D6A0';
       default: return '#8A8A8A';
     }
   };
+
 
   const handleDeleteNotification = async (notificationId) => {
     Alert.alert(
@@ -414,7 +415,7 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   collapsedBadge: {
-    backgroundColor: '#FF6B6B',
+    backgroundColor: '#fd3131ff',
     borderRadius: 10,
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -552,7 +553,7 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#FF6B6B',
+    backgroundColor: '#ff3a3aff',
     borderWidth: 2,
     borderColor: colors.homeBackground,
   },
