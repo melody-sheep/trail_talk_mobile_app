@@ -839,10 +839,19 @@ export default function CommunityDetailScreen({ navigation, route }) {
         >
           <Ionicons name="arrow-back" size={22} color={colors.white} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>
-          {community.name}
-        </Text>
-        {/* Removed header delete icon to make deletion less accessible */}
+        <View style={{ flex: 1 }} />
+        <View style={styles.headerRightRow}>
+          <TouchableOpacity
+            style={styles.profileButton}
+            onPress={() => navigation.navigate('ViewProfileScreen', { userId: user?.id })}
+          >
+            {user?.avatar_url ? (
+              <Image source={{ uri: user.avatar_url }} style={styles.profileImage} />
+            ) : (
+              <Ionicons name="person-circle-outline" size={30} color={colors.white} />
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView 
@@ -1246,6 +1255,21 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
     marginHorizontal: 12,
+  },
+  headerRightRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  profileButton: {
+    paddingLeft: 8,
+    paddingRight: 4,
+  },
+  profileImage: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)'
   },
   deleteHeaderButton: {
     padding: 6,

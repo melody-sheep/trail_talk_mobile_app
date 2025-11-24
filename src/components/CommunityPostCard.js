@@ -57,7 +57,11 @@ const CommunityPostCard = ({ post, userRole = 'student', onInteraction }) => {
   }, [post.author, post.author_id]);
 
   // Hook for comments (used to detect if current user has commented)
-  const { hasCommented, fetchComments } = useComments(post?.id, user?.id);
+  const { hasCommented, fetchComments } = useComments(post?.id, user?.id, {
+    commentsTable: 'community_comments',
+    postTable: 'community_posts',
+    commentCountField: 'comment_count'
+  });
 
   const checkUserInteractions = async () => {
     if (!user) return;
@@ -292,6 +296,10 @@ const CommunityPostCard = ({ post, userRole = 'student', onInteraction }) => {
     navigation.navigate('CommentScreen', {
       post,
       user,
+      commentsTable: 'community_comments',
+      postTable: 'community_posts',
+      commentCountField: 'comment_count',
+      postIdField: 'community_post_id',
       onCommentAdded: () => {
         // Refresh comments and increment local count
         fetchComments();
@@ -309,7 +317,7 @@ const CommunityPostCard = ({ post, userRole = 'student', onInteraction }) => {
 
   // Get text color based on interaction state
   const getLikeTextColor = () => isLiked ? '#FF0066' : 'rgba(255, 255, 255, 0.8)';
-  const getCommentTextColor = () => 'rgba(255, 255, 255, 0.8)';
+  const getCommentTextColor = () => hasCommented ? '#00DDFF' : 'rgba(255, 255, 255, 0.8)';
   const getRepostTextColor = () => isReposted ? '#11FF00' : 'rgba(255, 255, 255, 0.8)';
   const getBookmarkTextColor = () => isBookmarked ? '#FFCC00' : 'rgba(255, 255, 255, 0.8)';
 

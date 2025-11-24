@@ -947,3 +947,40 @@
 | reports        | post_id     | posts         | id             |
 | reports        | reporter_id | profiles      | id             |
 
+
+
+
+| column_name       | data_type                | is_nullable | column_default         |
+| ----------------- | ------------------------ | ----------- | ---------------------- |
+| id                | uuid                     | NO          | gen_random_uuid()      |
+| community_post_id | uuid                     | YES         | null                   |
+| user_id           | uuid                     | YES         | null                   |
+| content           | text                     | NO          | null                   |
+| is_anonymous      | boolean                  | YES         | false                  |
+| anonymous_name    | text                     | YES         | 'Anonymous User'::text |
+| created_at        | timestamp with time zone | YES         | now()                  |
+| updated_at        | timestamp with time zone | YES         | now()                  |
+
+| indexname                                | indexdef                                                                                                           |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| community_comments_pkey                  | CREATE UNIQUE INDEX community_comments_pkey ON public.community_comments USING btree (id)                          |
+| idx_community_comments_community_post_id | CREATE INDEX idx_community_comments_community_post_id ON public.community_comments USING btree (community_post_id) |
+| idx_community_comments_user_id           | CREATE INDEX idx_community_comments_user_id ON public.community_comments USING btree (user_id)                     |
+| idx_community_comments_created_at        | CREATE INDEX idx_community_comments_created_at ON public.community_comments USING btree (created_at DESC)          |
+
+| constraint_name                           | column_name       | foreign_table   | foreign_column |
+| ----------------------------------------- | ----------------- | --------------- | -------------- |
+| community_comments_community_post_id_fkey | community_post_id | community_posts | id             |
+| community_comments_user_id_fkey           | user_id           | profiles        | id             |
+
+| relname            | relrowsecurity |
+| ------------------ | -------------- |
+| community_comments | true           |
+
+
+| policy_name                             | permissive | command_char | command | using_expression       | with_check_expression  |
+| --------------------------------------- | ---------- | ------------ | ------- | ---------------------- | ---------------------- |
+| Anyone can view community comments      | true       | r            | S       | true                   | null                   |
+| Users can create community comments     | true       | a            | A       | null                   | (auth.uid() = user_id) |
+| Users can delete own community comments | true       | d            | D       | (auth.uid() = user_id) | null                   |
+| Users can update own community comments | true       | w            | w       | (auth.uid() = user_id) | null                   |

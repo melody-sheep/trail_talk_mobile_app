@@ -1,7 +1,12 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
-const useComments = (postId, userId) => {
+// Enhanced: support custom comment table and post table/count field for community posts
+const useComments = (
+  postId,
+  userId,
+  options = { commentsTable: 'comments', postTable: 'posts', commentCountField: 'comments_count' }
+) => {
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -12,10 +17,13 @@ const useComments = (postId, userId) => {
     setLoading(true);
     setError(null);
     try {
+      const commentsTable = options?.commentsTable || 'comments';
+      // Determine the foreign key field name for the post id in the comments table
+      const postIdField = options?.postIdField || (commentsTable === 'community_comments' ? 'community_post_id' : 'post_id');
       const { data, error } = await supabase
-        .from('comments')
+        .from(commentsTable)
         .select(`*, user:profiles(id, display_name, avatar_url)`)
-        .eq('post_id', postId)
+        .eq(postIdField, postId)
         .order('created_at', { ascending: true });
       if (error) throw error;
       setComments(data || []);
@@ -35,11 +43,13 @@ const useComments = (postId, userId) => {
     setLoading(true);
     setError(null);
     try {
+      const commentsTable = options?.commentsTable || 'comments';
+      const postIdField = options?.postIdField || (commentsTable === 'community_comments' ? 'community_post_id' : 'post_id');
       const { data, error } = await supabase
-        .from('comments')
+        .from(commentsTable)
         .insert([
           {
-            post_id: postId,
+            [postIdField]: postId,
             user_id: userId,
             content,
             is_anonymous: isAnonymous,
@@ -74,8 +84,9 @@ const useComments = (postId, userId) => {
     setLoading(true);
     setError(null);
     try {
+      const commentsTable = options?.commentsTable || 'comments';
       const { error } = await supabase
-        .from('comments')
+        .from(commentsTable)
         .delete()
         .eq('id', commentId);
 
@@ -99,24 +110,27 @@ const useComments = (postId, userId) => {
   // Update post comment count in database
   const updatePostCommentCount = async (change) => {
     try {
-      // Get current count
+      // Get current count from configured post table and field
+      const postTable = options?.postTable || 'posts';
+      const countField = options?.commentCountField || 'comments_count';
+
       const { data: currentPost } = await supabase
-        .from('posts')
-        .select('comments_count')
+        .from(postTable)
+        .select(countField)
         .eq('id', postId)
         .single();
 
       if (currentPost) {
-        const currentCount = currentPost.comments_count || 0;
+        const currentCount = Number(currentPost[countField]) || 0;
         const newCount = Math.max(0, currentCount + change);
         
         const { error } = await supabase
-          .from('posts')
-          .update({ comments_count: newCount })
+          .from(postTable)
+          .update({ [countField]: newCount })
           .eq('id', postId);
 
         if (!error) {
-          console.log(`Successfully updated comments_count to ${newCount}`);
+          console.log(`Successfully updated ${countField} to ${newCount}`);
         }
       }
     } catch (error) {
@@ -131,16 +145,18 @@ const useComments = (postId, userId) => {
     // Initial fetch
     fetchComments();
 
-    // Subscribe to comment changes
+    // Subscribe to comment changes on the configured comments table
+    const commentsTable = options?.commentsTable || 'comments';
+    const postIdField = options?.postIdField || (commentsTable === 'community_comments' ? 'community_post_id' : 'post_id');
     const subscription = supabase
-      .channel(`comments-${postId}`)
+      .channel(`${commentsTable}-${postId}`)
       .on(
         'postgres_changes',
         {
           event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
           schema: 'public',
-          table: 'comments',
-          filter: `post_id=eq.${postId}`
+          table: commentsTable,
+          filter: `${postIdField}=eq.${postId}`
         },
         (payload) => {
           console.log('Real-time comment update:', payload.eventType, 'by user:', payload.new?.user_id);

@@ -32,7 +32,7 @@ const CommentScreen = () => {
   const { user } = useContext(UserContext);
   const currentUser = routeUser || user;
 
-  // Hook for comments
+  // Hook for comments (supports custom tables via route params)
   const {
     comments,
     loading,
@@ -41,7 +41,15 @@ const CommentScreen = () => {
     deleteComment,
     fetchComments,
     hasCommented,
-  } = useComments(post?.id, currentUser?.id);
+  } = useComments(
+    post?.id,
+    currentUser?.id,
+    {
+      commentsTable: route.params?.commentsTable || 'comments',
+      postTable: route.params?.postTable || 'posts',
+      commentCountField: route.params?.commentCountField || 'comments_count'
+    }
+  );
 
   const [text, setText] = useState('');
   const [keyboardHeight, setKeyboardHeight] = useState(0);

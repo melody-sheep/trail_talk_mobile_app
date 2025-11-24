@@ -9,7 +9,8 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
-  Modal
+  Modal,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -178,19 +179,29 @@ export default function CommunityDetailScreen({ route, navigation }) {
           >
             <Ionicons name="arrow-back" size={24} color={colors.white} />
           </TouchableOpacity>
+          <View style={styles.headerTitleContainer} />
 
-          <View style={styles.headerTitleContainer}>
-            <Text style={styles.headerTitle}>Faculty Community</Text>
-          </View>
+          <View style={styles.headerRightRow}>
+            {isAdmin && (
+              <TouchableOpacity 
+                style={styles.menuButton}
+                onPress={() => {/* Add menu options */}}
+              >
+                <Ionicons name="ellipsis-vertical" size={20} color={colors.white} />
+              </TouchableOpacity>
+            )}
 
-          {isAdmin && (
-            <TouchableOpacity 
-              style={styles.menuButton}
-              onPress={() => {/* Add menu options */}}
+            <TouchableOpacity
+              style={styles.profileButton}
+              onPress={() => navigation.navigate('ViewProfileScreen', { userId: user?.id })}
             >
-              <Ionicons name="ellipsis-vertical" size={20} color={colors.white} />
+              {user?.avatar_url ? (
+                <Image source={{ uri: user.avatar_url }} style={styles.profileImage} />
+              ) : (
+                <Ionicons name="person-circle-outline" size={34} color={colors.white} />
+              )}
             </TouchableOpacity>
-          )}
+          </View>
         </View>
       </ImageBackground>
 
@@ -418,8 +429,23 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
   },
+  headerRightRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   backButton: {
     padding: 8,
+  },
+  profileButton: {
+    paddingLeft: 8,
+    paddingRight: 4,
+  },
+  profileImage: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)'
   },
   headerTitleContainer: {
     flex: 1,
