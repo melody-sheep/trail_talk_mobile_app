@@ -165,7 +165,15 @@ export default function CommunityFeedScreen({ route, navigation }) {
   };
 
   const handleViewMembers = () => {
-    navigation.navigate('CommunityMembers', { communityId });
+    // Navigate to members screen (you'll need to create this)
+    Alert.alert('Coming Soon', 'Community members screen coming soon!');
+  };
+
+  // ADDED: Handle profile navigation
+  const handleProfilePress = () => {
+    if (user?.id) {
+      navigation.navigate('ViewProfile', { userId: user.id });
+    }
   };
 
   const toggleSearch = () => {
@@ -397,12 +405,21 @@ export default function CommunityFeedScreen({ route, navigation }) {
               <View style={styles.collapsedTitleRow}>
                 <Text style={styles.collapsedHeaderTitle}>{community.name}</Text>
                 <View style={styles.collapsedHeaderActions}>
+                  {/* ADDED: Profile icon in header */}
+                  <TouchableOpacity 
+                    style={styles.headerActionButton}
+                    onPress={handleProfilePress}
+                  >
+                    <Ionicons name="person" size={20} color={colors.white} />
+                  </TouchableOpacity>
+                  
                   <TouchableOpacity 
                     style={styles.headerActionButton}
                     onPress={toggleSearch}
                   >
                     <Ionicons name="search" size={20} color={colors.white} />
                   </TouchableOpacity>
+                  
                   {isMember && (
                     <TouchableOpacity 
                       style={styles.headerActionButton}

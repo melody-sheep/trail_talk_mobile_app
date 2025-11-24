@@ -7,15 +7,15 @@ import { fonts } from '../../styles/fonts';
 import { supabase } from '../../lib/supabase';
 import PostCard from '../../components/PostCard';
 import { UserContext } from '../../contexts/UserContext';
-import { followUser, unfollowUser, getFollowCounts, checkIsFollowing } from '../../lib/supabase'; // Updated import
+import { followUser, unfollowUser, getFollowCounts, checkIsFollowing } from '../../lib/supabase';
 
 const { width: screenWidth } = Dimensions.get('window');
 
 export default function ViewProfileScreen({ route, navigation }) {
   const { user: currentUser } = useContext(UserContext);
   const viewedUserId = route?.params?.userId;
-  const [activeTab, setActiveTab] = useState('Posts');
-  const tabs = ['Posts', 'Communities'];
+  const [activeTab, setActiveTab] = useState('Post');
+  const tabs = ['Post', 'Communities'];
   const tabWidth = screenWidth / tabs.length;
   const vectorWidth = 80;
   const animation = useRef(new Animated.Value(0)).current;
@@ -30,6 +30,7 @@ export default function ViewProfileScreen({ route, navigation }) {
   const [birthday, setBirthday] = useState('Not set');
   const [joinDate, setJoinDate] = useState('');
 
+  // Fetch all data when component mounts or viewedUserId changes
   useEffect(() => {
     if (viewedUserId) {
       fetchProfile();
@@ -40,6 +41,20 @@ export default function ViewProfileScreen({ route, navigation }) {
     }
   }, [viewedUserId]);
 
+  // Auto-refresh when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      if (viewedUserId) {
+        console.log('ViewProfileScreen focused - refreshing data');
+        fetchProfile();
+        fetchPosts();
+        fetchCommunities();
+        fetchFollowCounts();
+        checkFollowingStatus();
+      }
+    }, [viewedUserId])
+  );
+
   const fetchProfile = async () => {
     try {
       setLoading(true);
@@ -47,7 +62,7 @@ export default function ViewProfileScreen({ route, navigation }) {
       if (data) {
         setProfileData(data);
         
-        // Format birthday if exists
+        // Format birthday if exists - MM/DD/YYYY format like ProfileScreen
         if (data.birthday) {
           const birthDate = new Date(data.birthday);
           const formattedBirthday = birthDate.toLocaleDateString('en-US', {
@@ -72,7 +87,9 @@ export default function ViewProfileScreen({ route, navigation }) {
       }
     } catch (e) {
       console.log('Error fetching profile', e);
-    } finally { setLoading(false); }
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   const fetchPosts = async () => {
@@ -83,7 +100,9 @@ export default function ViewProfileScreen({ route, navigation }) {
     } catch (e) {
       console.log('Error fetching user posts', e);
       setUserPosts([]);
-    } finally { setPostsLoading(false); }
+    } finally { 
+      setPostsLoading(false); 
+    }
   };
 
   const fetchCommunities = async () => {
@@ -163,12 +182,18 @@ export default function ViewProfileScreen({ route, navigation }) {
   });
 
   if (loading) return (
-    <SafeAreaView style={styles.safeArea}><View style={styles.loadingContainer}><Text style={styles.loadingText}>Loading profile...</Text></View></SafeAreaView>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Loading profile...</Text>
+      </View>
+    </SafeAreaView>
   );
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <StatusBar barStyle="light-content" backgroundColor={colors.homeBackground} />
+      
+      {/* Fixed Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Image source={require('../../../assets/profile_page_icons/back_button.png')} style={styles.backIcon} />
@@ -178,13 +203,31 @@ export default function ViewProfileScreen({ route, navigation }) {
       </View>
 
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        {/* Profile Details Section */}
         <View style={styles.profileDetails}>
-          <Image source={ profileData?.cover_url ? { uri: profileData.cover_url } : require('../../../assets/profile_page_icons/profile_default_bg.png') } style={styles.coverImage} />
+          {/* Cover Image */}
+          <Image 
+            source={ 
+              profileData?.cover_url 
+                ? { uri: profileData.cover_url }
+                : require('../../../assets/profile_page_icons/profile_default_bg.png')
+            } 
+            style={styles.coverImage} 
+          />
+          
+          {/* Profile Image */}
           <View style={styles.profileImageContainer}>
-            <Image source={ profileData?.avatar_url ? { uri: profileData.avatar_url } : require('../../../assets/profile_page_icons/default_profile_icon.png') } style={styles.profileImage} />
+            <Image 
+              source={ 
+                profileData?.avatar_url 
+                  ? { uri: profileData.avatar_url }
+                  : require('../../../assets/profile_page_icons/default_profile_icon.png')
+              } 
+              style={styles.profileImage} 
+            />
           </View>
 
-          {/* Follow Button */}
+          {/* Follow Button Row */}
           {currentUser && currentUser.id !== viewedUserId && (
             <View style={styles.followButtonRow}>
               <TouchableOpacity 
@@ -202,8 +245,11 @@ export default function ViewProfileScreen({ route, navigation }) {
             </View>
           )}
 
+          {/* Name and Role Row */}
           <View style={styles.nameRow}>
-            <Text style={styles.userName}>{profileData?.display_name || profileData?.username || 'User'}</Text>
+            <Text style={styles.userName}>
+              {profileData?.display_name || profileData?.username || 'User'}
+            </Text>
             <View style={styles.roleFrame}>
               <Image 
                 source={
@@ -250,25 +296,53 @@ export default function ViewProfileScreen({ route, navigation }) {
           </View>
         </View>
 
+        {/* Sticky Tabs */}
         <View style={styles.stickyTabsWrapper}>
           <View style={styles.tabsContainer}>
             {tabs.map((tab, index) => (
-              <TouchableOpacity key={tab} style={styles.tab} onPress={() => handleTabPress(tab, index)}>
-                <Text style={[styles.tabText, activeTab === tab ? styles.tabTextActive : styles.tabTextInactive]}>{tab}</Text>
+              <TouchableOpacity 
+                key={tab} 
+                style={styles.tab} 
+                onPress={() => handleTabPress(tab, index)}
+              >
+                <Text style={[
+                  styles.tabText, 
+                  activeTab === tab ? styles.tabTextActive : styles.tabTextInactive
+                ]}>
+                  {tab}
+                </Text>
               </TouchableOpacity>
             ))}
 
             <Animated.View style={[styles.horizontalVector, { transform: [{ translateX }] }]}> 
-              <Image source={require('../../../assets/profile_page_icons/horizontal_scroll_vector.png')} style={styles.vectorImage} />
+              <Image 
+                source={require('../../../assets/profile_page_icons/horizontal_scroll_vector.png')} 
+                style={styles.vectorImage} 
+              />
             </Animated.View>
           </View>
           <View style={styles.tabsBottomBorder} />
         </View>
 
+        {/* Posts/Communities Content */}
         <View style={styles.postsContent}>
-          {activeTab === 'Posts' && (
-            postsLoading ? <View style={styles.loadingPostsContainer}><Text style={styles.loadingText}>Loading posts...</Text></View> : (
-              userPosts.length > 0 ? <FlatList data={userPosts} renderItem={renderPostItem} keyExtractor={(i) => i.id} scrollEnabled={false} /> : <View style={styles.noPostsContainer}><Text style={styles.noPostsText}>No posts yet</Text></View>
+          {activeTab === 'Post' && (
+            postsLoading ? (
+              <View style={styles.loadingPostsContainer}>
+                <Text style={styles.loadingText}>Loading posts...</Text>
+              </View>
+            ) : userPosts.length > 0 ? (
+              <FlatList 
+                data={userPosts} 
+                renderItem={renderPostItem} 
+                keyExtractor={(item) => item.id} 
+                scrollEnabled={false} 
+              />
+            ) : (
+              <View style={styles.noPostsContainer}>
+                <Text style={styles.noPostsText}>No posts yet</Text>
+                <Text style={styles.noPostsSubtext}>This user hasn't posted anything yet</Text>
+              </View>
             )
           )}
 
@@ -279,7 +353,11 @@ export default function ViewProfileScreen({ route, navigation }) {
                   <Text style={styles.communityName}>{c.name}</Text>
                   <Text style={styles.communityMeta}>{c.member_count || 0} members</Text>
                 </View>
-              )) : <Text style={{ color: 'rgba(255,255,255,0.6)' }}>Not a member of any communities</Text>}
+              )) : (
+                <Text style={{ color: 'rgba(255,255,255,0.6)', textAlign: 'center' }}>
+                  Not a member of any communities
+                </Text>
+              )}
             </View>
           )}
         </View>
@@ -504,7 +582,13 @@ const styles = StyleSheet.create({
   noPostsText: { 
     fontSize: 16, 
     fontFamily: fonts.medium, 
-    color: colors.white 
+    color: colors.white,
+    marginBottom: 8,
+  },
+  noPostsSubtext: {
+    fontSize: 14,
+    fontFamily: fonts.normal,
+    color: 'rgba(255, 255, 255, 0.6)',
   },
   communityRow: { 
     flexDirection: 'row', 

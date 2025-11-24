@@ -98,18 +98,29 @@ const CommunityPostCard = ({ post, userRole = 'student', onInteraction }) => {
       if (!error && data) {
         setAuthorProfile(data);
         if (data.avatar_url) {
+          // Get the public URL for the avatar
           const { data: publicUrlData } = supabase.storage
             .from('avatars')
             .getPublicUrl(data.avatar_url);
+          
           if (publicUrlData?.publicUrl) {
+            console.log('Avatar URL found:', publicUrlData.publicUrl);
             setAvatarUrl(publicUrlData.publicUrl);
+          } else {
+            console.log('No public URL found for avatar');
+            setAvatarUrl(null);
           }
         } else {
+          console.log('No avatar_url in profile data');
           setAvatarUrl(null);
         }
+      } else {
+        console.log('Error fetching author profile:', error);
+        setAvatarUrl(null);
       }
     } catch (err) {
       console.log('Error fetching author profile:', err);
+      setAvatarUrl(null);
     }
   };
 
@@ -424,22 +435,36 @@ const CommunityPostCard = ({ post, userRole = 'student', onInteraction }) => {
     );
   };
 
+  const handleProfilePress = () => {
+    if (post.author_id && !post.is_anonymous) {
+      navigation.navigate('ViewProfile', { userId: post.author_id });
+    }
+  };
+
   return (
     <View style={styles.container}>
       {/* Main Content Row */}
       <View style={styles.mainRow}>
         {/* Profile Column */}
         <View style={styles.profileColumn}>
-          {avatarUrl ? (
-            <TouchableOpacity onPress={() => navigation.navigate('ViewProfile', { userId: post.author_id })}>
+          {post.is_anonymous ? (
+            <View style={styles.anonIconPlaceholder}>
+              <Ionicons name="person" size={20} color="rgba(255,255,255,0.6)" />
+            </View>
+          ) : avatarUrl ? (
+            <TouchableOpacity onPress={handleProfilePress}>
               <Image
                 source={{ uri: avatarUrl }}
-                style={styles.anonIcon}
+                style={styles.avatar}
                 resizeMode="cover"
+                onError={(error) => {
+                  console.log('Error loading avatar:', error.nativeEvent);
+                  setAvatarUrl(null);
+                }}
               />
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity onPress={() => navigation.navigate('ViewProfile', { userId: post.author_id })}>
+            <TouchableOpacity onPress={handleProfilePress}>
               <View style={styles.anonIconPlaceholder}>
                 <Ionicons name="person" size={20} color="rgba(255,255,255,0.6)" />
               </View>
@@ -454,15 +479,17 @@ const CommunityPostCard = ({ post, userRole = 'student', onInteraction }) => {
             <View style={styles.headerLeft}>
               {/* Name and Role on same line */}
               <View style={styles.nameRoleRow}>
-                <TouchableOpacity onPress={() => navigation.navigate('ViewProfile', { userId: post.author_id })}>
+                <TouchableOpacity onPress={handleProfilePress}>
                   <Text style={styles.username}>{getDisplayName()}</Text>
                 </TouchableOpacity>
-                <View style={styles.roleContainer}>
-                  <Ionicons name={getRoleIconName(getAuthorRole())} size={14} color="rgba(255,255,255,0.8)" />
-                  <Text style={styles.roleText}>
-                    {getAuthorRole() ? (getAuthorRole().charAt(0).toUpperCase() + getAuthorRole().slice(1)) : (userRole === 'student' ? 'Student' : 'Faculty')}
-                  </Text>
-                </View>
+                {!post.is_anonymous && (
+                  <View style={styles.roleContainer}>
+                    <Ionicons name={getRoleIconName(getAuthorRole())} size={14} color="rgba(255,255,255,0.8)" />
+                    <Text style={styles.roleText}>
+                      {getAuthorRole() ? (getAuthorRole().charAt(0).toUpperCase() + getAuthorRole().slice(1)) : (userRole === 'student' ? 'Student' : 'Faculty')}
+                    </Text>
+                  </View>
+                )}
               </View>
               
               {/* Time stamp below name/role */}
@@ -656,7 +683,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingLeft: 16,
   },
-  anonIcon: {
+  avatar: {
     width: 40,
     height: 40,
     borderRadius: 20,

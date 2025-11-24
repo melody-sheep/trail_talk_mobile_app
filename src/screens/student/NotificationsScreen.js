@@ -47,7 +47,7 @@ export default function NotificationsScreen({ navigation }) {
   // Animation values for header background
   const headerHeight = scrollY.interpolate({
     inputRange: [0, 100],
-    outputRange: [160, 100],
+    outputRange: [160, 80],
     extrapolate: 'clamp',
   });
 
@@ -63,10 +63,17 @@ export default function NotificationsScreen({ navigation }) {
     extrapolate: 'clamp',
   });
 
-  // Sticky section behavior
-  const stickySectionTranslateY = scrollY.interpolate({
-    inputRange: [0, 60, 100],
-    outputRange: [0, 0, -40],
+  // Sticky section top position animation
+  const stickySectionTop = scrollY.interpolate({
+    inputRange: [0, 100],
+    outputRange: [160, 80],
+    extrapolate: 'clamp',
+  });
+
+  // Header text centering animation
+  const headerTextTranslateY = scrollY.interpolate({
+    inputRange: [0, 100],
+    outputRange: [0, -10],
     extrapolate: 'clamp',
   });
 
@@ -213,10 +220,9 @@ export default function NotificationsScreen({ navigation }) {
   );
 
   const renderSectionHeader = ({ section }) => (
-    <View style={styles.sectionHeader}>
+    <View style={section.title === 'Earlier' ? styles.sectionHeaderEarlier : styles.sectionHeader}>
       <Text style={styles.sectionTitle}>{section.title}</Text>
       <Text style={styles.sectionCount}>({section.data.length})</Text>
-      <View style={styles.sectionLine} />
     </View>
   );
 
@@ -232,7 +238,7 @@ export default function NotificationsScreen({ navigation }) {
           resizeMode="cover"
         >
           {/* Expanded Header Content */}
-          <Animated.View style={[styles.headerContent, { opacity: headerTitleOpacity }]}>
+          <Animated.View style={[styles.headerContent, { opacity: headerTitleOpacity, transform: [{ translateY: headerTextTranslateY }] }]}>
             <Text style={styles.headerTitle}>Notifications</Text>
             <Text style={styles.headerSubtitle}>Stay updated with campus activities</Text>
           </Animated.View>
@@ -249,35 +255,40 @@ export default function NotificationsScreen({ navigation }) {
         </ImageBackground>
       </Animated.View>
 
-      {/* STICKY MARK ALL AS READ SECTION - BELOW HEADER */}
-      {unreadCount > 0 && (
-        <Animated.View 
-          style={[
-            styles.stickySection,
-            { 
-              transform: [{ translateY: stickySectionTranslateY }],
-              top: 160
-            }
-          ]}
-        >
-          <View style={styles.stickySectionContent}>
+      {/* STICKY MARK ALL AS READ + REFRESH SECTION - BELOW HEADER (always visible) */}
+      <Animated.View 
+        style={[
+          styles.stickySection,
+          { top: stickySectionTop }
+        ]}
+      >
+        <View style={styles.stickySectionContent}>
+          <View style={styles.buttonRow}>
             <TouchableOpacity 
-              style={styles.markAllButton}
+              style={[styles.markAllButton, styles.markAllButtonLarge]}
               onPress={markAllAsRead}
               activeOpacity={0.7}
             >
               <Ionicons name="checkmark-done-outline" size={16} color={colors.white} />
               <Text style={styles.markAllText}>Mark all as read</Text>
             </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.refreshButton, styles.refreshButtonSmall]}
+              onPress={fetchNotifications}
+              disabled={loading}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="refresh" size={18} color={colors.white} />
+            </TouchableOpacity>
           </View>
-        </Animated.View>
-      )}
+        </View>
+      </Animated.View>
 
       {/* SCROLL CONTENT */}
       <ScrollView 
         style={[
           styles.container,
-          { marginTop: unreadCount > 0 ? 210 : 160 }
+          { marginTop: 200 }
         ]}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
@@ -322,20 +333,6 @@ export default function NotificationsScreen({ navigation }) {
           />
         )}
 
-        {/* Simple Refresh Button */}
-        <View style={{ paddingHorizontal: 20, marginTop: 20 }}>
-          <TouchableOpacity
-            style={[styles.refreshButton, loading && styles.refreshButtonDisabled]}
-            onPress={fetchNotifications}
-            disabled={loading}
-          >
-            <Ionicons name="refresh" size={16} color={colors.white} />
-            <Text style={styles.refreshText}>
-              {loading ? 'Refreshing...' : 'Refresh'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
         {/* Bottom Spacer */}
         <View style={styles.bottomSpacer} />
       </ScrollView>
@@ -358,25 +355,18 @@ const styles = StyleSheet.create({
     zIndex: 10,
     overflow: 'hidden',
   },
-    refreshButton: {
-    flexDirection: 'row',
+  refreshButton: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 12,
   },
-  refreshButtonDisabled: {
-    opacity: 0.5,
-  },
-  refreshText: {
-    fontSize: 14,
-    fontFamily: fonts.medium,
-    color: colors.white,
-    marginLeft: 8,
+  refreshButtonSmall: {
+    flex: 0.2,
   },
   headerBackground: {
     width: '100%',
@@ -409,9 +399,10 @@ const styles = StyleSheet.create({
   },
   collapsedHeaderContent: {
     position: 'absolute',
-    top: 10,
+    top: 0,
     left: 0,
     right: 0,
+    bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
@@ -442,12 +433,17 @@ const styles = StyleSheet.create({
     right: 0,
     zIndex: 15,
     backgroundColor: colors.homeBackground,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
   stickySectionContent: {
     paddingHorizontal: 20,
     paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   markAllButton: {
     flexDirection: 'row',
@@ -459,6 +455,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  markAllButtonLarge: {
+    flex: 0.8,
   },
   markAllText: {
     fontSize: 14,
@@ -497,7 +496,14 @@ const styles = StyleSheet.create({
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: 50,
+    marginBottom: 15,
+    paddingHorizontal: 20,
+  },
+  sectionHeaderEarlier: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
     marginBottom: 15,
     paddingHorizontal: 20,
   },
@@ -512,12 +518,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.medium,
     color: 'rgba(255, 255, 255, 0.6)',
   },
-  sectionLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    marginLeft: 12,
-  },
+  
   notificationCard: {
     flexDirection: 'row',
     alignItems: 'center',
