@@ -1,14 +1,14 @@
-// src/screens/faculty/ProfileScreen.js
 import React, { useState, useRef, useContext, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, StatusBar, TouchableOpacity, Image, ScrollView, Animated, Dimensions, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../styles/colors';
 import { fonts } from '../../styles/fonts';
 import { UserContext } from '../../contexts/UserContext';
 import { supabase } from '../../lib/supabase';
 import PostCard from '../../components/PostCard';
-import { getFollowCounts } from '../../lib/supabase'; // Import the function
+import { getFollowCounts } from '../../lib/supabase';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -32,7 +32,6 @@ export default function FacultyProfileScreen({ navigation }) {
   const tabWidth = screenWidth / tabs.length;
   const vectorWidth = 80;
 
-  // Fetch all user profile data and posts
   useEffect(() => {
     if (user) {
       fetchUserProfileData();
@@ -40,28 +39,24 @@ export default function FacultyProfileScreen({ navigation }) {
     }
   }, [user]);
 
-  // Update local profile data when context profile changes
   useEffect(() => {
     if (profile) {
       setProfileData(profile);
       setUsername(profile.username || 'User');
       setDisplayName(profile.display_name || profile.username || 'User');
       
-      // Format birthday if exists - CHANGED TO MM/DD/YYYY
       if (profile.birthday) {
         const birthDate = new Date(profile.birthday);
-        // MM/DD/YYYY format for ProfileScreen
         const formattedBirthday = birthDate.toLocaleDateString('en-US', {
           month: '2-digit',
           day: '2-digit',
           year: 'numeric'
         });
-        setBirthday(formattedBirthday); // This will show like "07/18/2004"
+        setBirthday(formattedBirthday);
       } else {
         setBirthday('Not set');
       }
 
-      // Format join date (keep the original format for join date)
       if (profile.created_at) {
         const joinDate = new Date(profile.created_at);
         setJoinDate(joinDate.toLocaleDateString('en-US', {
@@ -86,7 +81,6 @@ export default function FacultyProfileScreen({ navigation }) {
     try {
       setLoading(true);
       
-      // Fetch profile data
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -98,21 +92,18 @@ export default function FacultyProfileScreen({ navigation }) {
         setUsername(profileData.username || 'User');
         setDisplayName(profileData.display_name || profileData.username || 'User');
         
-        // Format birthday if exists - CHANGED TO MM/DD/YYYY
         if (profileData.birthday) {
           const birthDate = new Date(profileData.birthday);
-          // MM/DD/YYYY format for ProfileScreen
           const formattedBirthday = birthDate.toLocaleDateString('en-US', {
             month: '2-digit',
             day: '2-digit',
             year: 'numeric'
           });
-          setBirthday(formattedBirthday); // This will show like "07/18/2004"
+          setBirthday(formattedBirthday);
         } else {
           setBirthday('Not set');
         }
 
-        // Format join date (keep the original format for join date)
         if (profileData.created_at) {
           const joinDate = new Date(profileData.created_at);
           setJoinDate(joinDate.toLocaleDateString('en-US', {
@@ -130,18 +121,15 @@ export default function FacultyProfileScreen({ navigation }) {
         }
       }
 
-      // Fetch follow counts using the follows table
       try {
         const counts = await getFollowCounts(user.id);
         setFollowersCount(counts.followers || 0);
         setFollowingCount(counts.following || 0);
       } catch (followError) {
         console.log('Error fetching follow counts:', followError);
-        // Fallback to individual queries
         await fetchFollowCountsFallback();
       }
 
-      // Fetch post count
       const { count: postCount, error: postError } = await supabase
         .from('posts')
         .select('*', { count: 'exact', head: true })
@@ -153,7 +141,6 @@ export default function FacultyProfileScreen({ navigation }) {
 
     } catch (error) {
       console.log('Error fetching profile data:', error);
-      // Fallback values
       setBirthday('Not set');
       if (user?.created_at) {
         const joinDate = new Date(user.created_at);
@@ -168,10 +155,8 @@ export default function FacultyProfileScreen({ navigation }) {
     }
   };
 
-  // Fallback function if getFollowCounts fails
   const fetchFollowCountsFallback = async () => {
     try {
-      // Get followers count (people who follow this user)
       const { count: followersCount, error: followersError } = await supabase
         .from('follows')
         .select('*', { count: 'exact', head: true })
@@ -181,7 +166,6 @@ export default function FacultyProfileScreen({ navigation }) {
         setFollowersCount(followersCount || 0);
       }
 
-      // Get following count (people this user follows)
       const { count: followingCount, error: followingError } = await supabase
         .from('follows')
         .select('*', { count: 'exact', head: true })
@@ -228,24 +212,20 @@ export default function FacultyProfileScreen({ navigation }) {
     }
   };
 
-  // AUTO-REFRESH WHEN FOCUSED
   useFocusEffect(
     useCallback(() => {
       console.log('Faculty Profile screen focused - refreshing posts and profile');
       fetchUserProfileData();
       fetchUserPosts();
-      // Update profile in context to ensure header gets latest image
       if (user) {
         updateProfile(user.id);
       }
     }, [user])
   );
 
-  // REAL-TIME SUBSCRIPTIONS FOR INTERACTION UPDATES
   useEffect(() => {
     console.log('Setting up real-time subscriptions for FacultyProfileScreen interactions...');
 
-    // Channel for post updates (count changes)
     const postsUpdateChannel = supabase
       .channel('faculty_profile_posts_update_channel')
       .on(
@@ -268,19 +248,17 @@ export default function FacultyProfileScreen({ navigation }) {
         console.log('Faculty Profile posts update subscription status:', status);
       });
 
-    // Channel for likes
     const likesChannel = supabase
       .channel('faculty_profile_likes_channel')
       .on(
         'postgres_changes',
         {
-          event: '*', // Listen to INSERT and DELETE
+          event: '*',
           schema: 'public',
           table: 'post_likes',
         },
         async (payload) => {
           console.log('Like interaction detected in FacultyProfileScreen:', payload);
-          // Refresh the specific post to get updated counts
           const { data: updatedPost } = await supabase
             .from('posts')
             .select('*')
@@ -300,19 +278,17 @@ export default function FacultyProfileScreen({ navigation }) {
         console.log('Faculty Profile likes subscription status:', status);
       });
 
-    // Channel for reposts
     const repostsChannel = supabase
       .channel('faculty_profile_reposts_channel')
       .on(
         'postgres_changes',
         {
-          event: '*', // Listen to INSERT and DELETE
+          event: '*',
           schema: 'public',
           table: 'reposts',
         },
         async (payload) => {
           console.log('Repost interaction detected in FacultyProfileScreen:', payload);
-          // Refresh the specific post to get updated counts
           const { data: updatedPost } = await supabase
             .from('posts')
             .select('*')
@@ -332,19 +308,17 @@ export default function FacultyProfileScreen({ navigation }) {
         console.log('Faculty Profile reposts subscription status:', status);
       });
 
-    // Channel for bookmarks
     const bookmarksChannel = supabase
       .channel('faculty_profile_bookmarks_channel')
       .on(
         'postgres_changes',
         {
-          event: '*', // Listen to INSERT and DELETE
+          event: '*',
           schema: 'public',
           table: 'bookmarks',
         },
         async (payload) => {
           console.log('Bookmark interaction detected in FacultyProfileScreen:', payload);
-          // Refresh the specific post to get updated counts
           const { data: updatedPost } = await supabase
             .from('posts')
             .select('*')
@@ -393,13 +367,11 @@ export default function FacultyProfileScreen({ navigation }) {
   const renderPostItem = ({ item }) => (
     <PostCard post={item} userRole="faculty" 
     onInteraction={() => {
-      // Force refresh user posts after interaction
       setTimeout(() => fetchUserPosts(), 500);
     }}    
     />
   );
 
-  // Loading state
   if (loading) {
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -428,11 +400,11 @@ export default function FacultyProfileScreen({ navigation }) {
         
         <Text style={styles.headerTitle}>Profile</Text>
         
-        <TouchableOpacity style={styles.searchButton}>
-          <Image 
-            source={require('../../../assets/profile_page_icons/search_icon.png')}
-            style={styles.searchIcon}
-          />
+        <TouchableOpacity 
+          style={styles.settingsButton}
+          onPress={() => navigation.navigate('FacultySettings')}
+        >
+          <Ionicons name="settings-outline" size={22} color={colors.white} />
         </TouchableOpacity>
       </View>
 
@@ -625,22 +597,15 @@ const styles = StyleSheet.create({
     fontFamily: fonts.semiBold,
     color: colors.white,
   },
-  searchButton: {
+  settingsButton: {
     padding: 8,
-  },
-  searchIcon: {
-    width: 22,
-    height: 22,
-    resizeMode: 'contain',
-    tintColor: colors.white,
   },
   container: {
     flex: 1,
     backgroundColor: colors.homeBackground,
   },
-  // Profile Details Section
   profileDetails: {
-    marginBottom: 0, // Remove margin since tabs are now part of the flow
+    marginBottom: 0,
   },
   coverImage: {
     width: '100%',
@@ -745,7 +710,7 @@ const styles = StyleSheet.create({
   statsRow: {
     flexDirection: 'row',
     paddingHorizontal: 22,
-    marginBottom: 20, // Space before tabs
+    marginBottom: 20,
   },
   statItem: {
     flexDirection: 'row',
@@ -770,7 +735,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.normal,
     color: 'rgba(255, 255, 255, 0.7)',
   },
-  // Sticky Tabs - AT BOTTOM OF PROFILE DETAILS
   stickyTabsWrapper: {
     backgroundColor: colors.homeBackground,
     marginBottom: 1,
@@ -811,7 +775,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#434343',
     width: '100%',
   },
-  // Posts Content Styles
   postsContent: {
     backgroundColor: colors.homeBackground,
     minHeight: 200,

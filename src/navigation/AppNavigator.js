@@ -1,4 +1,4 @@
-// src/navigation/AppNavigator.js
+// src/navigation/AppNavigator.js - FIXED VERSION
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -67,12 +67,45 @@ const Stack = createNativeStackNavigator();
 const StudentTab = createBottomTabNavigator();
 const FacultyTab = createBottomTabNavigator();
 
-// Create placeholder screens for unimplemented features
-const PlaceholderScreen = () => (
-  <div style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0A0A0A' }}>
-    <text style={{ color: 'white', fontSize: 18 }}>Coming Soon</text>
-  </div>
+// Create placeholder component for missing screens
+const PlaceholderScreen = ({ navigation, route }) => (
+  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.homeBackground }}>
+    <Text style={{ color: colors.white, fontSize: 18, marginBottom: 20 }}>{route.name} - Coming Soon</Text>
+    <TouchableOpacity 
+      style={{ backgroundColor: colors.primary, padding: 15, borderRadius: 10 }}
+      onPress={() => navigation.goBack()}
+    >
+      <Text style={{ color: colors.white, fontSize: 16 }}>Go Back</Text>
+    </TouchableOpacity>
+  </View>
 );
+
+// Try to import the new screens, fallback to placeholder if they don't exist
+let StudentSettingsScreen, FacultySettingsScreen, StudentDevelopersScreen, FacultyDevelopersScreen;
+
+try {
+  StudentSettingsScreen = require('../screens/student/StudentSettingsScreen').default;
+} catch (error) {
+  StudentSettingsScreen = PlaceholderScreen;
+}
+
+try {
+  FacultySettingsScreen = require('../screens/faculty/FacultySettingsScreen').default;
+} catch (error) {
+  FacultySettingsScreen = PlaceholderScreen;
+}
+
+try {
+  StudentDevelopersScreen = require('../screens/student/StudentDevelopersScreen').default;
+} catch (error) {
+  StudentDevelopersScreen = PlaceholderScreen;
+}
+
+try {
+  FacultyDevelopersScreen = require('../screens/faculty/FacultyDevelopersScreen').default;
+} catch (error) {
+  FacultyDevelopersScreen = PlaceholderScreen;
+}
 
 function StudentTabNavigator() {
   return (
@@ -223,6 +256,36 @@ export default function AppNavigator() {
         }}
       />
       
+      {/* NEW SETTINGS AND DEVELOPERS SCREENS */}
+      <Stack.Screen 
+        name="StudentSettings" 
+        component={StudentSettingsScreen}
+        options={{
+          animation: 'slide_from_right',
+        }}
+      />
+      <Stack.Screen 
+        name="FacultySettings" 
+        component={FacultySettingsScreen}
+        options={{
+          animation: 'slide_from_right',
+        }}
+      />
+      <Stack.Screen 
+        name="StudentDevelopers" 
+        component={StudentDevelopersScreen}
+        options={{
+          animation: 'slide_from_right',
+        }}
+      />
+      <Stack.Screen 
+        name="FacultyDevelopers" 
+        component={FacultyDevelopersScreen}
+        options={{
+          animation: 'slide_from_right',
+        }}
+      />
+      
       {/* COMMUNITY SCREENS - STUDENT */}
       <Stack.Screen 
         name="StudentCreateCommunity" 
@@ -301,3 +364,6 @@ export default function AppNavigator() {
     </Stack.Navigator>
   );
 }
+
+// Add missing imports at the top
+import { View, Text, TouchableOpacity } from 'react-native';
