@@ -11,4 +11,5 @@ export const colors = {
   tabBorder: '#434343',
   tabActive: '#FFFFFF',
   tabInactive: '#FFFFFF99', // 60% opacity white
+  skyBlue: '#38BDF8',
 };

@@ -1,7 +1,8 @@
-// src/navigation/AppNavigator.js - FIXED VERSION
+// src/navigation/AppNavigator.js - COMPLETE UPDATED VERSION
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { View, Text, TouchableOpacity } from 'react-native';
 import WelcomeScreen from '../screens/WelcomeScreen';
 import RoleSelectionScreen from '../screens/RoleSelectionScreen';
 import SignUpScreen from '../screens/SignUpScreen';
@@ -43,6 +44,7 @@ import FacultyMessagesScreen from '../screens/faculty/MessagesScreen';
 
 // Import ChatScreen
 import ChatScreen from '../screens/student/ChatScreen';
+import FacultyChatScreen from '../screens/faculty/ChatScreen';
 
 // Import Community Screens - STUDENT
 import StudentCreateCommunityScreen from '../screens/student/CreateCommunityScreen';
@@ -54,10 +56,20 @@ import StudentCreateCommunityPostScreen from '../screens/student/CreateCommunity
 import FacultyCreateCommunityScreen from '../screens/faculty/CreateCommunityScreen';
 import FacultyCommunityDetailScreen from '../screens/faculty/CommunityDetailScreen';
 import FacultyCommunityFeedScreen from '../screens/faculty/CommunityFeedScreen';
+import FacultyCreateCommunityPostScreen from '../screens/faculty/CreateCommunityPostScreen';
+
+// Import Report Dashboard
 import ReportDashboardScreen from '../screens/faculty/ReportDashboardScreen';
+
+// Import Settings and Developers Screens
+import StudentSettingsScreen from '../screens/student/StudentSettingsScreen';
+import FacultySettingsScreen from '../screens/faculty/FacultySettingsScreen';
+import StudentDevelopersScreen from '../screens/student/StudentDevelopersScreen';
+import FacultyDevelopersScreen from '../screens/faculty/FacultyDevelopersScreen';
 
 // Import Shared Screens
 import CommentScreen from '../screens/student/CommentScreen';
+import FacultyCommentScreen from '../screens/faculty/CommentScreen';
 
 import BottomNavigation from '../components/BottomNavigation';
 import { colors } from '../styles/colors';
@@ -79,33 +91,6 @@ const PlaceholderScreen = ({ navigation, route }) => (
     </TouchableOpacity>
   </View>
 );
-
-// Try to import the new screens, fallback to placeholder if they don't exist
-let StudentSettingsScreen, FacultySettingsScreen, StudentDevelopersScreen, FacultyDevelopersScreen;
-
-try {
-  StudentSettingsScreen = require('../screens/student/StudentSettingsScreen').default;
-} catch (error) {
-  StudentSettingsScreen = PlaceholderScreen;
-}
-
-try {
-  FacultySettingsScreen = require('../screens/faculty/FacultySettingsScreen').default;
-} catch (error) {
-  FacultySettingsScreen = PlaceholderScreen;
-}
-
-try {
-  StudentDevelopersScreen = require('../screens/student/StudentDevelopersScreen').default;
-} catch (error) {
-  StudentDevelopersScreen = PlaceholderScreen;
-}
-
-try {
-  FacultyDevelopersScreen = require('../screens/faculty/FacultyDevelopersScreen').default;
-} catch (error) {
-  FacultyDevelopersScreen = PlaceholderScreen;
-}
 
 function StudentTabNavigator() {
   return (
@@ -166,7 +151,13 @@ export default function AppNavigator() {
       <Stack.Screen name="FacultyMain" component={FacultyTabNavigator} />
 
       {/* Report Dashboard - Faculty only */}
-      <Stack.Screen name="ReportDashboard" component={ReportDashboardScreen} />
+      <Stack.Screen 
+        name="ReportDashboard" 
+        component={ReportDashboardScreen}
+        options={{
+          animation: 'slide_from_right',
+        }}
+      />
       
       {/* CREATE POST SCREENS */}
       <Stack.Screen 
@@ -184,7 +175,7 @@ export default function AppNavigator() {
         }}
       />
       
-      {/* COMMENT SCREEN */}
+      {/* COMMENT SCREENS */}
       <Stack.Screen
         name="CommentScreen"
         component={CommentScreen}
@@ -192,11 +183,33 @@ export default function AppNavigator() {
           animation: 'slide_from_right',
         }}
       />
+      <Stack.Screen
+        name="FacultyCommentScreen"
+        component={FacultyCommentScreen}
+        options={{
+          animation: 'slide_from_right',
+        }}
+      />
       
-      {/* CHAT SCREEN */}
+      {/* CHAT SCREENS */}
       <Stack.Screen 
         name="Chat" 
         component={ChatScreen}
+        options={{
+          animation: 'slide_from_right',
+          headerShown: true,
+          headerStyle: {
+            backgroundColor: colors.homeBackground,
+          },
+          headerTintColor: colors.white,
+          headerTitleStyle: {
+            fontFamily: fonts.semiBold,
+          },
+        }}
+      />
+      <Stack.Screen 
+        name="FacultyChat" 
+        component={FacultyChatScreen}
         options={{
           animation: 'slide_from_right',
           headerShown: true,
@@ -256,7 +269,7 @@ export default function AppNavigator() {
         }}
       />
       
-      {/* NEW SETTINGS AND DEVELOPERS SCREENS */}
+      {/* SETTINGS AND DEVELOPERS SCREENS */}
       <Stack.Screen 
         name="StudentSettings" 
         component={StudentSettingsScreen}
@@ -338,6 +351,13 @@ export default function AppNavigator() {
           animation: 'slide_from_right',
         }}
       />
+      <Stack.Screen 
+        name="FacultyCreateCommunityPost" 
+        component={FacultyCreateCommunityPostScreen}
+        options={{
+          animation: 'slide_from_bottom',
+        }}
+      />
       
       {/* LEGACY COMMUNITY SCREENS (for backward compatibility) */}
       <Stack.Screen 
@@ -361,9 +381,22 @@ export default function AppNavigator() {
           animation: 'slide_from_bottom',
         }}
       />
+
+      {/* ADDITIONAL SCREENS FOR COMPLETENESS */}
+      <Stack.Screen 
+        name="PremiumSubscription" 
+        component={PlaceholderScreen}
+        options={{
+          animation: 'slide_from_right',
+        }}
+      />
+      <Stack.Screen 
+        name="EditSupportContent" 
+        component={PlaceholderScreen}
+        options={{
+          animation: 'slide_from_right',
+        }}
+      />
     </Stack.Navigator>
   );
 }
-
-// Add missing imports at the top
-import { View, Text, TouchableOpacity } from 'react-native';
