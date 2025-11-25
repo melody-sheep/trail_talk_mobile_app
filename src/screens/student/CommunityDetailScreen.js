@@ -174,6 +174,7 @@ export default function CommunityDetailScreen({ navigation, route }) {
       )
       .subscribe();
 
+      
     const membersSub = supabase
       .channel(`community-members-${communityId}`)
       .on(
