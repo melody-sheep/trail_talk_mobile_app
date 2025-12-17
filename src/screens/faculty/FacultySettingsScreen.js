@@ -7,6 +7,7 @@ import {
   StyleSheet,
   SafeAreaView,
   StatusBar,
+  Platform,
   Animated,
   Alert,
   Image
@@ -315,6 +316,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.homeBackground,
+    paddingTop: Platform.OS === 'android' ? Math.max(0, (StatusBar.currentHeight || 0) - 15) : 0,
   },
   header: {
     flexDirection: 'row',

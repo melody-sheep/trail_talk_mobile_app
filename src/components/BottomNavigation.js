@@ -5,7 +5,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { colors } from '../styles/colors';
 
-export default function BottomNavigation({ userRole, state }) {
+export default function BottomNavigation({ userRole, state, unreadNotifications = 0, unreadMessages = 0, onNotificationsPress, onMessagesPress }) {
   const navigation = useNavigation();
   const route = useRoute();
 
@@ -65,6 +65,18 @@ export default function BottomNavigation({ userRole, state }) {
   ];
 
   const handleTabPress = (tab) => {
+    try {
+      // If pressing Notifications or Messages, allow caller to handle marking as read
+      if (tab.id === 'Notifications' && typeof onNotificationsPress === 'function') {
+        onNotificationsPress();
+      }
+      if (tab.id === 'Messages' && typeof onMessagesPress === 'function') {
+        onMessagesPress();
+      }
+    } catch (e) {
+      console.log('Error running tab press handler:', e);
+    }
+
     navigation.navigate(tab.screenName);
   };
 
@@ -105,6 +117,15 @@ export default function BottomNavigation({ userRole, state }) {
           ]}
           resizeMode="contain"
         />
+
+        {/* Notification dot for Notifications and Messages */}
+        {tab.id === 'Notifications' && unreadNotifications > 0 && (
+          <View style={styles.badgeDot} />
+        )}
+
+        {tab.id === 'Messages' && unreadMessages > 0 && (
+          <View style={styles.badgeDot} />
+        )}
       </View>
     );
   };
@@ -234,5 +255,17 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.8,
     shadowRadius: 20,
     elevation: 20,
+  },
+  badgeDot: {
+    position: 'absolute',
+    top: -2,
+    right: -6,
+    width: 10,
+    height: 10,
+    borderRadius: 6,
+    backgroundColor: '#EF4444',
+    borderWidth: 1,
+    borderColor: colors.homeBackground,
+    zIndex: 20,
   },
 });

@@ -11,7 +11,9 @@ import {
   ScrollView,
   FlatList,
   Animated,
-  RefreshControl
+  RefreshControl,
+  findNodeHandle,
+  UIManager,
 } from 'react-native';
 import { Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -50,6 +52,7 @@ export default function CommunityScreen({ navigation }) {
   const { user, refreshCommunities } = useContext(UserContext);
   const scrollY = useRef(new Animated.Value(0)).current;
   const scrollViewRef = useRef(null);
+  const allCommunitiesRef = useRef(null);
 
   // Animation values - ALL ELEMENTS SCROLL UP TOGETHER
   const headerHeight = scrollY.interpolate({
@@ -100,7 +103,7 @@ export default function CommunityScreen({ navigation }) {
       label: 'Explore', 
       icon: 'compass-outline', 
       color: '#4ECDC4',
-      action: () => navigation.navigate('CommunityExplore')
+      action: () => scrollToAllCommunities()
     },
     { 
       id: 'create', 
@@ -300,6 +303,40 @@ export default function CommunityScreen({ navigation }) {
 
   const scrollToFeatured = () => {
     scrollViewRef.current?.scrollTo({ y: 300, animated: true });
+  };
+
+  const scrollToAllCommunities = () => {
+    try {
+      const target = allCommunitiesRef.current;
+      const scroll = scrollViewRef.current;
+      if (!target || !scroll) {
+        scrollViewRef.current?.scrollTo({ y: 600, animated: true });
+        return;
+      }
+
+      const targetHandle = findNodeHandle(target);
+      const scrollHandle = findNodeHandle(scroll);
+
+      if (targetHandle && scrollHandle && UIManager && UIManager.measureLayout) {
+        UIManager.measureLayout(
+          targetHandle,
+          scrollHandle,
+          (err) => {
+            console.warn('measureLayout error:', err);
+            scrollViewRef.current?.scrollTo({ y: 600, animated: true });
+          },
+          (left, top, width, height) => {
+            const offset = Math.max(0, top - 90);
+            scrollViewRef.current.scrollTo({ y: offset, animated: true });
+          }
+        );
+      } else {
+        scrollViewRef.current?.scrollTo({ y: 600, animated: true });
+      }
+    } catch (e) {
+      console.warn('scrollToAllCommunities error', e);
+      scrollViewRef.current?.scrollTo({ y: 600, animated: true });
+    }
   };
 
   const handleCreateCommunity = async () => {
@@ -886,7 +923,7 @@ export default function CommunityScreen({ navigation }) {
 
           {/* All / Other Communities */}
           { (activeCategory === 'all' || activeCategory !== 'my') && (
-            <View>
+            <View ref={allCommunitiesRef}>
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionHeaderContent}>
                   <View style={styles.sectionHeaderRow}>

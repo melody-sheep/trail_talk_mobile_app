@@ -74,6 +74,10 @@ import FacultyCommentScreen from '../screens/faculty/CommentScreen';
 import BottomNavigation from '../components/BottomNavigation';
 import { colors } from '../styles/colors';
 import { fonts } from '../styles/fonts';
+import useNotifications from '../hooks/useNotifications';
+import { useContext, useEffect, useState, useRef } from 'react';
+import { UserContext } from '../contexts/UserContext';
+import { supabase } from '../lib/supabase';
 
 const Stack = createNativeStackNavigator();
 const StudentTab = createBottomTabNavigator();
@@ -93,9 +97,111 @@ const PlaceholderScreen = ({ navigation, route }) => (
 );
 
 function StudentTabNavigator() {
+  const { user } = useContext(UserContext);
+  const { unreadCount: unreadNotifications, markAllAsRead } = useNotifications(user?.id);
+  const [unreadMessages, setUnreadMessages] = useState(0);
+  const skipReadByRef = useRef(false);
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchUnreadMessages = async () => {
+      if (!user?.id) {
+        if (mounted) setUnreadMessages(0);
+        return;
+      }
+      try {
+        if (skipReadByRef.current) {
+          if (mounted) setUnreadMessages(0);
+          return;
+        }
+
+        // Fetch recent messages sent by others and compute unread locally.
+        const { data, error } = await supabase
+          .from('messages')
+          .select('id, read_by, sender_id, created_at')
+          .neq('sender_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(200);
+
+        if (error) {
+          // detect missing column error and stop querying read_by
+          if (error.code === '42703' || error.code === 42703 || (error.message || '').includes('read_by')) {
+            skipReadByRef.current = true;
+            if (mounted) setUnreadMessages(0);
+            return;
+          }
+
+          console.error('Error fetching recent messages for unread count:', error);
+          if (mounted) setUnreadMessages(0);
+        } else {
+          const unread = (data || []).filter(m => !(m.read_by || []).includes(user.id)).length;
+          if (mounted) setUnreadMessages(unread);
+        }
+      } catch (err) {
+        try {
+          if (err?.code === '42703' || err?.code === 42703 || (err?.message || '').includes('read_by')) {
+            skipReadByRef.current = true;
+            if (mounted) setUnreadMessages(0);
+            return;
+          }
+        } catch (e) {}
+        console.error('Unexpected error fetching unread messages:', err);
+        if (mounted) setUnreadMessages(0);
+      }
+    };
+
+    fetchUnreadMessages();
+
+    // Set up realtime subscription to messages table for this user to update count
+    let subscription;
+    try {
+      subscription = supabase
+        .channel(`unread-messages-${user?.id}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, () => {
+          fetchUnreadMessages();
+        })
+        .subscribe();
+    } catch (e) {
+      // ignore subscription errors
+    }
+
+    return () => {
+      mounted = false;
+      try { subscription?.unsubscribe(); } catch(e) {}
+    };
+  }, [user?.id]);
+  
+  const handleNotificationsPress = async () => {
+    try {
+      // Mark all notifications as read via hook
+      if (typeof markAllAsRead === 'function') {
+        await markAllAsRead();
+      }
+    } catch (e) {
+      console.error('Error marking notifications as read from navigator:', e);
+    }
+  };
+
+  const handleMessagesPress = async () => {
+    try {
+      // Optimistically clear the badge locally; Messages screen should perform DB updates
+      setUnreadMessages(0);
+    } catch (e) {
+      console.error('Error clearing message badge:', e);
+    }
+  };
   return (
     <StudentTab.Navigator
-      tabBar={(props) => <BottomNavigation {...props} userRole="student" />}
+      tabBar={(props) => (
+        <BottomNavigation
+          {...props}
+          userRole="student"
+          unreadNotifications={unreadNotifications}
+          unreadMessages={unreadMessages}
+          onNotificationsPress={handleNotificationsPress}
+          onMessagesPress={handleMessagesPress}
+        />
+      )}
       screenOptions={{
         headerShown: false,
         unmountOnBlur: false,
@@ -112,9 +218,106 @@ function StudentTabNavigator() {
 }
 
 function FacultyTabNavigator() {
+  const { user } = useContext(UserContext);
+  const { unreadCount: unreadNotifications, markAllAsRead } = useNotifications(user?.id);
+  const [unreadMessages, setUnreadMessages] = useState(0);
+  const skipReadByRefFaculty = useRef(false);
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchUnreadMessages = async () => {
+      if (!user?.id) {
+        if (mounted) setUnreadMessages(0);
+        return;
+      }
+      try {
+        if (skipReadByRefFaculty.current) {
+          if (mounted) setUnreadMessages(0);
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from('messages')
+          .select('id, read_by, sender_id, created_at')
+          .neq('sender_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(200);
+
+        if (error) {
+          if (error.code === '42703' || error.code === 42703 || (error.message || '').includes('read_by')) {
+            skipReadByRefFaculty.current = true;
+            if (mounted) setUnreadMessages(0);
+            return;
+          }
+
+          console.error('Error fetching recent messages for unread count:', error);
+          if (mounted) setUnreadMessages(0);
+        } else {
+          const unread = (data || []).filter(m => !(m.read_by || []).includes(user.id)).length;
+          if (mounted) setUnreadMessages(unread);
+        }
+      } catch (err) {
+        try {
+          if (err?.code === '42703' || err?.code === 42703 || (err?.message || '').includes('read_by')) {
+            skipReadByRefFaculty.current = true;
+            if (mounted) setUnreadMessages(0);
+            return;
+          }
+        } catch (e) {}
+        console.error('Unexpected error fetching unread messages:', err);
+        if (mounted) setUnreadMessages(0);
+      }
+    };
+
+    fetchUnreadMessages();
+
+    let subscription;
+    try {
+      subscription = supabase
+        .channel(`unread-messages-${user?.id}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, () => {
+          fetchUnreadMessages();
+        })
+        .subscribe();
+    } catch (e) {
+      // ignore subscription errors
+    }
+
+    return () => {
+      mounted = false;
+      try { subscription?.unsubscribe(); } catch(e) {}
+    };
+  }, [user?.id]);
+
+  const handleNotificationsPress = async () => {
+    try {
+      if (typeof markAllAsRead === 'function') {
+        await markAllAsRead();
+      }
+    } catch (e) {
+      console.error('Error marking notifications as read from navigator:', e);
+    }
+  };
+
+  const handleMessagesPress = async () => {
+    try {
+      setUnreadMessages(0);
+    } catch (e) {
+      console.error('Error clearing message badge:', e);
+    }
+  };
   return (
     <FacultyTab.Navigator
-      tabBar={(props) => <BottomNavigation {...props} userRole="faculty" />}
+      tabBar={(props) => (
+        <BottomNavigation
+          {...props}
+          userRole="faculty"
+          unreadNotifications={unreadNotifications}
+          unreadMessages={unreadMessages}
+          onNotificationsPress={handleNotificationsPress}
+          onMessagesPress={handleMessagesPress}
+        />
+      )}
       screenOptions={{
         headerShown: false,
         unmountOnBlur: false,

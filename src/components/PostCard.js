@@ -1,5 +1,14 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Alert, Modal } from 'react-native';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  TouchableOpacity, 
+  Image, 
+  Alert, 
+  Modal,
+  Dimensions 
+} from 'react-native';
 import { colors } from '../styles/colors';
 import { fonts } from '../styles/fonts';  
 import { supabase } from '../lib/supabase';
@@ -8,6 +17,8 @@ import useComments from '../hooks/useComments';
 import { UserContext } from '../contexts/UserContext';
 import ReportModal from './ReportModal';
 import { MaterialIcons } from '@expo/vector-icons';
+
+const { width: screenWidth } = Dimensions.get('window');
 
 const PostCard = ({ post, userRole = 'student', onInteraction, onCommentUpdate, onDelete }) => {
   const { user } = useContext(UserContext);
@@ -438,6 +449,16 @@ const PostCard = ({ post, userRole = 'student', onInteraction, onCommentUpdate, 
     return require('../../assets/post_card_icons/anon_profile_icon.png');
   };
 
+  // Handle image press to view full screen
+  const handleImagePress = () => {
+    if (post.image_url) {
+      navigation.navigate('ImageViewScreen', { 
+        imageUrl: post.image_url,
+        title: 'Post Image'
+      });
+    }
+  };
+
   // Don't render if post is null/undefined
   if (!post) {
     return null;
@@ -504,6 +525,23 @@ const PostCard = ({ post, userRole = 'student', onInteraction, onCommentUpdate, 
           {/* Content Box */}
           <View style={styles.contentBox}>
             <Text style={styles.contentText}>{post.content || ''}</Text>
+            
+            {/* IMAGE DISPLAY - NEW SECTION */}
+            {post.image_url && (
+              <TouchableOpacity 
+                style={styles.imageContainer}
+                onPress={handleImagePress}
+                activeOpacity={0.9}
+              >
+                <Image 
+                  source={{ uri: post.image_url }}
+                  style={styles.postImage}
+                  resizeMode="cover"
+                />
+                {/* Image overlay for better visual feedback */}
+                <View style={styles.imageOverlay} />
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* Footer Actions */}
@@ -574,6 +612,7 @@ const PostCard = ({ post, userRole = 'student', onInteraction, onCommentUpdate, 
           </View>
         </View>
       </View>
+
       {/* Enhanced Options Modal */}
       <Modal visible={showOptionsModal} transparent animationType="slide" onRequestClose={() => setShowOptionsModal(false)}>
         <View style={styles.optionsBackdrop}>
@@ -822,6 +861,23 @@ const styles = StyleSheet.create({
     fontFamily: fonts.normal,
     color: colors.white,
     lineHeight: 20,
+    marginBottom: 12,
+  },
+  // NEW IMAGE STYLES
+  imageContainer: {
+    position: 'relative',
+    borderRadius: 8,
+    overflow: 'hidden',
+    marginTop: 8,
+  },
+  postImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 8,
+  },
+  imageOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
   },
   footer: {
     flexDirection: 'row',

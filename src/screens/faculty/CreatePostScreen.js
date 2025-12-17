@@ -12,9 +12,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Switch
+  Switch,
+  Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
 import { colors } from '../../styles/colors';
 import { fonts } from '../../styles/fonts';
 import { supabase } from '../../lib/supabase';
@@ -29,18 +32,32 @@ const CreatePostScreen = ({ navigation }) => {
   const [message, setMessage] = useState('');
   const [inputHeight, setInputHeight] = useState(140);
   const [isFocused, setIsFocused] = useState(false);
-  const [userDisplayName, setUserDisplayName] = useState('Blazer01'); // Default fallback
-  const [userInitials, setUserInitials] = useState('USR'); // Default fallback
+  const [userDisplayName, setUserDisplayName] = useState('Blazer01');
+  const [userInitials, setUserInitials] = useState('USR');
   const [isUsingCustomName, setIsUsingCustomName] = useState(false);
-  const [postAnonymously, setPostAnonymously] = useState(true); // Default to true
+  const [postAnonymously, setPostAnonymously] = useState(true);
   const [userProfileData, setUserProfileData] = useState(null);
   const { user, loading } = useContext(UserContext);
   const { checkContent } = useBannedWords();
   const [warningMatches, setWarningMatches] = useState([]);
   const [showWarningModal, setShowWarningModal] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [uploading, setUploading] = useState(false);
 
   const textInputRef = useRef(null);
   const scrollViewRef = useRef(null);
+
+  // Request camera and gallery permissions on mount
+  useEffect(() => {
+    (async () => {
+      const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
+      const { status: libraryStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (cameraStatus !== 'granted' || libraryStatus !== 'granted') {
+        Alert.alert('Permission required', 'Sorry, we need camera and gallery permissions to make this work!');
+      }
+    })();
+  }, []);
 
   // Fetch user profile data when component mounts
   useEffect(() => {
@@ -54,7 +71,6 @@ const CreatePostScreen = ({ navigation }) => {
     if (!user) return;
 
     try {
-      // Get FULL profile data from profiles table including display_name AND post_anonymously
       const { data: profileData, error } = await supabase
         .from('profiles')
         .select('username, display_name, student_id, school_email, user_type, avatar_url, post_anonymously')
@@ -63,48 +79,38 @@ const CreatePostScreen = ({ navigation }) => {
 
       if (error) {
         console.log('Error fetching profile:', error);
-        // Fallback to auth user email
         handleFallbackDisplayName();
         return;
       }
 
-      // Store profile data
       setUserProfileData(profileData);
-
-      // Set global anonymous posting preference
       setPostAnonymously(profileData.post_anonymously ?? true);
 
-      // Determine what to display as the username
-      let displayName = 'Blazer01'; // Default
-      let initials = 'USR'; // Default
+      let displayName = 'Blazer01';
+      let initials = 'USR';
       let usingCustomName = false;
 
-      // PRIORITY 1: Use display_name from profiles table if it's customized (not null/empty)
       if (profileData?.display_name && profileData.display_name.trim() !== '') {
         displayName = profileData.display_name;
         initials = profileData.display_name.substring(0, 3).toUpperCase();
         usingCustomName = true;
       }
-      // PRIORITY 2: Use username from profiles table
       else if (profileData?.username) {
         displayName = profileData.username;
         initials = profileData.username.substring(0, 3).toUpperCase();
         usingCustomName = false;
       }
-      // PRIORITY 3: Use student_id if available
       else if (profileData?.student_id) {
         displayName = profileData.student_id;
         initials = profileData.student_id.substring(0, 3).toUpperCase();
         usingCustomName = false;
       }
-      // PRIORITY 4: Use school_email if available
       else if (profileData?.school_email) {
         const emailPart = profileData.school_email.split('@')[0];
         displayName = emailPart;
         initials = emailPart.substring(0, 3).toUpperCase();
         usingCustomName = false;
       }
-      // PRIORITY 5: Fallback to auth user email
       else {
         handleFallbackDisplayName();
         return;
@@ -134,12 +140,11 @@ const CreatePostScreen = ({ navigation }) => {
     }
   };
 
-  // Function to get display name for post - UPDATED FOR ANONYMOUS POSTING
+  // Function to get display name for post
   const getDisplayNameForPost = async () => {
     if (!user) return 'USR';
     
     try {
-      // Get fresh profile data to ensure we have the latest
       const { data: profileData, error } = await supabase
         .from('profiles')
         .select('display_name, username, student_id, school_email, post_anonymously')
@@ -147,43 +152,35 @@ const CreatePostScreen = ({ navigation }) => {
         .single();
 
       if (!error && profileData) {
-        // Check if we should post anonymously (global setting + current toggle)
         const shouldPostAnonymously = postAnonymously;
 
         if (shouldPostAnonymously) {
-          return 'Anonymous User'; // Return full anonymous name
+          return 'Anonymous User';
         }
 
-        // If not anonymous, use normal logic
-        // PRIORITY 1: Use display_name if customized
         if (profileData.display_name && profileData.display_name.trim() !== '') {
-          return profileData.display_name; // Return full name, not initials
+          return profileData.display_name;
         }
-        // PRIORITY 2: Use username
         if (profileData.username) {
           return profileData.username.substring(0, 3).toUpperCase();
         }
-        // PRIORITY 3: Use student_id
         if (profileData.student_id) {
           return profileData.student_id.substring(0, 3).toUpperCase();
         }
-        // PRIORITY 4: Use school_email
         if (profileData.school_email) {
           const emailPart = profileData.school_email.split('@')[0];
           return emailPart.substring(0, 3).toUpperCase();
         }
       }
 
-      // Fallback to auth user email
       if (user.email) {
         const emailPart = user.email.split('@')[0];
         return postAnonymously ? 'Anonymous User' : emailPart.substring(0, 3).toUpperCase();
       }
 
-      return postAnonymously ? 'Anonymous User' : 'USR'; // Final fallback
+      return postAnonymously ? 'Anonymous User' : 'USR';
     } catch (error) {
       console.log('Error getting display name for post:', error);
-      // Fallback to current state or auth email
       if (user?.email) {
         const emailPart = user.email.split('@')[0];
         return postAnonymously ? 'Anonymous User' : emailPart.substring(0, 3).toUpperCase();
@@ -192,7 +189,292 @@ const CreatePostScreen = ({ navigation }) => {
     }
   };
 
-  // ADDED: Loading state check
+  // Image Picker Functions
+  const pickImageFromGallery = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setSelectedImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.log('Error picking image from gallery:', error);
+      Alert.alert('Error', 'Failed to pick image from gallery');
+    }
+  };
+
+  const takePhotoWithCamera = async () => {
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setSelectedImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.log('Error taking photo:', error);
+      Alert.alert('Error', 'Failed to take photo');
+    }
+  };
+
+  // FIXED: Upload image to Supabase Storage - SIMPLIFIED VERSION
+  const uploadImage = async (imageUri) => {
+    if (!imageUri) return null;
+
+    try {
+      setUploading(true);
+      console.log('Starting image upload...');
+      
+      // Get file extension and create unique filename
+      const fileExt = imageUri.split('.').pop() || 'jpg';
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+      const filePath = `post-images/${fileName}`;
+
+      console.log('Uploading file:', filePath);
+
+      // Use fetch + arrayBuffer which works reliably in Expo/React Native
+      const response = await fetch(imageUri);
+      const arrayBuffer = await response.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+
+      // Upload to Supabase Storage (Uint8Array / ArrayBuffer is supported)
+      const { data, error } = await supabase.storage
+        .from('posts')
+        .upload(filePath, uint8Array, {
+          cacheControl: '3600',
+          upsert: false,
+          contentType: `image/${fileExt}`
+        });
+
+      if (error) {
+        console.log('Supabase upload error:', error);
+        throw error;
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('posts')
+        .getPublicUrl(filePath);
+
+      console.log('Image uploaded successfully:', publicUrl);
+      return publicUrl;
+      
+    } catch (error) {
+      console.log('Error in uploadImage:', error);
+      Alert.alert('Upload Error', 'Failed to upload image. Please try again.');
+      return null;
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Alternative upload method using FormData approach
+  const uploadImageAlternative = async (imageUri) => {
+    if (!imageUri) return null;
+
+    try {
+      setUploading(true);
+      
+      // Get file extension and create unique filename
+      const fileExt = imageUri.split('.').pop() || 'jpg';
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+      const filePath = `post-images/${fileName}`;
+
+      // Alternative: fetch as arrayBuffer (avoids relying on atob/Blob globals)
+      const response = await fetch(imageUri);
+      const arrayBuffer = await response.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+
+      const { data, error } = await supabase.storage
+        .from('posts')
+        .upload(filePath, uint8Array, {
+          cacheControl: '3600',
+          upsert: false,
+          contentType: `image/${fileExt}`
+        });
+
+      if (error) {
+        console.log('Error uploading image:', error);
+        throw error;
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('posts')
+        .getPublicUrl(filePath);
+
+      console.log('Image uploaded successfully:', publicUrl);
+      return publicUrl;
+      
+    } catch (error) {
+      console.log('Error in uploadImageAlternative:', error);
+      Alert.alert('Upload Error', 'Failed to upload image. Please try a different image.');
+      return null;
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Remove selected image
+  const removeImage = () => {
+    setSelectedImage(null);
+  };
+
+  const handlePostPress = async () => {
+    if (!selectedCategory || !message.trim()) return;
+
+    // Check for banned words
+    const matches = checkContent(message.trim());
+    if (matches && matches.length > 0) {
+      setWarningMatches(matches);
+      setShowWarningModal(true);
+      return;
+    }
+
+    try {
+      console.log('Submitting post to Supabase...');
+      
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) {
+        console.log('No user logged in');
+        Alert.alert('Error', 'Please sign in to create posts');
+        return;
+      }
+
+      // Upload image if selected
+      let imageUrl = null;
+      if (selectedImage) {
+        console.log('Uploading image...');
+        // Try the main upload method first
+        imageUrl = await uploadImage(selectedImage);
+        
+        // If main method fails, try alternative
+        if (!imageUrl) {
+          console.log('Trying alternative upload method...');
+          imageUrl = await uploadImageAlternative(selectedImage);
+        }
+        
+        console.log('Image upload result:', imageUrl);
+      }
+
+      const displayName = await getDisplayNameForPost();
+
+      const { data, error } = await supabase
+        .from('posts')
+        .insert([
+          {
+            content: message.trim(),
+            category: selectedCategory,
+            author_id: userData.user.id,
+            author_initials: displayName,
+            is_anonymous: postAnonymously,
+            image_url: imageUrl // Add image URL to post
+          }
+        ])
+        .select();
+
+      if (error) {
+        console.log('Error submitting post:', error);
+        Alert.alert('Error', 'Failed to create post');
+        return;
+      }
+
+      console.log('Post submitted successfully:', data);
+      
+      // Clear form and go back
+      setMessage('');
+      setSelectedCategory(null);
+      setSelectedImage(null);
+      navigation.goBack();
+      
+    } catch (error) {
+      console.log('Error:', error);
+      Alert.alert('Error', 'Failed to create post');
+    }
+  };
+
+  const continueDespiteWarnings = async () => {
+    setShowWarningModal(false);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return;
+      
+      let imageUrl = null;
+      if (selectedImage) {
+        imageUrl = await uploadImage(selectedImage);
+        if (!imageUrl) {
+          imageUrl = await uploadImageAlternative(selectedImage);
+        }
+      }
+
+      const displayName = await getDisplayNameForPost();
+      const { data, error } = await supabase
+        .from('posts')
+        .insert([
+          {
+            content: message.trim(),
+            category: selectedCategory,
+            author_id: userData.user.id,
+            author_initials: displayName,
+            is_anonymous: postAnonymously,
+            image_url: imageUrl
+          }
+        ])
+        .select();
+      if (!error) {
+        setMessage('');
+        setSelectedCategory(null);
+        setSelectedImage(null);
+        navigation.goBack();
+      } else {
+        Alert.alert('Error', 'Failed to create post');
+      }
+    } catch (err) {
+      console.log('Error posting after warnings', err);
+      Alert.alert('Error', 'Failed to create post');
+    }
+  };
+
+  const selectCategory = (category) => {
+    if (selectedCategory === category) {
+      setSelectedCategory(null);
+    } else {
+      setSelectedCategory(category);
+    }
+  };
+
+  const handleContentSizeChange = (event) => {
+    const { height } = event.nativeEvent.contentSize;
+    const newHeight = Math.max(140, Math.min(height + 40, 400));
+    setInputHeight(newHeight);
+  };
+
+  const focusTextInput = () => {
+    textInputRef.current?.focus();
+  };
+
+  const getCurrentDisplayName = () => {
+    if (postAnonymously) {
+      return 'Anonymous User';
+    }
+    return isUsingCustomName ? userDisplayName : userInitials;
+  };
+
+  const getCurrentStatus = () => {
+    if (postAnonymously) {
+      return 'Anonymous User • Your identity is hidden';
+    }
+    return `${isUsingCustomName ? 'Custom Name' : userInitials} • Your identity is visible`;
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -226,121 +508,6 @@ const CreatePostScreen = ({ navigation }) => {
     navigation.goBack();
   };
 
-  const handlePostPress = async () => {
-    if (!selectedCategory || !message.trim()) return;
-
-    // Check for banned words
-    const matches = checkContent(message.trim());
-    if (matches && matches.length > 0) {
-      setWarningMatches(matches);
-      setShowWarningModal(true);
-      return;
-    }
-
-    try {
-      console.log('Submitting post to Supabase...');
-      
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) {
-        console.log('No user logged in');
-        return;
-      }
-
-      // Get display name for the post - USING UPDATED FUNCTION WITH ANONYMOUS LOGIC
-      const displayName = await getDisplayNameForPost();
-
-      const { data, error } = await supabase
-        .from('posts')
-        .insert([
-          {
-            content: message.trim(),
-            category: selectedCategory,
-            author_id: userData.user.id,
-            author_initials: displayName, // Now stores either "Anonymous User" or actual name
-            is_anonymous: postAnonymously // Store the anonymous status
-          }
-        ])
-        .select();
-
-      if (error) {
-        console.log('Error submitting post:', error);
-        return;
-      }
-
-      console.log('Post submitted successfully:', data);
-      
-      // Clear form and go back
-      setMessage('');
-      setSelectedCategory(null);
-      navigation.goBack();
-      
-    } catch (error) {
-      console.log('Error:', error);
-    }
-  };
-
-  const continueDespiteWarnings = async () => {
-    setShowWarningModal(false);
-    try {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) return;
-      const displayName = await getDisplayNameForPost();
-      const { data, error } = await supabase
-        .from('posts')
-        .insert([
-          {
-            content: message.trim(),
-            category: selectedCategory,
-            author_id: userData.user.id,
-            author_initials: displayName,
-            is_anonymous: postAnonymously
-          }
-        ])
-        .select();
-      if (!error) {
-        setMessage('');
-        setSelectedCategory(null);
-        navigation.goBack();
-      }
-    } catch (err) {
-      console.log('Error posting after warnings', err);
-    }
-  };
-
-  const selectCategory = (category) => {
-    if (selectedCategory === category) {
-      setSelectedCategory(null);
-    } else {
-      setSelectedCategory(category);
-    }
-  };
-
-  const handleContentSizeChange = (event) => {
-    const { height } = event.nativeEvent.contentSize;
-    const newHeight = Math.max(140, Math.min(height + 40, 400));
-    setInputHeight(newHeight);
-  };
-
-  const focusTextInput = () => {
-    textInputRef.current?.focus();
-  };
-
-  // Get current display name for UI
-  const getCurrentDisplayName = () => {
-    if (postAnonymously) {
-      return 'Anonymous User';
-    }
-    return isUsingCustomName ? userDisplayName : userInitials;
-  };
-
-  // Get current status text
-  const getCurrentStatus = () => {
-    if (postAnonymously) {
-      return 'Anonymous User • Your identity is hidden';
-    }
-    return `${isUsingCustomName ? 'Custom Name' : userInitials} • Your identity is visible`;
-  };
-
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <KeyboardAvoidingView 
@@ -361,7 +528,7 @@ const CreatePostScreen = ({ navigation }) => {
             translucent={false}
           />
           
-          {/* Header with Anonymous Toggle */}
+          {/* Header */}
           <ImageBackground 
             source={require('../../../assets/create_post_screen_icons/createpost_header_bg.png')}
             style={styles.headerBackground}
@@ -383,12 +550,10 @@ const CreatePostScreen = ({ navigation }) => {
               <View style={styles.titleContainer}>
                 <Text style={styles.headerTitle}>Create Post</Text>
               </View>
-
-              {/* Anonymous toggle moved into user card (see below) */}
             </View>
           </ImageBackground>
 
-          {/* User Identity Card - NOW SHOWS ANONYMOUS OR ACTUAL NAME */}
+          {/* User Identity Card */}
           <View style={[styles.userCard, styles.userCardAdjusted]}>
             <View style={styles.userInfo}>
               <Image 
@@ -430,7 +595,6 @@ const CreatePostScreen = ({ navigation }) => {
               <Text style={styles.sectionTitle}>Choose Category</Text>
             </View>
             
-            {/* Manual ScrollView */}
             <ScrollView 
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -507,6 +671,34 @@ const CreatePostScreen = ({ navigation }) => {
             </TouchableOpacity>
           </View>
 
+          {/* Image Preview */}
+          {selectedImage && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Image 
+                  source={require('../../../assets/create_post_screen_icons/attach_icon.png')}
+                  style={styles.sectionIcon}
+                  resizeMode="contain"
+                />
+                <Text style={styles.sectionTitle}>Image Preview</Text>
+              </View>
+              
+              <View style={styles.imagePreviewContainer}>
+                <Image 
+                  source={{ uri: selectedImage }}
+                  style={styles.selectedImage}
+                  resizeMode="cover"
+                />
+                <TouchableOpacity 
+                  style={styles.removeImageButton}
+                  onPress={removeImage}
+                >
+                  <Text style={styles.removeImageText}>×</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
           {/* Attachment Section */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -519,7 +711,12 @@ const CreatePostScreen = ({ navigation }) => {
             </View>
             
             <View style={styles.attachmentButtons}>
-              <TouchableOpacity style={styles.mediaButton} activeOpacity={0.7}>
+              <TouchableOpacity 
+                style={styles.mediaButton} 
+                onPress={pickImageFromGallery}
+                activeOpacity={0.7}
+                disabled={uploading}
+              >
                 <View style={styles.mediaButtonIcon}>
                   <Image 
                     source={require('../../../assets/create_post_screen_icons/gallery_icon.png')}
@@ -530,7 +727,12 @@ const CreatePostScreen = ({ navigation }) => {
                 <Text style={styles.mediaButtonText}>Gallery</Text>
               </TouchableOpacity>
               
-              <TouchableOpacity style={styles.mediaButton} activeOpacity={0.7}>
+              <TouchableOpacity 
+                style={styles.mediaButton} 
+                onPress={takePhotoWithCamera}
+                activeOpacity={0.7}
+                disabled={uploading}
+              >
                 <View style={styles.mediaButtonIcon}>
                   <Image 
                     source={require('../../../assets/create_post_screen_icons/camera_icon.png')}
@@ -541,20 +743,25 @@ const CreatePostScreen = ({ navigation }) => {
                 <Text style={styles.mediaButtonText}>Camera</Text>
               </TouchableOpacity>
             </View>
+            {uploading && (
+              <Text style={styles.uploadingText}>Uploading image...</Text>
+            )}
           </View>
 
-          {/* Post Button - Clean Design */}
+          {/* Post Button */}
           <View style={styles.postButtonContainer}>
             <TouchableOpacity 
               style={[
                 styles.postButton,
-                (!selectedCategory || !message.trim()) && styles.postButtonDisabled
+                (!selectedCategory || !message.trim() || uploading) && styles.postButtonDisabled
               ]}
               onPress={handlePostPress}
               activeOpacity={0.8}
-              disabled={!selectedCategory || !message.trim()}
+              disabled={!selectedCategory || !message.trim() || uploading}
             >
-              <Text style={styles.postButtonText}>Post</Text>
+              <Text style={styles.postButtonText}>
+                {uploading ? 'Uploading...' : 'Post'}
+              </Text>
             </TouchableOpacity>
             
             <Text style={styles.postDisclaimer}>
@@ -567,6 +774,7 @@ const CreatePostScreen = ({ navigation }) => {
 
           <View style={styles.bottomSpacer} />
         </ScrollView>
+
         {/* Warning Modal for banned words */}
         <Modal visible={showWarningModal} transparent animationType="slide" onRequestClose={() => setShowWarningModal(false)}>
           <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
@@ -592,6 +800,7 @@ const CreatePostScreen = ({ navigation }) => {
   );
 };
 
+// ... (keep all your existing styles exactly the same)
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -643,23 +852,6 @@ const styles = StyleSheet.create({
     color: colors.white,
     textAlign: 'center',
     letterSpacing: 1.5,
-  },
-  // Anonymous Toggle in Header
-  anonymousToggleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  anonymousToggleText: {
-    fontSize: 12,
-    fontFamily: fonts.medium,
-    color: colors.white,
-    marginRight: 8,
   },
   // User Card
   userCard: {
@@ -819,6 +1011,36 @@ const styles = StyleSheet.create({
     fontFamily: fonts.normal,
     color: 'rgba(255, 255, 255, 0.5)',
   },
+  // Image Preview
+  imagePreviewContainer: {
+    position: 'relative',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    overflow: 'hidden',
+  },
+  selectedImage: {
+    width: '100%',
+    height: 200,
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  removeImageText: {
+    color: colors.white,
+    fontSize: 18,
+    fontWeight: 'bold',
+    lineHeight: 20,
+  },
   // Attachment Section
   attachmentButtons: {
     flexDirection: 'row',
@@ -850,7 +1072,14 @@ const styles = StyleSheet.create({
     fontFamily: fonts.medium,
     color: 'rgba(255, 255, 255, 0.8)',
   },
-  // Post Button - Clean Design
+  uploadingText: {
+    fontSize: 12,
+    fontFamily: fonts.normal,
+    color: '#FFCC00',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  // Post Button
   postButtonContainer: {
     marginHorizontal: 20,
     marginTop: 25,
@@ -889,7 +1118,7 @@ const styles = StyleSheet.create({
   bottomSpacer: {
     height: 10,
   },
-  // ADDED: Loading styles
+  // Loading styles
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',

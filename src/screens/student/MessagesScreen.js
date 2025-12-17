@@ -77,41 +77,39 @@ export default function MessagesScreen({ navigation }) {
     try {
       setLoading(true);
       // Get users that current user follows
-      const { data: followingData, error: followingError } = await supabase
+      // Try to include `last_active_at` if present in profiles; if the column
+      // doesn't exist (Postgres 42703), retry without it so the screen still works.
+      let includeLastActive = true;
+      const selectWithLast = `following_user_id, profiles:following_user_id ( id, display_name, username, avatar_url, role, student_id, school_email, last_active_at )`;
+      let { data: followingData, error: followingError } = await supabase
         .from('follows')
-        .select(`
-          following_user_id,
-          profiles:following_user_id (
-            id,
-            display_name,
-            username,
-            avatar_url,
-            role,
-            student_id,
-            school_email
-          )
-        `)
+        .select(selectWithLast)
         .eq('follower_user_id', user.id);
+
+      if (followingError && followingError.code === '42703' && /last_active_at/.test(followingError.message || '')) {
+        includeLastActive = false;
+        const selectNoLast = `following_user_id, profiles:following_user_id ( id, display_name, username, avatar_url, role, student_id, school_email )`;
+        const retry = await supabase.from('follows').select(selectNoLast).eq('follower_user_id', user.id);
+        followingData = retry.data;
+        followingError = retry.error;
+      }
       if (followingError) {
         console.error('Error fetching following:', followingError);
         return;
       }
       // Get users that follow current user
-      const { data: followersData, error: followersError } = await supabase
+      const selectWithLastFollowers = `follower_user_id, profiles:follower_user_id ( id, display_name, username, avatar_url, role, student_id, school_email${includeLastActive ? ', last_active_at' : ''} )`;
+      let { data: followersData, error: followersError } = await supabase
         .from('follows')
-        .select(`
-          follower_user_id,
-          profiles:follower_user_id (
-            id,
-            display_name,
-            username,
-            avatar_url,
-            role,
-            student_id,
-            school_email
-          )
-        `)
+        .select(selectWithLastFollowers)
         .eq('following_user_id', user.id);
+
+      if (followersError && followersError.code === '42703' && /last_active_at/.test(followersError.message || '')) {
+        const selectNoLastFollowers = `follower_user_id, profiles:follower_user_id ( id, display_name, username, avatar_url, role, student_id, school_email )`;
+        const retryF = await supabase.from('follows').select(selectNoLastFollowers).eq('following_user_id', user.id);
+        followersData = retryF.data;
+        followersError = retryF.error;
+      }
       if (followersError) {
         console.error('Error fetching followers:', followersError);
         return;
@@ -122,6 +120,8 @@ export default function MessagesScreen({ navigation }) {
       followingData?.forEach(follow => {
         if (follow.following_user_id !== user.id && follow.profiles) {
           const userData = follow.profiles;
+          const lastActive = userData.last_active_at;
+          const isOnline = lastActive ? (Date.now() - new Date(lastActive).getTime() < 2 * 60 * 1000) : false;
           contactUsers.set(userData.id, {
             user_id: userData.id,
             display_name: userData.display_name,
@@ -136,6 +136,8 @@ export default function MessagesScreen({ navigation }) {
             last_message_at: null,
             is_read: false,
             last_message_sender_id: null,
+            last_active_at: lastActive,
+            is_online: isOnline,
           });
         }
       });
@@ -143,6 +145,8 @@ export default function MessagesScreen({ navigation }) {
       followersData?.forEach(follow => {
         if (follow.follower_user_id !== user.id && follow.profiles) {
           const userData = follow.profiles;
+          const lastActive = userData.last_active_at;
+          const isOnline = lastActive ? (Date.now() - new Date(lastActive).getTime() < 2 * 60 * 1000) : false;
           contactUsers.set(userData.id, {
             user_id: userData.id,
             display_name: userData.display_name,
@@ -157,6 +161,8 @@ export default function MessagesScreen({ navigation }) {
             last_message_at: null,
             is_read: false,
             last_message_sender_id: null,
+            last_active_at: lastActive,
+            is_online: isOnline,
           });
         }
       });
@@ -206,6 +212,13 @@ export default function MessagesScreen({ navigation }) {
       } else if (activeCategory === 'following') {
         conversationsList = conversationsList.filter(conv => followingData?.some(f => f.profiles?.id === conv.user_id));
       }
+      // Sort conversations so the most recently active chats appear first
+      conversationsList.sort((a, b) => {
+        const ta = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
+        const tb = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
+        return tb - ta;
+      });
+
       setConversations(conversationsList);
     } catch (error) {
       console.error('Error in fetchConversations:', error);
@@ -264,7 +277,8 @@ export default function MessagesScreen({ navigation }) {
           display_name: conversation.display_name,
           username: conversation.username,
           avatar_url: conversation.avatar_url,
-          role: conversation.role
+          role: conversation.role,
+          is_online: !!conversation.is_online,
         }
       });
     } catch (error) {
@@ -308,6 +322,7 @@ export default function MessagesScreen({ navigation }) {
     const initials = buildInitials(item.display_name);
     const isUnread = item.unread_count > 0;
     const isSentByMe = item.last_message_sender_id === user?.id;
+    const isOnline = !!item.is_online;
     return (
       <TouchableOpacity 
         style={styles.conversationCard}
@@ -327,6 +342,7 @@ export default function MessagesScreen({ navigation }) {
               </View>
             )}
             {isUnread && <View style={styles.unreadDot} />}
+            {isOnline && <View style={styles.onlineDot} />}
           </View>
           <View style={styles.conversationInfo}>
             <View style={styles.nameRow}>
@@ -697,5 +713,16 @@ const styles = StyleSheet.create({
     fontFamily: fonts.normal,
     color: 'rgba(255,255,255,0.4)',
     textAlign: 'center',
+  },
+  onlineDot: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#4CAF50',
+    borderWidth: 2,
+    borderColor: colors.homeBackground,
   },
 });

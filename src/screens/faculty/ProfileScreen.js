@@ -22,8 +22,14 @@ export default function FacultyProfileScreen({ navigation }) {
   const [followersCount, setFollowersCount] = useState(0);
   const [postCount, setPostCount] = useState(0);
   const [userPosts, setUserPosts] = useState([]);
+  const [bookmarkedPosts, setBookmarkedPosts] = useState([]);
+  const [likedPosts, setLikedPosts] = useState([]);
+  const [repliedPosts, setRepliedPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [postsLoading, setPostsLoading] = useState(false);
+  const [bookmarksLoading, setBookmarksLoading] = useState(false);
+  const [likesLoading, setLikesLoading] = useState(false);
+  const [repliesLoading, setRepliesLoading] = useState(false);
   const [profileData, setProfileData] = useState(null);
   const { user, profile, updateProfile } = useContext(UserContext);
   const animation = useRef(new Animated.Value(0)).current;
@@ -212,11 +218,132 @@ export default function FacultyProfileScreen({ navigation }) {
     }
   };
 
+  const fetchBookmarkedPosts = async () => {
+    if (!user) return;
+    try {
+      setBookmarksLoading(true);
+      const { data: bookmarks, error: bmError } = await supabase
+        .from('bookmarks')
+        .select('post_id')
+        .eq('user_id', user.id);
+
+      if (!bmError && bookmarks) {
+        const postIds = bookmarks.map(b => b.post_id).filter(Boolean);
+        if (postIds.length === 0) {
+          setBookmarkedPosts([]);
+          return;
+        }
+
+        const { data: posts, error: postsError } = await supabase
+          .from('posts')
+          .select('*')
+          .in('id', postIds)
+          .order('created_at', { ascending: false });
+
+        if (!postsError && posts) setBookmarkedPosts(posts);
+        else setBookmarkedPosts([]);
+      } else {
+        setBookmarkedPosts([]);
+      }
+    } catch (error) {
+      console.log('Error fetching bookmarked posts:', error);
+      setBookmarkedPosts([]);
+    } finally {
+      setBookmarksLoading(false);
+    }
+  };
+
+  const fetchLikedPosts = async () => {
+    if (!user) return;
+    try {
+      setLikesLoading(true);
+      const { data: likes, error: likesError } = await supabase
+        .from('post_likes')
+        .select('post_id')
+        .eq('user_id', user.id);
+
+      if (!likesError && likes) {
+        const postIds = likes.map(l => l.post_id).filter(Boolean);
+        if (postIds.length === 0) {
+          setLikedPosts([]);
+          return;
+        }
+
+        const { data: posts, error: postsError } = await supabase
+          .from('posts')
+          .select('*')
+          .in('id', postIds)
+          .order('created_at', { ascending: false });
+
+        if (!postsError && posts) setLikedPosts(posts);
+        else setLikedPosts([]);
+      } else {
+        setLikedPosts([]);
+      }
+    } catch (error) {
+      console.log('Error fetching liked posts:', error);
+      setLikedPosts([]);
+    } finally {
+      setLikesLoading(false);
+    }
+  };
+
+  const fetchRepliedPosts = async () => {
+    if (!user) return;
+    try {
+      setRepliesLoading(true);
+      const { data: comments, error: commentsError } = await supabase
+        .from('comments')
+        .select('id, post_id, content, created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (!commentsError && comments) {
+        const latestMap = new Map();
+        for (const c of comments) {
+          if (!c.post_id) continue;
+          if (!latestMap.has(c.post_id)) {
+            latestMap.set(c.post_id, c);
+          }
+        }
+
+        const postIds = Array.from(latestMap.keys()).filter(Boolean);
+        if (postIds.length === 0) {
+          setRepliedPosts([]);
+          return;
+        }
+
+        const { data: posts, error: postsError } = await supabase
+          .from('posts')
+          .select('*')
+          .in('id', postIds)
+          .order('created_at', { ascending: false });
+
+        if (!postsError && posts) {
+          const items = posts.map(p => ({ post: p, comment: latestMap.get(p.id) })).sort((a, b) => new Date(b.comment.created_at) - new Date(a.comment.created_at));
+          setRepliedPosts(items);
+        } else {
+          setRepliedPosts([]);
+        }
+      } else {
+        setRepliedPosts([]);
+      }
+    } catch (error) {
+      console.log('Error fetching replied posts:', error);
+      setRepliedPosts([]);
+    } finally {
+      setRepliesLoading(false);
+    }
+  };
+
   useFocusEffect(
     useCallback(() => {
       console.log('Faculty Profile screen focused - refreshing posts and profile');
       fetchUserProfileData();
       fetchUserPosts();
+      fetchBookmarkedPosts();
+      fetchLikedPosts();
+      fetchRepliedPosts();
       if (user) {
         updateProfile(user.id);
       }
@@ -271,6 +398,8 @@ export default function FacultyProfileScreen({ navigation }) {
                 post.id === updatedPost.id ? updatedPost : post
               )
             );
+            // refresh liked posts list when likes change
+            fetchLikedPosts();
           }
         }
       )
@@ -331,11 +460,32 @@ export default function FacultyProfileScreen({ navigation }) {
                 post.id === updatedPost.id ? updatedPost : post
               )
             );
+            // refresh bookmarks list when bookmarks change
+            fetchBookmarkedPosts();
           }
         }
       )
       .subscribe((status) => {
         console.log('Faculty Profile bookmarks subscription status:', status);
+      });
+
+    const commentsChannel = supabase
+      .channel('faculty_profile_comments_channel')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'comments',
+        },
+        async (payload) => {
+          console.log('Comment interaction detected in FacultyProfileScreen:', payload);
+          // refresh the replies list when comments change
+          fetchRepliedPosts();
+        }
+      )
+      .subscribe((status) => {
+        console.log('Faculty Profile comments subscription status:', status);
       });
 
     return () => {
@@ -344,6 +494,7 @@ export default function FacultyProfileScreen({ navigation }) {
       supabase.removeChannel(likesChannel);
       supabase.removeChannel(repostsChannel);
       supabase.removeChannel(bookmarksChannel);
+      supabase.removeChannel(commentsChannel);
     };
   }, []);
 
@@ -546,21 +697,97 @@ export default function FacultyProfileScreen({ navigation }) {
           )}
 
           {activeTab === 'Replies' && (
-            <View style={styles.comingSoonContainer}>
-              <Text style={styles.comingSoonText}>Replies tab coming soon!</Text>
-            </View>
+            <>
+              {repliesLoading ? (
+                <View style={styles.loadingPostsContainer}>
+                  <Text style={styles.loadingText}>Loading replies...</Text>
+                </View>
+              ) : repliedPosts.length > 0 ? (
+                <FlatList
+                  data={repliedPosts}
+                  renderItem={({ item }) => (
+                    <View>
+                      <PostCard post={item.post} userRole="faculty" onInteraction={() => {
+                        setTimeout(() => fetchUserPosts(), 500);
+                      }} onCommentUpdate={() => fetchRepliedPosts()} />
+
+                      <View style={styles.replyBox}>
+                        <Text style={styles.replyLabel}>Your reply</Text>
+                        <Text style={styles.replyText}>{item.comment?.content}</Text>
+                      </View>
+                    </View>
+                  )}
+                  keyExtractor={(item) => item.post.id}
+                  scrollEnabled={false}
+                  showsVerticalScrollIndicator={false}
+                />
+              ) : (
+                <View style={styles.noPostsContainer}>
+                  <Text style={styles.noPostsText}>No replies yet</Text>
+                  <Text style={styles.noPostsSubtext}>Reply to posts to see them here.</Text>
+                </View>
+              )}
+            </>
           )}
 
           {activeTab === 'BookMarks' && (
-            <View style={styles.comingSoonContainer}>
-              <Text style={styles.comingSoonText}>Bookmarks tab coming soon!</Text>
-            </View>
+            <>
+              {bookmarksLoading ? (
+                <View style={styles.loadingPostsContainer}>
+                  <Text style={styles.loadingText}>Loading bookmarks...</Text>
+                </View>
+              ) : bookmarkedPosts.length > 0 ? (
+                <FlatList
+                  data={bookmarkedPosts}
+                  renderItem={({ item }) => (
+                    <PostCard post={item} userRole="faculty" onInteraction={() => {
+                      setTimeout(() => {
+                        fetchBookmarkedPosts();
+                        fetchUserPosts();
+                      }, 500);
+                    }} />
+                  )}
+                  keyExtractor={(item) => item.id}
+                  scrollEnabled={false}
+                  showsVerticalScrollIndicator={false}
+                />
+              ) : (
+                <View style={styles.noPostsContainer}>
+                  <Text style={styles.noPostsText}>No bookmarks yet</Text>
+                  <Text style={styles.noPostsSubtext}>Tap the bookmark icon on a post to save it here.</Text>
+                </View>
+              )}
+            </>
           )}
 
           {activeTab === 'Like' && (
-            <View style={styles.comingSoonContainer}>
-              <Text style={styles.comingSoonText}>Likes tab coming soon!</Text>
-            </View>
+            <>
+              {likesLoading ? (
+                <View style={styles.loadingPostsContainer}>
+                  <Text style={styles.loadingText}>Loading likes...</Text>
+                </View>
+              ) : likedPosts.length > 0 ? (
+                <FlatList
+                  data={likedPosts}
+                  renderItem={({ item }) => (
+                    <PostCard post={item} userRole="faculty" onInteraction={() => {
+                      setTimeout(() => {
+                        fetchLikedPosts();
+                        fetchUserPosts();
+                      }, 500);
+                    }} />
+                  )}
+                  keyExtractor={(item) => item.id}
+                  scrollEnabled={false}
+                  showsVerticalScrollIndicator={false}
+                />
+              ) : (
+                <View style={styles.noPostsContainer}>
+                  <Text style={styles.noPostsText}>No liked posts yet</Text>
+                  <Text style={styles.noPostsSubtext}>Tap the heart on a post to add it here.</Text>
+                </View>
+              )}
+            </>
           )}
         </View>
 
@@ -797,6 +1024,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: fonts.normal,
     color: 'rgba(255, 255, 255, 0.6)',
+  },
+  replyBox: {
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    padding: 10,
+    marginHorizontal: 12,
+    marginTop: 8,
+    borderRadius: 8,
+  },
+  replyLabel: {
+    fontSize: 12,
+    fontFamily: fonts.semiBold,
+    color: 'rgba(255,255,255,0.8)',
+    marginBottom: 4,
+  },
+  replyText: {
+    fontSize: 14,
+    fontFamily: fonts.normal,
+    color: 'rgba(255,255,255,0.9)'
   },
   comingSoonContainer: {
     padding: 40,

@@ -39,18 +39,21 @@ export default function ChatScreen({ route, navigation }) {
       headerTitle: () => (
         <View style={styles.headerTitleContainer}>
           <View style={styles.headerProfile}>
-            {recipient.avatar_url ? (
-              <Image 
-                source={{ uri: recipient.avatar_url }} 
-                style={styles.headerAvatar} 
-              />
-            ) : (
-              <View style={styles.headerAvatarPlaceholder}>
-                <Text style={styles.headerAvatarInitials}>
-                  {buildInitials(recipient.display_name)}
-                </Text>
-              </View>
-            )}
+            <View style={{ position: 'relative' }}>
+              {recipient.avatar_url ? (
+                <Image 
+                  source={{ uri: recipient.avatar_url }} 
+                  style={styles.headerAvatar} 
+                />
+              ) : (
+                <View style={styles.headerAvatarPlaceholder}>
+                  <Text style={styles.headerAvatarInitials}>
+                    {buildInitials(recipient.display_name)}
+                  </Text>
+                </View>
+              )}
+              {recipient.is_online && <View style={styles.onlineDotSmall} />}
+            </View>
             <View style={styles.headerTextContainer}>
               <Text style={styles.headerName} numberOfLines={1}>
                 {recipient.display_name || 'Unknown User'}
@@ -376,6 +379,17 @@ const styles = StyleSheet.create({
     fontFamily: fonts.normal,
     color: 'rgba(255,255,255,0.7)',
     marginTop: 2,
+  },
+  onlineDotSmall: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#4CAF50',
+    borderWidth: 2,
+    borderColor: colors.homeBackground,
   },
   loadingContainer: {
     flex: 1,

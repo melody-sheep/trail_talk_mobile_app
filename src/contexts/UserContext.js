@@ -1,5 +1,6 @@
 // src/contexts/UserContext.js
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useRef, useCallback } from 'react';
+import { AppState } from 'react-native';
 import { supabase } from '../lib/supabase';
 
 export const UserContext = createContext();
@@ -71,6 +72,86 @@ export const UserProvider = ({ children }) => {
     const profileData = await fetchUserProfile(userId);
     setProfile(profileData);
   };
+
+  // Heartbeat: update profiles.last_active_at while app is active
+  const heartbeatIntervalRef = useRef(null);
+  const appStateRef = useRef(AppState.currentState);
+  const skipHeartbeatRef = useRef(false);
+
+  const updateLastActive = useCallback(async (userId) => {
+    if (!userId || skipHeartbeatRef.current) return;
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ last_active_at: new Date().toISOString() })
+        .eq('id', userId);
+
+      if (error) {
+        // If column doesn't exist, stop attempting further heartbeats
+        if (error.code === '42703' || (error.message || '').includes('last_active_at')) {
+          console.warn('last_active_at column missing, disabling heartbeat.');
+          skipHeartbeatRef.current = true;
+        } else {
+          console.error('Error updating last_active_at:', error);
+        }
+        return;
+      }
+
+      // Update local profile timestamp for immediate UI feedback
+      setProfile(prev => prev ? { ...prev, last_active_at: new Date().toISOString() } : prev);
+    } catch (e) {
+      console.error('Exception updating last_active_at:', e);
+    }
+  }, []);
+
+  const startHeartbeat = useCallback((userId) => {
+    if (!userId || skipHeartbeatRef.current) return;
+    // immediate update
+    updateLastActive(userId);
+    // clear any existing
+    if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current);
+    heartbeatIntervalRef.current = setInterval(() => updateLastActive(userId), 60 * 1000); // every 60s
+  }, [updateLastActive]);
+
+  const stopHeartbeat = useCallback(() => {
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current);
+      heartbeatIntervalRef.current = null;
+    }
+  }, []);
+
+  // Listen to app state changes to start/stop heartbeat
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (!user?.id) return;
+      const prev = appStateRef.current;
+      appStateRef.current = nextAppState;
+      if (prev.match(/inactive|background/) && nextAppState === 'active') {
+        // app came to foreground
+        startHeartbeat(user.id);
+      } else if (nextAppState.match(/inactive|background/)) {
+        // app went to background
+        stopHeartbeat();
+        // also do one final update (best effort)
+        updateLastActive(user.id);
+      }
+    });
+
+    return () => {
+      subscription.remove();
+      stopHeartbeat();
+    };
+  }, [user?.id, startHeartbeat, stopHeartbeat, updateLastActive]);
+
+  // Start heartbeat when user logs in
+  useEffect(() => {
+    if (user?.id) {
+      startHeartbeat(user.id);
+    } else {
+      stopHeartbeat();
+    }
+    return () => stopHeartbeat();
+  }, [user?.id, startHeartbeat, stopHeartbeat]);
 
   const triggerCommunityRefresh = () => {
     console.log('Triggering community refresh...');

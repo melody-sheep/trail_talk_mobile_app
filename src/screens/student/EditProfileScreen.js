@@ -159,21 +159,18 @@ export default function EditProfileScreen({ navigation }) {
 
       console.log('Uploading to bucket:', bucket, 'path:', filePath);
 
-      // SIMPLE FIX: Use React Native FormData approach
-      const formData = new FormData();
-      formData.append('file', {
-        uri: uri,
-        type: 'image/jpeg',
-        name: fileName,
-      });
+      // Use fetch + arrayBuffer which works reliably in Expo/React Native
+      const response = await fetch(uri);
+      const arrayBuffer = await response.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
 
       // Upload to Supabase Storage
       const { data, error } = await supabase.storage
         .from(bucket)
-        .upload(filePath, formData, {
+        .upload(filePath, uint8Array, {
           cacheControl: '3600',
           upsert: true,
-          contentType: 'image/jpeg'
+          contentType: `image/${fileExt}`
         });
 
       if (error) {
@@ -215,21 +212,17 @@ export default function EditProfileScreen({ navigation }) {
       const filePath = `${user.id}/${fileName}`;
       const bucket = type === 'avatar' ? 'avatars' : 'covers';
 
-      // Create form data
-      const formData = new FormData();
-      formData.append('file', {
-        uri: uri,
-        type: 'image/jpeg',
-        name: fileName,
-      });
+      // Alternative: fetch as arrayBuffer (avoids FormData/multipart issues)
+      const response = await fetch(uri);
+      const arrayBuffer = await response.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
 
-      // Get the upload URL from Supabase
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from(bucket)
-        .upload(filePath, formData, {
+        .upload(filePath, uint8Array, {
           cacheControl: '3600',
           upsert: true,
-          contentType: 'image/jpeg'
+          contentType: `image/${fileExt}`
         });
 
       if (uploadError) throw uploadError;
