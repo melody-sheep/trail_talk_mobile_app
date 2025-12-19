@@ -177,12 +177,18 @@ const PostCard = ({ post, userRole = 'student', onInteraction, onCommentUpdate, 
   const getRoleIcon = () => {
     // Use the actual author's role from the database
     const role = authorRole || post.author?.user_type || 'student';
-    
+
     if (role === 'faculty') {
       return require('../../assets/post_card_icons/faculty_icon.png');
     } else {
       return require('../../assets/post_card_icons/student_icon.png');
     }
+  };
+
+  // Get role icon style based on role
+  const getRoleIconStyle = () => {
+    const role = authorRole || post.author?.user_type || 'student';
+    return role === 'faculty' ? styles.roleIconFaculty : styles.roleIcon;
   };
 
   // Get role text based on AUTHOR'S role, not current viewer's role - UPDATED
@@ -488,9 +494,9 @@ const PostCard = ({ post, userRole = 'student', onInteraction, onCommentUpdate, 
                 {/* If post is anonymous, hide role label/icon to compress layout */}
                 {!post?.is_anonymous ? (
                   <View style={styles.roleTimeContainer}>
-                    <Image 
+                    <Image
                       source={getRoleIcon()}
-                      style={styles.roleIcon}
+                      style={getRoleIconStyle()}
                       resizeMode="contain"
                     />
                     <Text style={styles.roleText}>{getRoleText()}</Text>
@@ -804,6 +810,11 @@ const styles = StyleSheet.create({
   roleIcon: {
     width: 14,
     height: 14,
+    marginRight: 6,
+  },
+  roleIconFaculty: {
+    width: 16,
+    height: 16,
     marginRight: 6,
   },
   roleText: {

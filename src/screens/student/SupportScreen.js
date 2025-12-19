@@ -1,4 +1,4 @@
-// src/screens/student/SupportScreen.js
+// src/screens/student/SupportScreen.js (SIMPLIFIED VERSION)
 import React, { useState, useContext, useRef } from 'react';
 import {
   View,
@@ -19,12 +19,13 @@ import { colors } from '../../styles/colors';
 import { fonts } from '../../styles/fonts';
 import { UserContext } from '../../contexts/UserContext';
 import ReportModal from '../../components/ReportModal';
+import { INITIAL_IMPACT_COUNTERS } from '../../constants/donationPaths';
 
 export default function SupportScreen({ navigation }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
   const [expandedItems, setExpandedItems] = useState({});
-  const [showFeatured, setShowFeatured] = useState(true); // Dropdown state
+  const [communityImpact, setCommunityImpact] = useState(INITIAL_IMPACT_COUNTERS);
   const { user } = useContext(UserContext);
   
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -56,163 +57,206 @@ export default function SupportScreen({ navigation }) {
   });
 
   const categories = [
-    { id: 'all', label: 'All', icon: 'grid-outline' },
-    { id: 'faq', label: 'FAQ', icon: 'help-circle-outline' },
-    { id: 'reporting', label: 'Reporting', icon: 'flag-outline' },
-    { id: 'resources', label: 'Resources', icon: 'business-outline' },
-    { id: 'volunteers', label: 'Volunteers', icon: 'heart-outline' }
+    { id: 'all', label: 'All', icon: 'grid-outline', color: '#8B5CF6' },
+    { id: 'faq', label: 'FAQ', icon: 'help-circle-outline', color: '#38BDF8' },
+    { id: 'reporting', label: 'Reporting', icon: 'flag-outline', color: '#FF6B6B' },
+    { id: 'resources', label: 'Resources', icon: 'business-outline', color: '#4ECDC4' },
+    { id: 'volunteers', label: 'Volunteers', icon: 'heart-outline', color: '#FFA726' }
   ];
 
-  // Mock data for support content - USTP Specific
+  // USTP Specific Support Content
   const [supportContent, setSupportContent] = useState([
-    // FAQ Items - READ ONLY
+    // FAQ Category
     {
       id: 'faq1',
+      title: 'How do I create a community?',
+      description: 'Creating study groups, clubs, or interest groups',
+      content: 'Go to Communities tab → Tap "+ Create Community" → Fill in details → Set privacy → Create! All students can create unlimited communities.',
       category: 'faq',
-      title: 'How to Report Inappropriate Content',
-      description: 'Learn how to flag posts or comments that violate community guidelines.',
-      content: 'To report a post:\n1. Tap the three dots on the post\n2. Select "Report Post"\n3. Choose the reason for reporting\n4. Submit your report\n\nOur USTP moderation team will review within 24 hours.',
-      icon: 'flag',
-      iconColor: '#FF6B6B',
-      emergency: false,
-      lastUpdated: '2024-01-15',
-      updatedBy: 'USTP Admin',
-      editable: false,
-      isOfficial: true // Mark as official content
+      icon: 'people-outline',
+      iconColor: '#4ECDC4',
+      editable: true,
+      lastUpdated: 'Dec 18, 2024',
+      updatedBy: 'USTP Admin'
     },
     {
       id: 'faq2',
-      category: 'faq', 
-      title: 'How to Find Support Groups',
-      description: 'Discover and explore campus support communities.',
-      content: 'Support Groups Available:\n• Mental Health Support\n• Academic Success\n• International Students\n• LGBTQ+ Community\n• First-Generation Students\n\nTap "Find Support" below to explore.',
-      icon: 'search',
-      iconColor: '#4ECDC4',
-      emergency: false,
-      lastUpdated: '2024-01-10',
-      updatedBy: 'Counseling Center',
-      editable: false,
-      isOfficial: true
+      title: 'What are donation paths?',
+      description: 'Understanding the 3 emotional donation systems',
+      content: 'We have 3 donation paths: 1) Immediate Rescue (basic needs), 2) Dual Impact (platform + students), 3) Sustaining Legacy (monthly support). Each peso becomes hope.',
+      category: 'faq',
+      icon: 'heart-outline',
+      iconColor: '#FF6B6B',
+      editable: true,
+      lastUpdated: 'Dec 18, 2024',
+      updatedBy: 'USTP Admin'
+    },
+    {
+      id: 'faq3',
+      title: 'How to report inappropriate content?',
+      description: 'Keeping our campus safe and respectful',
+      content: 'Tap "Report Content" quick action → Choose category → Add details → Submit. Faculty will review within 24 hours.',
+      category: 'faq',
+      icon: 'flag-outline',
+      iconColor: '#FFA726',
+      editable: true,
+      lastUpdated: 'Dec 18, 2024',
+      updatedBy: 'USTP Admin'
+    },
+    {
+      id: 'faq4',
+      title: 'Are my anonymous posts really anonymous?',
+      description: 'Privacy and anonymity on TrailTalk',
+      content: 'Yes! Anonymous posts hide your identity from other students. Only platform admins can see the author for moderation purposes.',
+      category: 'faq',
+      icon: 'eye-off-outline',
+      iconColor: '#9B5DE5',
+      editable: true,
+      lastUpdated: 'Dec 18, 2024',
+      updatedBy: 'USTP Admin'
     },
 
-    // Reporting Items - READ ONLY
+    // Reporting Category
     {
       id: 'report1',
+      title: 'Reporting Harassment',
+      description: 'What to do if you experience harassment',
+      content: '1. Document the incident\n2. Use "Report Content" feature\n3. Contact USTP Counseling Center\n4. Reach out to trusted faculty\n\nWe take all reports seriously.',
       category: 'reporting',
-      title: 'Emergency Reporting',
-      description: 'Immediate assistance for urgent situations.',
-      content: 'For immediate danger:\n• USTP Campus Security: (088) 123-4567\n• Emergency Services: 911\n• Crisis Hotline: 988\n\nAvailable 24/7 for urgent matters.',
-      icon: 'warning',
+      icon: 'warning-outline',
       iconColor: '#FF6B6B',
       emergency: true,
-      lastUpdated: '2024-01-12',
-      updatedBy: 'Campus Security',
-      editable: false,
-      isOfficial: true
+      editable: true,
+      lastUpdated: 'Dec 18, 2024',
+      updatedBy: 'USTP Security'
+    },
+    {
+      id: 'report2',
+      title: 'Academic Integrity Violations',
+      description: 'Reporting cheating or plagiarism',
+      content: 'Submit report with evidence → Faculty review → Academic Committee → Appropriate action taken. Your identity will be protected.',
+      category: 'reporting',
+      icon: 'school-outline',
+      iconColor: '#4ECDC4',
+      editable: true,
+      lastUpdated: 'Dec 18, 2024',
+      updatedBy: 'Academic Office'
+    },
+    {
+      id: 'report3',
+      title: 'Cybersecurity Concerns',
+      description: 'Reporting suspicious accounts or hacking',
+      content: 'If you suspect account compromise or malicious activity: 1) Report immediately 2) Change password 3) Contact IT Department at ithelp@ustp.edu.ph',
+      category: 'reporting',
+      icon: 'shield-outline',
+      iconColor: '#1DD1A1',
+      editable: true,
+      lastUpdated: 'Dec 18, 2024',
+      updatedBy: 'IT Department'
     },
 
-    // Resource Items - EDITABLE by verified users
+    // Resources Category
     {
       id: 'resource1',
+      title: 'Library Online Resources',
+      description: '24/7 access to journals and e-books',
+      content: 'Access via: library.ustp.edu.ph\nCredentials: Use your student ID\nIncludes: IEEE, Springer, JSTOR, 50,000+ e-books\n24/7 Research Assistance Chat',
       category: 'resources',
-      title: 'USTP Counseling Services',
-      description: 'Professional mental health support.',
-      content: 'Services Offered:\n• Individual therapy\n• Group sessions\n• Crisis intervention\n• Referrals to specialists\n\nLocation: USTP Student Wellness Center',
-      icon: 'medical',
-      iconColor: '#45B7D1',
-      emergency: false,
-      lastUpdated: '2024-01-14',
-      updatedBy: 'Counseling Center',
-      editable: true
+      icon: 'library-outline',
+      iconColor: '#118AB2',
+      isOfficial: true,
+      editable: true,
+      lastUpdated: 'Dec 18, 2024',
+      updatedBy: 'Library Staff'
     },
     {
       id: 'resource2',
+      title: 'Free Printing Stations',
+      description: 'Campus locations with free printing',
+      content: '1. Main Library - 10 pages/day\n2. Engineering Building - 5 pages/day\n3. CS Department - 20 pages/day for projects\n\nBring your own paper or use provided (limited)',
       category: 'resources',
-      title: 'Self-Help Resources',
-      description: 'Tools and materials for self-care.',
-      content: 'Available Resources:\n• Meditation guides\n• Stress management\n• Sleep improvement\n• Mindfulness exercises\n• Digital wellness tools',
-      icon: 'build',
-      iconColor: '#FFA726',
-      emergency: false,
-      lastUpdated: '2024-01-07',
-      updatedBy: 'Wellness Committee',
-      editable: true
+      icon: 'print-outline',
+      iconColor: '#FFD166',
+      isOfficial: true,
+      editable: true,
+      lastUpdated: 'Dec 18, 2024',
+      updatedBy: 'Student Affairs'
+    },
+    {
+      id: 'resource3',
+      title: 'Wi-Fi Access Points',
+      description: 'Campus-wide internet coverage',
+      content: 'Network: USTP-Student\nUsername: StudentID\nPassword: Your birthdate (DDMMYYYY)\n\nHigh-speed zones: Library, Cafeteria, Study Halls',
+      category: 'resources',
+      icon: 'wifi-outline',
+      iconColor: '#06D6A0',
+      isOfficial: true,
+      editable: true,
+      lastUpdated: 'Dec 18, 2024',
+      updatedBy: 'IT Department'
+    },
+    {
+      id: 'resource4',
+      title: 'Career Center Services',
+      description: 'Resume building and job placement',
+      content: 'Services: Resume workshops, Mock interviews, Company partnerships, Internship placement\nLocation: Admin Building Room 201\nHours: Mon-Fri 8AM-5PM',
+      category: 'resources',
+      icon: 'briefcase-outline',
+      iconColor: '#FF9E6B',
+      isOfficial: true,
+      editable: true,
+      lastUpdated: 'Dec 18, 2024',
+      updatedBy: 'Career Center'
     },
 
-    // Volunteer Items - EDITABLE by verified users
+    // Volunteers Category
     {
       id: 'volunteer1',
+      title: 'Student Ambassador Program',
+      description: 'Represent USTP and help new students',
+      content: 'Requirements: GPA 2.5+, Good standing, Leadership potential\nBenefits: Certificate, Stipend, Network opportunities\nApply at: Student Affairs Office',
       category: 'volunteers',
-      title: 'Peer Support Volunteers',
-      description: 'Trained USTP student volunteers ready to help.',
-      content: 'Our volunteers:\n• Complete 20-hour training\n• Maintain confidentiality\n• Provide empathetic listening\n• Connect you to resources\n\nAvailable: Mon-Fri, 9AM-5PM',
-      icon: 'hand-left',
-      iconColor: '#4ECDC4',
-      emergency: false,
-      lastUpdated: '2024-01-11',
-      updatedBy: 'Student Affairs',
-      editable: true
-    }
-    ,
-    // Office of Student Affairs - CDO Campus (official contact)
-    {
-      id: 'studentaffairs-cdo',
-      category: 'resources',
-      title: 'Office of Student Affairs — CDO (Student Affairs)',
-      description: 'Contact for document requests (Good Moral Certificate, student ID updates)',
-      content: 'Phone: +63 926-905-3363\nEmail: studentaffairs-cdo@ustp.edu.ph\n\nServices:\n• Good Moral Certificates and verification\n• Student ID updates and replacements\n• Assistance with student records and requests\n\nHours: Mon-Fri, 8AM–5PM',
-      icon: 'business',
-      iconColor: '#4ECDC4',
-      emergency: false,
-      lastUpdated: '2024-01-20',
-      updatedBy: 'Office of Student Affairs - CDO',
-      editable: false,
-      isOfficial: true
+      icon: 'megaphone-outline',
+      iconColor: '#FFD700',
+      editable: true,
+      lastUpdated: 'Dec 18, 2024',
+      updatedBy: 'Student Affairs'
     },
-    // USTP Emergency Warning System (EWS)
     {
-      id: 'ews',
-      category: 'resources',
-      title: 'USTP Emergency Warning System (EWS)',
-      description: 'Official color-coded alert levels and actions',
-      content: 'RED — Extreme / Full Emergency:\nOperations seriously impaired or halted. Multiple casualties or severe property damage possible.\nActions: Evacuate if instructed, follow IMT/security orders, seek shelter immediately.\n\nORANGE — Severe / Significant Emergency:\nSignificant damage; campus operations disrupted.\nActions: Prepare to suspend activities, follow campus advisories.\n\nYELLOW — Moderate / Active Emergency:\nLocalized incidents; campus functions continue with caution.\nActions: Monitor updates, avoid affected areas.\n\nGREEN — Normal / Monitoring:\nNo active threat; routine monitoring.\nActions: Continue normal operations and report hazards.',
-      icon: 'warning',
+      id: 'volunteer2',
+      title: 'Peer Tutoring Program',
+      description: 'Help fellow students with difficult subjects',
+      content: 'Subjects: Calculus, Programming, Physics, Chemistry\nHours: 10 hours/month minimum\nRewards: Service credits, Recognition certificate\nSign up: Academic Office',
+      category: 'volunteers',
+      icon: 'book-outline',
+      iconColor: '#4ECDC4',
+      editable: true,
+      lastUpdated: 'Dec 18, 2024',
+      updatedBy: 'Academic Office'
+    },
+    {
+      id: 'volunteer3',
+      title: 'Mental Health Advocates',
+      description: 'Support student mental wellness',
+      content: 'Training: Provided by Counseling Center\nRole: Peer support, Event organization, Awareness campaigns\nCommitment: 5 hours/week\nApply: Counseling Center',
+      category: 'volunteers',
+      icon: 'heart-outline',
       iconColor: '#FF6B6B',
-      emergency: true,
-      lastUpdated: '2024-01-18',
-      updatedBy: 'USTP System',
-      editable: false,
-      isOfficial: true
+      editable: true,
+      lastUpdated: 'Dec 18, 2024',
+      updatedBy: 'Counseling Center'
     },
-    // USTP System Campuses
     {
-      id: 'ustp-campuses',
-      category: 'resources',
-      title: 'USTP System Campuses',
-      description: 'Overview of USTP campuses and locations',
-      content: 'Main Campus: USTP Alubijid\nMajor Campuses: Cagayan de Oro, Claveria, Villanueva\nSatellite Campuses: Balubal, Jasaan, Oroquieta, Panaon\n\nIf you need campus-specific assistance, contact the local campus Student Affairs office.',
-      icon: 'map',
-      iconColor: '#FFA726',
-      emergency: false,
-      lastUpdated: '2024-01-18',
-      updatedBy: 'USTP System',
-      editable: false,
-      isOfficial: true
-    },
-    // Incident Management Team (IMT)
-    {
-      id: 'imt',
-      category: 'resources',
-      title: 'Incident Management Team (IMT)',
-      description: 'Team responsible for coordinating emergency response across USTP',
-      content: 'Chairperson: Vice President for Administration and Legal Affairs – USTP System\nCo-Chairperson: Director for Disaster Risk Reduction and Management Office – USTP System\nMembers: Chief of Security and Safety (each campus), Security & Safety Coordinator – USTP System, Incident Commander (each major campus)\n\nThe IMT issues official campus alerts and coordinates with local authorities during emergencies.',
-      icon: 'people',
-      iconColor: '#8B5CF6',
-      emergency: false,
-      lastUpdated: '2024-01-18',
-      updatedBy: 'USTP System',
-      editable: false,
-      isOfficial: true
+      id: 'volunteer4',
+      title: 'Tech Support Volunteers',
+      description: 'Help with campus technology issues',
+      content: 'Skills needed: Basic troubleshooting, Software installation, Network basics\nSchedule: Flexible 2-4 hour shifts\nPerks: Tech certifications, Priority Wi-Fi access\nContact: IT Department',
+      category: 'volunteers',
+      icon: 'hardware-chip-outline',
+      iconColor: '#073B4C',
+      editable: true,
+      lastUpdated: 'Dec 18, 2024',
+      updatedBy: 'IT Department'
     }
   ]);
 
@@ -231,9 +275,7 @@ export default function SupportScreen({ navigation }) {
       icon: 'search-outline', 
       color: '#4ECDC4',
       action: () => {
-        // reuse the support page UI: switch to 'resources' filter
         setActiveCategory('resources');
-        // scroll to top so user sees the filtered list
         scrollViewRef.current?.scrollTo({ y: 0, animated: true });
       }
     },
@@ -244,16 +286,16 @@ export default function SupportScreen({ navigation }) {
       color: '#FFA726',
       action: () => navigation.navigate('CreateCommunity')
     },
-    { 
-      id: 'emergency', 
-      label: 'Emergency', 
-      icon: 'warning-outline', 
+    {
+      id: 'donate',
+      label: 'Make Donation',
+      icon: 'heart-outline',
       color: '#FF6B6B',
-      action: () => scrollToEmergency()
+      action: () => navigation.navigate('AssignPath')
     }
   ];
 
-  // Local modal state for reporting (use ReportModal component)
+  // Local modal state for reporting
   const [reportModalVisible, setReportModalVisible] = useState(false);
 
   // USTP Specific Emergency contacts
@@ -280,14 +322,6 @@ export default function SupportScreen({ navigation }) {
       icon: 'medical' 
     }
   ];
-
-  // Community Creation Data
-  const userCommunityStats = {
-    createdCommunities: user?.createdCommunities || 0,
-    maxFreeCommunities: 3,
-    subscription: user?.subscription || 'free',
-    isVerifiedCreator: user?.isVerifiedCreator || false
-  };
 
   // Enhanced permission checking
   const canEditSupport = user?.role === 'faculty' || user?.organization_role === 'president' || user?.organization_role === 'officer';
@@ -349,7 +383,7 @@ export default function SupportScreen({ navigation }) {
     }
   };
 
-  // ENHANCED Professional Badge Component with Shield Badge
+  // Professional Badge Component
   const ProfessionalBadge = ({ type, size = 'medium' }) => {
     const badgeConfig = {
       verified: {
@@ -379,6 +413,13 @@ export default function SupportScreen({ navigation }) {
         label: 'Emergency',
         bgColor: 'rgba(255, 107, 107, 0.1)',
         borderColor: '#FF6B6B'
+      },
+      faculty: {
+        icon: 'school',
+        color: '#8B5CF6',
+        label: 'Faculty',
+        bgColor: 'rgba(139, 92, 246, 0.1)',
+        borderColor: '#8B5CF6'
       }
     };
 
@@ -414,116 +455,67 @@ export default function SupportScreen({ navigation }) {
     );
   };
 
-  // ENHANCED CommunityCreationSection with SINGLE FRAME LAYOUT
-  const CommunityCreationSection = () => (
-    <View style={styles.featuredSection}>
-      {/* SINGLE FRAME HEADER with Title + Featured Label + Dropdown */}
-      <TouchableOpacity 
-        style={styles.featuredHeader}
-        onPress={() => setShowFeatured(!showFeatured)}
-        activeOpacity={0.7}
-      >
-        {/* LEFT: Title Text */}
-        <View style={styles.headerLeft}>
-          <Text style={styles.headerTitle}>Membership Plans</Text>
+  // Community Impact Dashboard (upgraded UI, no Create Donation)
+  const CommunityImpactDashboard = () => (
+    <View style={styles.impactDashboard}>
+        <View style={styles.dashboardHeader}>
+          <Text style={styles.dashboardTitle}>TOGETHER, WE HAVE CREATED</Text>
+        </View>
+      
+      <View style={styles.impactStats}>
+        <View style={styles.statRow}>
+          <View style={styles.statItem}>
+            <Ionicons name="fast-food-outline" size={18} color="#FF6B6B" style={styles.statIcon} />
+            <Text style={styles.statValue}>{communityImpact.mealsProvided}</Text>
+            <Text style={styles.statLabel}>Days of meals</Text>
+          </View>
+          <View style={styles.statItem}>
+            <Ionicons name="school-outline" size={18} color="#4ECDC4" style={styles.statIcon} />
+            <Text style={styles.statValue}>{communityImpact.journeysFunded}</Text>
+            <Text style={styles.statLabel}>Students helped</Text>
+          </View>
         </View>
         
-        {/* RIGHT: Featured Label + Dropdown Icon */}
-        <View style={styles.headerRight}>
-          <ProfessionalBadge type="featured" size="small" />
-          <Ionicons 
-            name={showFeatured ? 'chevron-up' : 'chevron-down'} 
-            size={20} 
-            color="rgba(255, 255, 255, 0.6)" 
-            style={styles.dropdownIcon}
-          />
-        </View>
-      </TouchableOpacity>
-
-      {/* CONTENT that shows/hides with dropdown */}
-      {showFeatured && (
-        <View style={styles.featuredContent}>
-          {/* Student Free/Basic Plan Card (mirrors faculty layout) */}
-          <View style={styles.planCard}>
-            <View style={styles.planHeader}>
-              <View style={styles.planTitleContainer}>
-                <Text style={styles.planName}>Free Plan</Text>
-                <Text style={styles.planDescription}>
-                  Perfect for student clubs and study groups
-                </Text>
-              </View>
-              <View style={[
-                styles.communityCount,
-                userCommunityStats.createdCommunities >= userCommunityStats.maxFreeCommunities && styles.communityCountFull
-              ]}>
-                <Text style={styles.countText}>
-                  {userCommunityStats.createdCommunities}/{userCommunityStats.maxFreeCommunities}
-                </Text>
-              </View>
-            </View>
-            
-            <View style={styles.featuresList}>
-              <View style={styles.featureRow}>
-                <Ionicons name="checkmark-circle" size={16} color="#4CAF50" />
-                <Text style={styles.featureItem}>Create up to 3 communities</Text>
-              </View>
-              <View style={styles.featureRow}>
-                <Ionicons name="checkmark-circle" size={16} color="#4CAF50" />
-                <Text style={styles.featureItem}>Basic community features</Text>
-              </View>
-            </View>
-            
-            <TouchableOpacity 
-              style={[
-                styles.planButton,
-                userCommunityStats.createdCommunities >= userCommunityStats.maxFreeCommunities && styles.disabledButton
-              ]}
-              onPress={() => navigation.navigate('CreateCommunity', { tier: 'free' })}
-              disabled={userCommunityStats.createdCommunities >= userCommunityStats.maxFreeCommunities}
-            >
-              <Text style={styles.planButtonText}>
-                {userCommunityStats.createdCommunities >= userCommunityStats.maxFreeCommunities ? 'Free Limit Reached' : 'Create Free Community'}
-              </Text>
-            </TouchableOpacity>
+        <View style={styles.statRow}>
+          <View style={styles.statItem}>
+            <Ionicons name="book-outline" size={18} color="#8B5CF6" style={styles.statIcon} />
+            <Text style={styles.statValue}>
+              {(communityImpact.pagesPrinted / 1000).toFixed(1)}k
+            </Text>
+            <Text style={styles.statLabel}>Pages printed (k)</Text>
           </View>
-
-          {/* Student Premium / Department Plan Card (same visual treatment as faculty) */}
-          <View style={[styles.planCard, styles.premiumCard]}>
-            <View style={styles.planHeader}>
-              <View style={styles.planTitleContainer}>
-                <Text style={styles.premiumPlanName}>Premium Plan</Text>
-                <Text style={styles.planDescription}>
-                  Advanced tools for serious community builders
-                </Text>
-              </View>
-              <ProfessionalBadge type="verified" size="small" />
-            </View>
-            
-            <View style={styles.featuresList}>
-              <View style={styles.featureRow}>
-                <Ionicons name="checkmark-circle" size={16} color="#FFD700" />
-                <Text style={styles.premiumFeatureItem}>Unlimited communities</Text>
-              </View>
-              <View style={styles.featureRow}>
-                <Ionicons name="checkmark-circle" size={16} color="#FFD700" />
-                <Text style={styles.premiumFeatureItem}>Verified creator badge</Text>
-              </View>
-              <View style={styles.featureRow}>
-                <Ionicons name="checkmark-circle" size={16} color="#FFD700" />
-                <Text style={styles.premiumFeatureItem}>Priority support</Text>
-              </View>
-            </View>
-            
-            <TouchableOpacity 
-              style={styles.premiumButton}
-              onPress={() => navigation.navigate('PremiumSubscription')}
-            >
-              <Text style={styles.premiumButtonText}>Upgrade to Premium</Text>
-              <Text style={styles.premiumButtonSubtext}>₱99/month or ₱999/year</Text>
-            </TouchableOpacity>
+          <View style={styles.statItem}>
+            <Ionicons name="cash-outline" size={18} color="#FFA726" style={styles.statIcon} />
+            <Text style={styles.statValue}>
+              ₱{(communityImpact.totalHopeGenerated / 1000).toFixed(1)}k
+            </Text>
+            <Text style={styles.statLabel}>Donations</Text>
           </View>
         </View>
-      )}
+      </View>
+      
+      {/* Action Buttons */}
+      <View style={styles.dashboardActions}>
+        <TouchableOpacity
+          style={styles.primaryActionButton}
+          onPress={() => navigation.navigate('AssignPath')}
+        >
+          <Ionicons name="heart" size={18} color={colors.white} />
+          <Text style={styles.primaryActionText}>Make a Donation</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={styles.secondaryActionButton}
+          onPress={() => navigation.navigate('DonationLedger')}
+        >
+          <Ionicons name="list" size={16} color="#4ECDC4" />
+          <Text style={styles.secondaryActionText}>View Donations Ledger</Text>
+        </TouchableOpacity>
+      </View>
+      
+      <Text style={styles.dashboardFooter}>
+        These aren't metrics. They're <Text style={{ color: '#FF6B6B' }}>heartbeats</Text>.
+      </Text>
     </View>
   );
 
@@ -531,7 +523,7 @@ export default function SupportScreen({ navigation }) {
     <TouchableOpacity
       style={[
         styles.categoryChip,
-        activeCategory === item.id && styles.categoryChipSelected
+        activeCategory === item.id && styles.categoryChipActive
       ]}
       onPress={() => setActiveCategory(item.id)}
       activeOpacity={0.7}
@@ -544,7 +536,7 @@ export default function SupportScreen({ navigation }) {
       />
       <Text style={[
         styles.categoryChipText,
-        activeCategory === item.id && styles.categoryChipTextSelected
+        activeCategory === item.id && { color: colors.homeBackground, fontFamily: fonts.semiBold }
       ]}>
         {item.label}
       </Text>
@@ -567,7 +559,6 @@ export default function SupportScreen({ navigation }) {
     </TouchableOpacity>
   );
 
-  // FIXED Support Card with proper badge hierarchy
   const renderSupportCard = ({ item }) => {
     const userCanEdit = canEditItem(item);
     
@@ -587,7 +578,6 @@ export default function SupportScreen({ navigation }) {
           <View style={styles.cardContent}>
             <View style={styles.cardTitleRow}>
               <Text style={styles.cardTitle}>{item.title}</Text>
-              {/* SINGLE BADGE PER CARD - Better hierarchy */}
               {item.emergency && <ProfessionalBadge type="emergency" size="small" />}
               {!item.emergency && item.isOfficial && <ProfessionalBadge type="official" size="small" />}
             </View>
@@ -676,7 +666,7 @@ export default function SupportScreen({ navigation }) {
         >
           <Animated.View style={[styles.headerContent, { opacity: headerTitleOpacity }]}>
             <Text style={styles.headerTitle}>Support & Resources</Text>
-            <Text style={styles.headerSubtitle}>Get help when you need it</Text>
+            <Text style={styles.headerSubtitle}>Where Every Peso Becomes Hope</Text>
           </Animated.View>
 
           <Animated.View style={[styles.collapsedHeaderContent, { opacity: collapsedTitleOpacity }]}>
@@ -733,10 +723,10 @@ export default function SupportScreen({ navigation }) {
         onScroll={handleScroll}
         scrollEventThrottle={16}
       >
-        {/* Community Creation Section with Dropdown */}
-        <CommunityCreationSection />
+        {/* Community Impact Dashboard */}
+        <CommunityImpactDashboard />
 
-        {/* Quick Action Buttons - FIXED MARGIN */}
+        {/* Quick Action Buttons */}
         <View style={styles.quickActionsSection}>
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionTitle}>Quick Help</Text>
@@ -810,7 +800,7 @@ export default function SupportScreen({ navigation }) {
           visible={reportModalVisible}
           onClose={() => setReportModalVisible(false)}
           postId={null}
-          onSubmitted={() => { setReportModalVisible(false); /* optionally refresh state */ }}
+          onSubmitted={() => { setReportModalVisible(false); }}
         />
       </ScrollView>
     </SafeAreaView>
@@ -900,7 +890,98 @@ const styles = StyleSheet.create({
     paddingTop: 70,
     paddingBottom: 20,
   },
-  // ENHANCED Badge Styles with Shield
+  // Impact Dashboard
+  impactDashboard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    marginHorizontal: 16,
+    marginTop: 20,
+    marginBottom: 20,
+    padding: 20,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 107, 107, 0.2)',
+  },
+  dashboardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 20,
+    marginBottom: 20,
+    gap: 8,
+  },
+  dashboardTitle: {
+    fontSize: 15,
+    fontFamily: fonts.bold,
+    color: colors.white,
+    textAlign: 'center',
+  },
+  impactStats: {
+    marginBottom: 20,
+  },
+  statRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: 8,
+  },
+  statValue: {
+    fontSize: 24,
+    fontFamily: fonts.bold,
+    color: colors.white,
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 12,
+    fontFamily: fonts.normal,
+    color: 'rgba(255, 255, 255, 0.6)',
+    textAlign: 'center',
+  },
+  dashboardActions: {
+    gap: 10,
+    marginBottom: 16,
+  },
+  primaryActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FF6B6B',
+    paddingVertical: 14,
+    borderRadius: 10,
+    gap: 8,
+  },
+  primaryActionText: {
+    fontSize: 15,
+    fontFamily: fonts.bold,
+    color: colors.white,
+  },
+  secondaryActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(78, 205, 196, 0.1)',
+    paddingVertical: 12,
+    borderRadius: 10,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(78, 205, 196, 0.2)',
+  },
+  secondaryActionText: {
+    fontSize: 14,
+    fontFamily: fonts.semiBold,
+    color: '#4ECDC4',
+  },
+  dashboardFooter: {
+    fontSize: 12,
+    fontFamily: fonts.normal,
+    color: 'rgba(255, 255, 255, 0.7)',
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  // Badge Styles
   badgeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -912,156 +993,11 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
     fontSize: 11,
   },
-  // NEW: Enhanced Featured Section Styles
-  featuredSection: {
-    marginHorizontal: 16,
-    marginTop: 20,
-    marginBottom: 18,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    overflow: 'hidden',
-  },
-  featuredHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-  },
-  headerLeft: {
-    flex: 1,
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontFamily: fonts.bold,
-    color: colors.white,
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  dropdownIcon: {
-    marginLeft: 4,
-  },
-  featuredContent: {
-    paddingHorizontal: 14,
-    paddingBottom: 14,
-    paddingTop: 12, // add top padding for membership plan content
-  },
-  planCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    marginBottom: 10,
-  },
-  premiumCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  planHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 10,
-  },
-  planTitleContainer: {
-    flex: 1,
-  },
-  planName: {
-    fontSize: 15,
-    fontFamily: fonts.bold,
-    color: colors.white,
-    marginBottom: 4,
-  },
-  premiumPlanName: {
-    fontSize: 15,
-    fontFamily: fonts.bold,
-    color: '#FFD700',
-    marginBottom: 4,
-  },
-  planDescription: {
-    fontSize: 12,
-    fontFamily: fonts.normal,
-    color: 'rgba(255, 255, 255, 0.7)',
-    lineHeight: 16,
-  },
-  communityCount: {
-    backgroundColor: 'rgba(76, 175, 80, 0.2)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 10,
-  },
-  communityCountFull: {
-    backgroundColor: 'rgba(255, 107, 107, 0.2)',
-  },
-  countText: {
-    fontSize: 12,
-    fontFamily: fonts.bold,
-    color: '#4CAF50',
-  },
-  featuresList: {
-    marginBottom: 12,
-  },
-  featureRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  featureItem: {
-    fontSize: 12,
-    fontFamily: fonts.normal,
-    color: 'rgba(255, 255, 255, 0.8)',
-    marginLeft: 6,
-    lineHeight: 16,
-  },
-  premiumFeatureItem: {
-    fontSize: 12,
-    fontFamily: fonts.normal,
-    color: 'rgba(255, 255, 255, 0.9)',
-    marginLeft: 6,
-    lineHeight: 16,
-  },
-  planButton: {
-    backgroundColor: '#4ECDC4',
-    paddingVertical: 10,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  disabledButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-  },
-  planButtonText: {
-    fontSize: 13,
-    fontFamily: fonts.bold,
-    color: colors.white,
-  },
-  premiumButton: {
-    backgroundColor: '#FFD700',
-    paddingVertical: 10,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  premiumButtonText: {
-    fontSize: 13,
-    fontFamily: fonts.bold,
-    color: '#000',
-  },
-  premiumButtonSubtext: {
-    fontSize: 11,
-    fontFamily: fonts.normal,
-    color: 'rgba(0, 0, 0, 0.7)',
-    marginTop: 2,
-  },
-  // Search and Edit Styles
+  // Existing styles (preserved)
   searchContainer: {
     paddingHorizontal: 20,
     marginBottom: 10,
-    marginTop: 10, // add top margin for search field
+    marginTop: 10,
   },
   searchInputWrapper: {
     flexDirection: 'row',
@@ -1088,13 +1024,12 @@ const styles = StyleSheet.create({
     padding: 2,
     marginLeft: 6,
   },
-  // FIXED Section Header Styles with proper margins
   sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-start',
+    justifyContent: 'space-between',
     marginBottom: 10,
-    paddingHorizontal: 10, // reduced from 20
+    paddingHorizontal: 16,
   },
   manageButton: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
@@ -1115,7 +1050,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bold,
     color: colors.white,
     textAlign: 'left',
-    marginLeft: 0, // ensure no extra left margin
   },
   quickActionsList: {
     paddingHorizontal: 16,
@@ -1127,7 +1061,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 12,
-    minWidth: 90,
+    minWidth: 100,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
   },
@@ -1159,6 +1093,10 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     minWidth: 90,
   },
+  categoryChipActive: {
+    backgroundColor: colors.white,
+    // keep borderColor unchanged (do not change to item color)
+  },
   categoryChipSelected: {
     backgroundColor: colors.white,
     borderColor: colors.white,
@@ -1182,7 +1120,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sectionHeaderContent: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
   },
   sectionSubtitle: {
     fontSize: 12,
@@ -1190,7 +1128,6 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.6)',
     marginTop: 2,
   },
-  // Support Card Enhanced Styles
   supportCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.04)',
     marginHorizontal: 16,
@@ -1297,7 +1234,6 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.6)',
     marginBottom: 10,
   },
-  // Emergency Contact Styles
   emergencyContact: {
     flexDirection: 'row',
     alignItems: 'center',

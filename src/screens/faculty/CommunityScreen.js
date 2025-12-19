@@ -342,7 +342,7 @@ export default function CommunityScreen({ navigation }) {
   const handleCreateCommunity = async () => {
     const { canCreate } = await canUserCreateCommunity(user.id);
     if (!canCreate) {
-      alert('You have reached the faculty community limit (5 communities). Upgrade to premium for unlimited communities.');
+      alert('You have reached the faculty community limit (5 communities). To request more, contact support.');
       return;
     }
     navigation.navigate('FacultyCreateCommunity');
@@ -467,23 +467,19 @@ export default function CommunityScreen({ navigation }) {
     );
   };
 
-  // ENHANCED CommunityCreationSection - FACULTY VERSION
+  // CommunityCreationSection: use student-style Community Options + donation card
   const CommunityCreationSection = () => (
     <View style={styles.featuredSection}>
-      {/* SINGLE FRAME HEADER with Title + Featured Label + Dropdown */}
       <TouchableOpacity 
         style={styles.featuredHeader}
         onPress={() => setShowFeatured(!showFeatured)}
         activeOpacity={0.7}
       >
-        {/* LEFT: Title Text */}
         <View style={styles.headerLeft}>
-          <Text style={styles.headerTitle}>Faculty Community Plans</Text>
+          <Text style={styles.headerTitle}>Community Options</Text>
         </View>
-        
-        {/* RIGHT: Featured Label + Dropdown Icon */}
         <View style={styles.headerRight}>
-          <ProfessionalBadge type="faculty" size="small" />
+          <ProfessionalBadge type="featured" size="small" />
           <Ionicons 
             name={showFeatured ? 'chevron-up' : 'chevron-down'} 
             size={20} 
@@ -493,24 +489,14 @@ export default function CommunityScreen({ navigation }) {
         </View>
       </TouchableOpacity>
 
-      {/* CONTENT that shows/hides with dropdown */}
       {showFeatured && (
         <View style={styles.featuredContent}>
-          {/* Faculty Plan Card */}
           <View style={styles.planCard}>
             <View style={styles.planHeader}>
               <View style={styles.planTitleContainer}>
-                <Text style={styles.planName}>Faculty Plan</Text>
+                <Text style={styles.planName}>Make your own Community</Text>
                 <Text style={styles.planDescription}>
-                  Enhanced tools for faculty collaboration and department groups
-                </Text>
-              </View>
-              <View style={[
-                styles.communityCount,
-                userCommunityStats.createdCommunities >= userCommunityStats.maxFreeCommunities && styles.communityCountFull
-              ]}>
-                <Text style={styles.countText}>
-                  {userCommunityStats.createdCommunities}/{userCommunityStats.maxFreeCommunities}
+                  Create and manage communities — unlimited for everyone.
                 </Text>
               </View>
             </View>
@@ -518,85 +504,48 @@ export default function CommunityScreen({ navigation }) {
             <View style={styles.featuresList}>
               <View style={styles.featureRow}>
                 <Ionicons name="checkmark-circle" size={16} color="#4CAF50" />
-                <Text style={styles.featureItem}>Create up to 5 communities</Text>
+                <Text style={styles.featureItem}>Create unlimited communities</Text>
               </View>
               <View style={styles.featureRow}>
                 <Ionicons name="checkmark-circle" size={16} color="#4CAF50" />
-                <Text style={styles.featureItem}>Faculty verification badge</Text>
-              </View>
-              <View style={styles.featureRow}>
-                <Ionicons name="checkmark-circle" size={16} color="#4CAF50" />
-                <Text style={styles.featureItem}>Up to 200 members each</Text>
-              </View>
-              <View style={styles.featureRow}>
-                <Ionicons name="checkmark-circle" size={16} color="#4CAF50" />
-                <Text style={styles.featureItem}>Advanced moderation tools</Text>
-              </View>
-              <View style={styles.featureRow}>
-                <Ionicons name="checkmark-circle" size={16} color="#4CAF50" />
-                <Text style={styles.featureItem}>Department collaboration features</Text>
+                <Text style={styles.featureItem}>Essential community management tools</Text>
               </View>
             </View>
             
             <TouchableOpacity 
-              style={[
-                styles.planButton,
-                userCommunityStats.createdCommunities >= userCommunityStats.maxFreeCommunities && styles.disabledButton
-              ]}
-              onPress={() => navigation.navigate('FacultyCreateCommunity', { tier: 'faculty' })}
-              disabled={userCommunityStats.createdCommunities >= userCommunityStats.maxFreeCommunities}
+              style={styles.planButton}
+              onPress={() => navigation.navigate('FacultyCreateCommunity')}
             >
-              <Text style={styles.planButtonText}>
-                {userCommunityStats.createdCommunities >= userCommunityStats.maxFreeCommunities ? 'Faculty Limit Reached' : 'Create Faculty Community'}
-              </Text>
+              <Text style={styles.planButtonText}>Create Community</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Premium Plan Card */}
-          <View style={[styles.planCard, styles.premiumCard]}>
+          <View style={[styles.planCard, styles.donationCard]}>
             <View style={styles.planHeader}>
               <View style={styles.planTitleContainer}>
-                <Text style={styles.premiumPlanName}>Premium Plan</Text>
+                <Text style={styles.premiumPlanName}>Support the Platform & Community</Text>
                 <Text style={styles.planDescription}>
-                  Advanced tools for institutional community builders
+                  Help keep the platform running and uplift our community.
                 </Text>
               </View>
-              <ProfessionalBadge type="verified" size="small" />
             </View>
-            
+
             <View style={styles.featuresList}>
               <View style={styles.featureRow}>
-                <Ionicons name="checkmark-circle" size={16} color="#FFD700" />
-                <Text style={styles.premiumFeatureItem}>Unlimited communities</Text>
+                <Ionicons name="heart" size={16} color="#FF6B6B" />
+                <Text style={styles.premiumFeatureItem}>One-time or recurring donations</Text>
               </View>
               <View style={styles.featureRow}>
-                <Ionicons name="checkmark-circle" size={16} color="#FFD700" />
-                <Text style={styles.premiumFeatureItem}>Verified faculty badge</Text>
-              </View>
-              <View style={styles.featureRow}>
-                <Ionicons name="checkmark-circle" size={16} color="#FFD700" />
-                <Text style={styles.premiumFeatureItem}>Advanced analytics</Text>
-              </View>
-              <View style={styles.featureRow}>
-                <Ionicons name="checkmark-circle" size={16} color="#FFD700" />
-                <Text style={styles.premiumFeatureItem}>Priority support</Text>
-              </View>
-              <View style={styles.featureRow}>
-                <Ionicons name="checkmark-circle" size={16} color="#FFD700" />
-                <Text style={styles.premiumFeatureItem}>Custom branding</Text>
-              </View>
-              <View style={styles.featureRow}>
-                <Ionicons name="checkmark-circle" size={16} color="#FFD700" />
-                <Text style={styles.premiumFeatureItem}>Unlimited members</Text>
+                <Ionicons name="receipt" size={16} color="#4ECDC4" />
+                <Text style={styles.premiumFeatureItem}>Funds support platform and community programs</Text>
               </View>
             </View>
-            
+
             <TouchableOpacity 
               style={styles.premiumButton}
-              onPress={() => navigation.navigate('PremiumSubscription')}
+              onPress={() => navigation.navigate('DonationSelection')}
             >
-              <Text style={styles.premiumButtonText}>Upgrade to Premium</Text>
-              <Text style={styles.premiumButtonSubtext}>₱199/month or ₱1999/year</Text>
+              <Text style={styles.premiumButtonText}>Make a Donation</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1257,6 +1206,10 @@ const styles = StyleSheet.create({
   premiumCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
     borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  donationCard: {
+    backgroundColor: 'rgba(78, 205, 196, 0.06)',
+    borderColor: 'rgba(78, 205, 196, 0.12)'
   },
   planHeader: {
     flexDirection: 'row',

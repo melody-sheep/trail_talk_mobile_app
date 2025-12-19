@@ -30,15 +30,6 @@ export default function CreateCommunityScreen({ navigation, route }) {
     rules: '',
     max_members: 50
   });
-  const [userCommunityStats, setUserCommunityStats] = useState({
-    createdCommunities: 0,
-    maxFreeCommunities: 3,
-    canCreate: true
-  });
-
-  // Free plan settings — update if you determine plan server-side
-  const FREE_PLAN_MAX = 50;
-  const isFreePlan = true;
 
   const categories = [
     { id: 'academic', label: 'Academic', icon: 'school-outline', color: '#4ECDC4' },
@@ -52,26 +43,6 @@ export default function CreateCommunityScreen({ navigation, route }) {
     { id: 'public', label: 'Public', description: 'Anyone can join and view content', icon: 'earth-outline' },
     { id: 'private', label: 'Private', description: 'Membership requires approval', icon: 'lock-closed-outline' }
   ];
-
-  // Load user community stats
-  useEffect(() => {
-    loadUserCommunityStats();
-  }, [user?.id]);
-
-  const loadUserCommunityStats = async () => {
-    if (!user?.id) return;
-    
-    try {
-      const { canCreate, createdCount } = await canUserCreateCommunity(user.id);
-      setUserCommunityStats({
-        createdCommunities: createdCount,
-        maxFreeCommunities: 3,
-        canCreate
-      });
-    } catch (error) {
-      console.error('Error loading user stats:', error);
-    }
-  };
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
@@ -106,18 +77,6 @@ export default function CreateCommunityScreen({ navigation, route }) {
 
   const handleCreateCommunity = async () => {
     if (!validateForm()) return;
-
-    if (!userCommunityStats.canCreate) {
-      Alert.alert(
-        'Community Limit Reached',
-        `You have reached the free tier limit of ${userCommunityStats.maxFreeCommunities} communities. Upgrade to premium for unlimited communities.`,
-        [
-          { text: 'OK', style: 'cancel' },
-          { text: 'Upgrade', onPress: () => navigation.navigate('PremiumSubscription') }
-        ]
-      );
-      return;
-    }
 
     setLoading(true);
 
@@ -166,16 +125,12 @@ export default function CreateCommunityScreen({ navigation, route }) {
   };
 
   const handleMemberLimitChange = (value) => {
-    // Accept numeric input or numeric deltas.
     let numValue = typeof value === 'number' ? value : parseInt(value);
     if (Number.isNaN(numValue)) return;
-    // Clamp value between 2 and either free-plan max or 500
-    const clampMax = isFreePlan ? FREE_PLAN_MAX : 500;
-    numValue = Math.max(2, Math.min(clampMax, numValue));
+    numValue = Math.max(2, Math.min(500, numValue));
     handleInputChange('max_members', numValue);
   };
 
-  // Slightly darken a hex color by a given amount (0-255)
   const darkenColor = (hex, amount = 20) => {
     try {
       let col = hex.replace('#', '');
@@ -291,40 +246,22 @@ export default function CreateCommunityScreen({ navigation, route }) {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
-          {/* Enhanced Community Creation Status */}
+          {/* Community Creation Welcome Card */}
           <View style={styles.creationStatus}>
             <View style={styles.statusHeader}>
               <View style={styles.statusIconContainer}>
-                <Ionicons name="rocket-outline" size={20} color="#4ECDC4" />
+                <Ionicons name="people-circle-outline" size={24} color="#4ECDC4" />
               </View>
               <View style={styles.statusTextContainer}>
-                <Text style={styles.statusTitle}>Free Plan Progress</Text>
+                <Text style={styles.statusTitle}>Create Your Community</Text>
                 <Text style={styles.statusSubtitle}>
-                  {userCommunityStats.createdCommunities} of {userCommunityStats.maxFreeCommunities} communities used
+                  Build groups for study, hobbies, support, or shared interests
                 </Text>
               </View>
             </View>
-            <View style={styles.progressContainer}>
-              <View style={styles.progressBar}>
-                <View 
-                  style={[
-                    styles.progressFill,
-                    { 
-                      width: `${(userCommunityStats.createdCommunities / userCommunityStats.maxFreeCommunities) * 100}%`,
-                      backgroundColor: userCommunityStats.createdCommunities >= userCommunityStats.maxFreeCommunities ? '#FF6B6B' : '#4ECDC4'
-                    }
-                  ]} 
-                />
-              </View>
-            </View>
-            {!userCommunityStats.canCreate && (
-              <View style={styles.limitWarning}>
-                <Ionicons name="warning-outline" size={16} color="#FF6B6B" />
-                <Text style={styles.limitWarningText}>
-                  Free tier limit reached. Upgrade to premium for more.
-                </Text>
-              </View>
-            )}
+            <Text style={styles.creationDescription}>
+              All students can create unlimited communities. Connect with peers who share your interests!
+            </Text>
           </View>
 
           {/* Enhanced Form Sections */}
@@ -400,11 +337,9 @@ export default function CreateCommunityScreen({ navigation, route }) {
           <View style={styles.formCard}>
             <View style={styles.formSection}>
               <Text style={styles.sectionLabel}>Member Limit</Text>
-              {!isFreePlan && (
-                <Text style={styles.sectionDescription}>
-                  Set maximum number of members (2-500) — you can type a number or use the buttons
-                </Text>
-              )}
+              <Text style={styles.sectionDescription}>
+                Set maximum number of members (2-500) — you can type a number or use the buttons
+              </Text>
               <View style={styles.memberLimitContainer}>
                 <TouchableOpacity
                   style={[
@@ -432,15 +367,15 @@ export default function CreateCommunityScreen({ navigation, route }) {
                 <TouchableOpacity
                   style={[
                     styles.limitButton,
-                    (isFreePlan ? formData.max_members >= FREE_PLAN_MAX : formData.max_members >= 500) && styles.limitButtonDisabled
+                    formData.max_members >= 500 && styles.limitButtonDisabled
                   ]}
                   onPress={() => handleMemberLimitChange(formData.max_members + 1)}
-                  disabled={isFreePlan ? formData.max_members >= FREE_PLAN_MAX : formData.max_members >= 500}
+                  disabled={formData.max_members >= 500}
                 >
-                  <Ionicons name="add" size={18} color={(isFreePlan ? formData.max_members >= FREE_PLAN_MAX : formData.max_members >= 500) ? 'rgba(255,255,255,0.3)' : colors.white} />
+                  <Ionicons name="add" size={18} color={formData.max_members >= 500 ? 'rgba(255,255,255,0.3)' : colors.white} />
                 </TouchableOpacity>
               </View>
-              <Text style={styles.limitNote}>Free tier supports up to 50 members</Text>
+              <Text style={styles.limitNote}>Maximum 500 members per community</Text>
             </View>
           </View>
 
@@ -470,10 +405,10 @@ export default function CreateCommunityScreen({ navigation, route }) {
           <TouchableOpacity
             style={[
               styles.createButton,
-              (!userCommunityStats.canCreate || loading || !isFormValid()) && styles.createButtonDisabled
+              (loading || !isFormValid()) && styles.createButtonDisabled
             ]}
             onPress={handleCreateCommunity}
-            disabled={!userCommunityStats.canCreate || loading || !isFormValid()}
+            disabled={loading || !isFormValid()}
           >
             <View style={styles.createButtonContent}>
               {loading ? (
@@ -482,7 +417,7 @@ export default function CreateCommunityScreen({ navigation, route }) {
                 <>
                   <Ionicons name="people" size={20} color={colors.white} />
                   <Text style={styles.createButtonText}>
-                    {userCommunityStats.canCreate ? 'Create Community' : 'Free Limit Reached'}
+                    Create Community
                   </Text>
                 </>
               )}
@@ -567,9 +502,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   statusIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: 'rgba(78, 205, 196, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -579,45 +514,22 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   statusTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontFamily: fonts.bold,
     color: colors.white,
-    marginBottom: 2,
+    marginBottom: 4,
   },
   statusSubtitle: {
     fontSize: 14,
     fontFamily: fonts.normal,
+    color: 'rgba(255, 255, 255, 0.7)',
+  },
+  creationDescription: {
+    fontSize: 14,
+    fontFamily: fonts.normal,
     color: 'rgba(255, 255, 255, 0.6)',
-  },
-  progressContainer: {
-    marginBottom: 8,
-  },
-  progressBar: {
-    height: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 3,
-  },
-  limitWarning: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 107, 107, 0.1)',
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 107, 107, 0.2)',
-    marginTop: 8,
-  },
-  limitWarningText: {
-    fontSize: 13,
-    fontFamily: fonts.medium,
-    color: '#FF6B6B',
-    marginLeft: 8,
-    flex: 1,
+    lineHeight: 20,
+    textAlign: 'center',
   },
   // Enhanced Form Sections
   formSection: {
@@ -693,14 +605,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(78, 205, 196, 0.18)',
     borderColor: 'rgba(78, 205, 196, 0.35)'
   },
-  categoryIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 8,
-  },
   chipLeft: {
     width: 32,
     height: 32,
@@ -720,16 +624,6 @@ const styles = StyleSheet.create({
   categoryLabelSelected: {
     color: colors.white,
     fontFamily: fonts.semiBold,
-  },
-  selectedBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   // Enhanced Privacy Options
   privacyOptions: {

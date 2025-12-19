@@ -1,4 +1,4 @@
-// src/navigation/AppNavigator.js - COMPLETE UPDATED VERSION
+// src/navigation/AppNavigator.js - COMPLETE UPDATED VERSION WITH DONATION SCREENS
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -66,6 +66,15 @@ import StudentSettingsScreen from '../screens/student/StudentSettingsScreen';
 import FacultySettingsScreen from '../screens/faculty/FacultySettingsScreen';
 import StudentDevelopersScreen from '../screens/student/StudentDevelopersScreen';
 import FacultyDevelopersScreen from '../screens/faculty/FacultyDevelopersScreen';
+
+// Import Donation Screens
+import DonationSelectionScreen from '../screens/student/DonationSelectionScreen';
+import DonationFlowScreen from '../screens/student/DonationFlowScreen';
+import DonationLedgerScreen from '../screens/student/DonationLedgerScreen';
+import AssignPathScreen from '../screens/student/AssignPathScreen';
+import SelectCategoryScreen from '../screens/student/SelectCategoryScreen';
+// Faculty donation creation screen
+import CreateDonationScreen from '../screens/faculty/CreateDonationScreen';
 
 // Import Shared Screens
 import CommentScreen from '../screens/student/CommentScreen';
@@ -362,6 +371,56 @@ export default function AppNavigator() {
         }}
       />
       
+      {/* DONATION SCREENS */}
+      <Stack.Screen
+        name="DonationSelection"
+        component={DonationSelectionScreen}
+        options={{
+          headerShown: false,
+          animation: 'slide_from_right',
+        }}
+      />
+      <Stack.Screen
+        name="AssignPath"
+        component={AssignPathScreen}
+        options={{
+          headerShown: false,
+          animation: 'slide_from_right',
+        }}
+      />
+      <Stack.Screen
+        name="SelectCategory"
+        component={SelectCategoryScreen}
+        options={{
+          headerShown: false,
+          animation: 'slide_from_right',
+        }}
+      />
+      <Stack.Screen 
+        name="DonationFlow" 
+        component={DonationFlowScreen}
+        options={{ 
+          headerShown: false,
+          animation: 'slide_from_right',
+        }}
+      />
+      <Stack.Screen 
+        name="DonationLedger" 
+        component={DonationLedgerScreen}
+        options={{ 
+          headerShown: false,
+          animation: 'slide_from_right',
+        }}
+      />
+      <Stack.Screen 
+        name="CreateDonationScreen"
+        component={CreateDonationScreen}
+        options={{
+          headerShown: false,
+          animation: 'slide_from_right'
+        }}
+      />
+      
       {/* CREATE POST SCREENS */}
       <Stack.Screen 
         name="StudentCreatePost" 
@@ -586,13 +645,7 @@ export default function AppNavigator() {
       />
 
       {/* ADDITIONAL SCREENS FOR COMPLETENESS */}
-      <Stack.Screen 
-        name="PremiumSubscription" 
-        component={PlaceholderScreen}
-        options={{
-          animation: 'slide_from_right',
-        }}
-      />
+      {/* PremiumSubscription removed — app no longer supports premium plans */}
       <Stack.Screen 
         name="EditSupportContent" 
         component={PlaceholderScreen}
