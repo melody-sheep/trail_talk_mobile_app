@@ -1,0 +1,2 @@
+- [x] Update Key Features section to include Support System
+- [x] Add new "## 💫 Support System" section after Key Features, incorporating content from TRAILTALK_SUPPORT-SYSTEM.txt
